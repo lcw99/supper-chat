@@ -25,7 +25,7 @@ class Channel {
       id = json['_id'];
       name = json['name'];
       t = json['t'];
-      usernames = List<String>.from(json['usernames']);
+      usernames = json['usernames'] != null ? List<String>.from(json['usernames']) : null;
       msgs = json['msgs'];
       user = json['u'] != null ? User.fromMap(json['u']) : null;
       ts = DateTime.parse(json['ts']);

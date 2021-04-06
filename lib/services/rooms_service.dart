@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:rocket_chat_connector_flutter/exceptions/exception.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -12,16 +11,15 @@ import 'package:rocket_chat_connector_flutter/models/filters/channel_filter.dart
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/new/channel_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_new_response.dart';
-import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart';
 
-class ChannelService {
+class RoomsService {
   HttpService _httpService;
 
-  ChannelService(this._httpService);
+  RoomsService(this._httpService);
 
-  Future<ChannelNewResponse> create(
+  Future<ChannelNewResponse> getRooms(
       ChannelNew channelNew, Authentication authentication) async {
     http.Response response = await _httpService.post(
       '/api/v1/channels.create',
@@ -39,7 +37,8 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<ChannelMessages> messages(Channel channel, Authentication authentication) async {
+  Future<ChannelMessages> messages(
+      Channel channel, Authentication authentication) async {
     http.Response response = await _httpService.getWithFilter(
       '/api/v1/channels.messages',
       ChannelFilter(channel),
@@ -48,7 +47,7 @@ class ChannelService {
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return ChannelMessages.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
+        return ChannelMessages.fromMap(jsonDecode(response.body));
       } else {
         return ChannelMessages();
       }
@@ -86,7 +85,7 @@ class ChannelService {
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return ChannelMessages.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
+        return ChannelMessages.fromMap(jsonDecode(response.body));
       } else {
         return ChannelMessages();
       }
@@ -95,9 +94,9 @@ class ChannelService {
   }
 
   Future<ChannelCounters> counters(
-    ChannelCountersFilter filter,
-    Authentication authentication,
-  ) async {
+      ChannelCountersFilter filter,
+      Authentication authentication,
+      ) async {
     http.Response response = await _httpService.getWithFilter(
       '/api/v1/channels.counters',
       filter,
@@ -113,23 +112,4 @@ class ChannelService {
     }
     throw RocketChatException(response.body);
   }
-
-  Future<ChannelListResponse> list(Authentication authentication) async {
-    http.Response response = await _httpService.get(
-      '/api/v1/channels.list', authentication
-    );
-
-    //debugPrint("resp=" + response.body);
-
-    if (response.statusCode == 200) {
-      if (response.body.isNotEmpty == true) {
-        return ChannelListResponse.fromMap(jsonDecode(response.body));
-      } else {
-        return ChannelListResponse();
-      }
-    }
-    throw RocketChatException(response.body);
-  }
-
 }
-

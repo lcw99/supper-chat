@@ -1,21 +1,21 @@
 class UserNew {
-  String? name;
-  String? email;
-  String? password;
   String? username;
+  String? email;
+  String? pass;
+  String? name;
 
   UserNew({
-    this.name,
-    this.email,
-    this.password,
     this.username,
+    this.email,
+    this.pass,
+    this.name,
   });
 
   UserNew.fromMap(Map<String, dynamic>? json) {
     if (json != null) {
       name = json['name'];
       email = json['email'];
-      password = json['password'];
+      pass = json['pass'];
       username = json['username'];
     }
   }
@@ -29,8 +29,8 @@ class UserNew {
     if (email != null) {
       map['email'] = email;
     }
-    if (password != null) {
-      map['password'] = password;
+    if (pass != null) {
+      map['pass'] = pass;
     }
     if (username != null) {
       map['username'] = username;
@@ -41,7 +41,7 @@ class UserNew {
 
   @override
   String toString() {
-    return 'UserNew{name: $name, email: $email, password: $password, username: $username}';
+    return 'UserNew{name: $name, email: $email, pass: $pass, username: $username}';
   }
 
   @override
@@ -51,10 +51,10 @@ class UserNew {
           runtimeType == other.runtimeType &&
           name == other.name &&
           email == other.email &&
-          password == other.password &&
+          pass == other.pass &&
           username == other.username;
 
   @override
   int get hashCode =>
-      name.hashCode ^ email.hashCode ^ password.hashCode ^ username.hashCode;
+      name.hashCode ^ email.hashCode ^ pass.hashCode ^ username.hashCode;
 }

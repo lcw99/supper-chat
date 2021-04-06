@@ -39,13 +39,8 @@ class RoomService {
     throw RocketChatException(response.body);
   }
 
-  Future<RoomMessages> messages(
-      Room room, Authentication authentication) async {
-    http.Response response = await _httpService.getWithFilter(
-      '/api/v1/im.messages',
-      RoomFilter(room),
-      authentication,
-    );
+  Future<RoomMessages> messages(Room room, Authentication authentication) async {
+    http.Response response = await _httpService.getWithFilter('/api/v1/im.messages', RoomFilter(room), authentication);
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {

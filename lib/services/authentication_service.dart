@@ -25,6 +25,23 @@ class AuthenticationService {
     throw RocketChatException(response.body);
   }
 
+  Future<Authentication> loginGoogle(String accessToken, String idToken) async {
+    print("google login=" + accessToken);
+    Map<String, dynamic> body = {'serviceName': 'google', 'accessToken': accessToken, 'idToken': idToken, 'expiresIn': 200, 'scope': 'email'};
+    http.Response response = await _httpService.post(
+      '/api/v1/login',
+      jsonEncode(body),
+      null,
+    );
+
+    print("google login resp=" + response.body);
+
+    if (response.statusCode == 200 && response.body.isNotEmpty == true) {
+      return Authentication.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
+    }
+    throw RocketChatException(response.body);
+  }
+
   Future<User> me(Authentication authentication) async {
     http.Response response = await _httpService.get(
       '/api/v1/me',

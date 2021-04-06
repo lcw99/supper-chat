@@ -71,7 +71,7 @@ class ChannelMessages {
 
   @override
   String toString() {
-    return 'ChannelMessages{messages: $messages, count: $count, offset: $offset, total: $total, success: $success}';
+    return 'ChannelMessages{count: $count, offset: $offset, total: $total, success: $success, messages: $messages}';
   }
 
   @override

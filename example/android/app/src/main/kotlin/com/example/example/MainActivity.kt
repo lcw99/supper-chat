@@ -1,4 +1,4 @@
-package com.example.example
+package co.smallet.superchat
 
 import io.flutter.embedding.android.FlutterActivity
 
