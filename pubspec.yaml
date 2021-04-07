@@ -10,18 +10,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  #https://pub.dev/packages/collection#-changelog-tab-
   collection: ^1.15.0
-  #https://pub.dev/packages/http#-changelog-tab-
   http: ^0.13.1
-  #https://pub.dev/packages/web_socket_channel/changelog-tab-
   web_socket_channel: ^2.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   mockito: ^5.0.3
-  build_runner: ^1.10.0
+  build_runner: ^1.12.2
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

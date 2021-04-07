@@ -62,7 +62,8 @@ class UserService {
         return User();
       }
     }
-    throw RocketChatException(response.body);
+    print(response.body);
+    return User();
   }
 
 }

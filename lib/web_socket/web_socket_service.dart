@@ -1,18 +1,19 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
-import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketService {
-  WebSocketChannel connectToWebSocket(
-      String url, Authentication authentication) {
-    WebSocketChannel webSocketChannel = IOWebSocketChannel.connect(url);
+
+  WebSocketChannel connectToWebSocket(String url, Authentication authentication) {
+    WebSocketChannel webSocketChannel = WebSocketChannel.connect(Uri.parse(url));
     _sendConnectRequest(webSocketChannel);
     _sendLoginRequest(webSocketChannel, authentication);
+
     return webSocketChannel;
   }
 
@@ -25,8 +26,7 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
-  void _sendLoginRequest(
-      WebSocketChannel webSocketChannel, Authentication authentication) {
+  void _sendLoginRequest(WebSocketChannel webSocketChannel, Authentication authentication) {
     Map msg = {
       "msg": "method",
       "method": "login",
@@ -128,3 +128,4 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 }
+
