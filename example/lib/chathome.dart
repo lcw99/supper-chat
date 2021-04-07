@@ -19,6 +19,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 
+import 'chatview.dart';
+
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
 
 final String serverUrl = "https://chat.smallet.co";
@@ -43,8 +45,6 @@ class _ChatHomeState extends State<ChatHome> {
   Room room = Room(id: "myRoomId");
 
   bool firebaseInitialized = false;
-
-  int chattingCount = 20;
 
   WebSocketChannel webSocketChannel;
   WebSocketService webSocketService = WebSocketService();
@@ -152,66 +152,7 @@ class _ChatHomeState extends State<ChatHome> {
             });
         break;
       case 1:
-        return FutureBuilder(
-            future: _getChannelMessages(),
-            builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
-              if (snapshot.hasData) {
-                List<Message> channelMessages = snapshot.data.messages;
-                //channelMessages.sort((a, b) { return a.ts.compareTo(b.ts); });
-                debugPrint("msg count=" + channelMessages.length.toString());
-                return Expanded(
-                  child: NotificationListener<ScrollEndNotification>(
-                    child: ListView.builder(
-                        padding: EdgeInsets.all(0.0),
-                        itemExtent: 40,
-                        scrollDirection: Axis.vertical,
-                        itemCount: channelMessages.length,
-                        reverse: true,
-                        shrinkWrap: true,
-                        itemBuilder: (context, index) {
-                          Message message = channelMessages[index];
-                          bool joinMessage = message.t != null && message.t == 'uj';
-                          //debugPrint("msg=" + index.toString() + message.toString());
-                          return Container(
-                              decoration: BoxDecoration(border: Border.all(color: Colors.red)),
-                              child:
-                              Column(children: [
-                                Container(
-                                    decoration: BoxDecoration(border: Border.all(color: Colors.yellow)),
-                                    alignment: Alignment.centerLeft,
-                                    child:
-                                    Text(
-                                      message.user.username + '(' + index.toString() +')',
-                                      style: TextStyle(fontSize: 10, color: Colors.brown),
-                                      textAlign: TextAlign.left,
-                                    )),
-                                Container(
-                                    decoration: BoxDecoration(border: Border.all(color: Colors.yellow)),
-                                    alignment: Alignment.centerLeft,
-                                    child:
-                                    Text(
-                                      joinMessage ? message.user.username + ' joined' : message.msg,
-                                      style: TextStyle(fontSize: 10, color: Colors.blueAccent),
-                                    ))
-                              ])
-                          );
-                        }
-                    ),
-                    onNotification: (notification) {
-                      print("listview Scrollend" + notification.metrics.pixels.toString());
-                      if (notification.metrics.pixels != 0.0) { // bottom
-                        setState(() {
-                          chattingCount += 20;
-                        });
-                      }
-                      return true;
-                    },
-                  ),
-                );
-              } else
-                return Container();
-            }
-        );
+        return ChatView(authRC: widget.authRC, channel: channel);
         break;
     }
   }
@@ -229,13 +170,6 @@ class _ChatHomeState extends State<ChatHome> {
       _selectedPage = 1;
     });
     debugPrint("channel name=" + channel.name);
-  }
-
-  _getChannelMessages() {
-    ChannelService channelService = ChannelService(rocketHttpService);
-    ChannelHistoryFilter filter = ChannelHistoryFilter(channel, count: chattingCount);
-    Future<ChannelMessages> messages = channelService.history(filter, widget.authRC);
-    return messages;
   }
 
   _getChannelList() {
