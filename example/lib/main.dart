@@ -192,8 +192,8 @@ class _LoginHomeState extends State<LoginHome> {
   Future<Authentication> getAuthentication() async {
     final AuthenticationService authenticationService = AuthenticationService(rocketHttpService);
     GoogleSignInAuthentication acc = await googleSignIn.currentUser.authentication;
-    //return await authenticationService.loginGoogle(acc.accessToken, acc.idToken);
-    return await authenticationService.login(username, password);
+    return await authenticationService.loginGoogle(acc.accessToken, acc.idToken);
+    //return await authenticationService.login(username, password);
   }
 
   registerToken(Authentication _auth) async {

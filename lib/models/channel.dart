@@ -9,6 +9,7 @@ class Channel {
   int? msgs;
   User? user;
   DateTime? ts;
+  String? avatarETag;
 
   Channel({
     this.id,
@@ -18,6 +19,7 @@ class Channel {
     this.msgs,
     this.user,
     this.ts,
+    this.avatarETag,
   });
 
   Channel.fromMap(Map<String, dynamic>? json) {
@@ -29,6 +31,7 @@ class Channel {
       msgs = json['msgs'];
       user = json['u'] != null ? User.fromMap(json['u']) : null;
       ts = DateTime.parse(json['ts']);
+      avatarETag = json['avatarETag'];
     }
   }
 
@@ -40,11 +43,12 @@ class Channel {
         'msgs': msgs,
         'u': user != null ? user!.toMap() : null,
         'ts': ts != null ? ts!.toIso8601String() : null,
+        'avatarETag': avatarETag,
       };
 
   @override
   String toString() {
-    return 'Channel{_id: $id, name: $name, t: $t, usernames: $usernames, msgs: $msgs, user: $user, ts: $ts}';
+    return 'Channel{_id: $id, name: $name, t: $t, usernames: $usernames, msgs: $msgs, user: $user, ts: $ts, avatarETag: $avatarETag}';
   }
 
   @override
@@ -54,6 +58,7 @@ class Channel {
           runtimeType == other.runtimeType &&
           id == other.id &&
           name == other.name &&
+          avatarETag == other.avatarETag &&
           t == other.t &&
           DeepCollectionEquality().equals(usernames, other.usernames) &&
           msgs == other.msgs &&
@@ -68,5 +73,6 @@ class Channel {
       usernames.hashCode ^
       msgs.hashCode ^
       user.hashCode ^
+      avatarETag.hashCode ^
       ts.hashCode;
 }

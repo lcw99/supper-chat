@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -76,17 +77,19 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<ChannelMessages> history(
-      ChannelHistoryFilter filter, Authentication authentication) async {
+  Future<ChannelMessages> history(ChannelHistoryFilter filter, Authentication authentication) async {
+    debugPrint("=================================channels.history: offset=" + filter.offset.toString());
     http.Response response = await _httpService.getWithFilter(
       '/api/v1/channels.history',
       filter,
       authentication,
     );
 
+    var resp = utf8.decode(response.bodyBytes);
+    debugPrint("channels.history resp=" + resp, wrapWidth: 1024);
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return ChannelMessages.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
+        return ChannelMessages.fromMap(jsonDecode(resp));
       } else {
         return ChannelMessages();
       }
@@ -119,11 +122,11 @@ class ChannelService {
       '/api/v1/channels.list', authentication
     );
 
-    //debugPrint("resp=" + response.body);
+    //print("channel list resp=" + utf8.decode(response.bodyBytes));
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return ChannelListResponse.fromMap(jsonDecode(response.body));
+        return ChannelListResponse.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
         return ChannelListResponse();
       }

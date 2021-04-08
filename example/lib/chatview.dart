@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -7,14 +5,11 @@ import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
-import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/constants.dart';
 
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
-
-final String serverUrl = "https://chat.smallet.co";
-final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(Uri.parse(serverUrl));
 
 class ChatView extends StatefulWidget {
   final Authentication authRC;
@@ -27,7 +22,11 @@ class ChatView extends StatefulWidget {
 }
 
 class _ChatViewState extends State<ChatView> {
-  int chattingCount = 20;
+  int chatItemOffset = 0;
+  final int chatItemCount = 20;
+
+  List<Message> chatData = [];
+  bool historyEnd = false;
 
   @override
   Widget build(BuildContext context) {
@@ -36,52 +35,65 @@ class _ChatViewState extends State<ChatView> {
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
           if (snapshot.hasData) {
             List<Message> channelMessages = snapshot.data.messages;
-            //channelMessages.sort((a, b) { return a.ts.compareTo(b.ts); });
-            debugPrint("msg count=" + channelMessages.length.toString());
+            if (channelMessages.length > 0) {
+              for (Message m in channelMessages)
+                if (!chatData.contains(m))
+                  chatData.add(m);
+              chatData.sort((a, b) {
+                return b.ts.compareTo(a.ts);
+              });
+              debugPrint("msg count=" + channelMessages.length.toString());
+              debugPrint("total msg count=" + chatData.length.toString());
+            } else {
+              historyEnd = true;
+            }
             return Expanded(
               child: NotificationListener<ScrollEndNotification>(
                 child: ListView.builder(
                     padding: EdgeInsets.all(0.0),
-                    itemExtent: 40,
                     scrollDirection: Axis.vertical,
-                    itemCount: channelMessages.length,
+                    itemCount: chatData.length,
                     reverse: true,
                     shrinkWrap: true,
                     itemBuilder: (context, index) {
-                      Message message = channelMessages[index];
+                      Message message = chatData[index];
                       bool joinMessage = message.t != null && message.t == 'uj';
                       //debugPrint("msg=" + index.toString() + message.toString());
+                      String url = message.user.avatarUrl == null ?
+                          serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
+                          message.user.avatarUrl;
+                      bool grp = message.groupable != null ? message.groupable : false;
                       return Container(
                           decoration: BoxDecoration(border: Border.all(color: Colors.red)),
                           child:
-                          Column(children: [
-                            Container(
-                                decoration: BoxDecoration(border: Border.all(color: Colors.yellow)),
-                                alignment: Alignment.centerLeft,
-                                child:
-                                Text(
-                                  message.user.username + '(' + index.toString() +')',
-                                  style: TextStyle(fontSize: 10, color: Colors.brown),
-                                  textAlign: TextAlign.left,
-                                )),
-                            Container(
-                                decoration: BoxDecoration(border: Border.all(color: Colors.yellow)),
-                                alignment: Alignment.centerLeft,
-                                child:
-                                Text(
-                                  joinMessage ? message.user.username + ' joined' : message.msg,
-                                  style: TextStyle(fontSize: 10, color: Colors.blueAccent),
-                                ))
-                          ])
+                            ListTile(
+                              dense: true,
+                              leading: grp ? Container() : Container(
+                                  width: 40,
+                                  height: 40,
+                                  child: Image.network(url)
+                              ),
+                              title: Text(
+                                message.user.username + '(' + index.toString() +')',
+                                style: TextStyle(fontSize: 10, color: Colors.brown),
+                                textAlign: TextAlign.left,
+                              ),
+                              subtitle: Text(
+                                joinMessage ? message.user.username + ' joined' : message.msg,
+                                style: TextStyle(fontSize: 10, color: Colors.blueAccent),
+                              )
+                            )
                       );
                     }
                 ),
                 onNotification: (notification) {
-                  print("listview Scrollend" + notification.metrics.pixels.toString());
-                  if (notification.metrics.pixels != 0.0) { // bottom
-                    setState(() {
-                      chattingCount += 20;
-                    });
+                  if (notification.metrics.atEdge) {
+                    print("listview Scrollend" + notification.metrics.pixels.toString());
+                    if (!historyEnd && notification.metrics.pixels != 0.0) { // bottom
+                      setState(() {
+                        chatItemOffset += chatItemCount;
+                      });
+                    }
                   }
                   return true;
                 },
@@ -95,7 +107,7 @@ class _ChatViewState extends State<ChatView> {
 
   _getChannelMessages() {
     ChannelService channelService = ChannelService(rocketHttpService);
-    ChannelHistoryFilter filter = ChannelHistoryFilter(widget.channel, count: chattingCount);
+    ChannelHistoryFilter filter = ChannelHistoryFilter(widget.channel, count: chatItemCount, offset: chatItemOffset);
     Future<ChannelMessages> messages = channelService.history(filter, widget.authRC);
     return messages;
   }
