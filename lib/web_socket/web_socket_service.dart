@@ -61,11 +61,17 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
-  void streamChannelMessagesUnsubscribe(
-      WebSocketChannel webSocketChannel, Channel channel) {
+  void streamChannelMessagesUnsubscribe(WebSocketChannel webSocketChannel, Channel channel) {
     Map msg = {
       "msg": "unsub",
       "id": channel.id! + "subscription-id",
+    };
+    webSocketChannel.sink.add(jsonEncode(msg));
+  }
+
+  void streamChannelMessagesPong(WebSocketChannel webSocketChannel) {
+    Map msg = {
+      "msg": "pong",
     };
     webSocketChannel.sink.add(jsonEncode(msg));
   }

@@ -1,20 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
-import 'package:rocket_chat_connector_flutter/models/new/message_new.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
-import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
+import 'package:rocket_chat_connector_flutter/web_socket/notification_type.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/web_socket_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
-import 'package:rocket_chat_connector_flutter/models/constants/constants.dart';
+import 'constants/constants.dart';
 
 import 'chatview.dart';
 
@@ -32,7 +32,6 @@ class ChatHome extends StatefulWidget {
 }
 
 class _ChatHomeState extends State<ChatHome> {
-  TextEditingController _controller = TextEditingController();
   int _selectedPage = 0;
 
   Channel channel = Channel(id: "myChannelId");
@@ -43,6 +42,9 @@ class _ChatHomeState extends State<ChatHome> {
   WebSocketChannel webSocketChannel;
   WebSocketService webSocketService = WebSocketService();
 
+  final StreamController<rocket_notification.Notification> notificationController = StreamController();
+  Stream<rocket_notification.Notification> notificationStream;
+
   @override
   void initState() {
     super.initState();
@@ -50,8 +52,21 @@ class _ChatHomeState extends State<ChatHome> {
 
   @override
   Widget build(BuildContext context) {
+    notificationStream = notificationController.stream;
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
     webSocketService.streamNotifyUserSubscribe(webSocketChannel, widget.user);
+    webSocketChannel.stream.listen((event) {
+      rocket_notification.Notification notification = rocket_notification.Notification.fromMap(jsonDecode(event));
+      String data = notification.toString();
+      if (notification.msg == NotificationType.PING)
+        webSocketService.streamChannelMessagesPong(webSocketChannel);
+      else {
+        print("***got noti= " + data);
+        notificationController.add(notification);
+      }
+      onError() {}
+      onDone() {}
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -62,12 +77,7 @@ class _ChatHomeState extends State<ChatHome> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Form(
-              child: TextFormField(
-                controller: _controller,
-                decoration: InputDecoration(labelText: 'Send a message'),
-              ),
-            ),
+            /*
             StreamBuilder(
               stream: webSocketChannel.stream,
               builder: (context, snapshot) {
@@ -86,16 +96,11 @@ class _ChatHomeState extends State<ChatHome> {
                   child: Text(''),
                 );
               },
-            ),
+            ), */
             _buildPage(),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _postMessage,
-        tooltip: 'Send message',
-        child: Icon(Icons.send),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -152,7 +157,7 @@ class _ChatHomeState extends State<ChatHome> {
             });
         break;
       case 1:
-        return ChatView(authRC: widget.authRC, channel: channel);
+        return ChatView(authRC: widget.authRC, channel: channel, notificationStream: notificationStream);
         break;
     }
   }
@@ -178,19 +183,9 @@ class _ChatHomeState extends State<ChatHome> {
     return respChannelList;
   }
 
-  void _postMessage() {
-    if (_controller.text.isNotEmpty) {
-      MessageService messageService = MessageService(rocketHttpService);
-      MessageNew msg = MessageNew(channel: channel.id, roomId: channel.name, text: _controller.text);
-      messageService.postMessage(msg, widget.authRC);
-    }
-  }
-
-  void _sendMessage() {
-    if (_controller.text.isNotEmpty) {
-      webSocketService.sendMessageOnChannel(_controller.text, webSocketChannel, channel);
-      webSocketService.sendMessageOnRoom(_controller.text, webSocketChannel, room);
-    }
+  void _sendMessage(String msg) {
+    webSocketService.sendMessageOnChannel(msg, webSocketChannel, channel);
+    webSocketService.sendMessageOnRoom(msg, webSocketChannel, room);
   }
 
   @override

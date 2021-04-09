@@ -22,7 +22,7 @@ class MessageService {
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return MessageNewResponse.fromMap(jsonDecode(response.body));
+        return MessageNewResponse.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
       } else {
         return MessageNewResponse();
       }

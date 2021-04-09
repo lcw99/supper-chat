@@ -86,7 +86,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    debugPrint("channels.history resp=" + resp, wrapWidth: 1024);
+    //debugPrint("channels.history resp=" + resp, wrapWidth: 1024);
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));

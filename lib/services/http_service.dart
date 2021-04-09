@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/filter.dart';
@@ -22,11 +24,9 @@ class HttpService {
           headers: await (_getHeaders(authentication)
               as Future<Map<String, String>?>));
 
-  Future<http.Response> post(
-          String uri, String body, Authentication? authentication) async =>
+  Future<http.Response> post(String uri, String body, Authentication? authentication) async =>
       await http.post(Uri.parse(_apiUrl.toString() + uri),
-          headers: await (_getHeaders(authentication)
-              as Future<Map<String, String>?>),
+          headers: await (_getHeaders(authentication) as Future<Map<String, String>?>),
           body: body);
 
   Future<http.Response> put(
