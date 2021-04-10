@@ -81,28 +81,9 @@ class _ChatViewState extends State<ChatView> {
                         shrinkWrap: true,
                         itemBuilder: (context, index) {
                           Message message = chatData[index];
-                          //log("msg=" + index.toString() + message.toString());
-                          bool joinMessage = message.t != null && message.t == 'uj';
-                          String url = message.user.avatarUrl == null ?
-                              serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
-                              message.user.avatarUrl;
                           return Container(
-                              decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
-                              child:
-                                ListTile(
-                                  dense: true,
-                                  leading: Container(
-                                      width: joinMessage ? 20 : 40,
-                                      height: joinMessage ? 20 : 40,
-                                      child: Image.network(url)
-                                  ),
-                                  title: Text(
-                                    message.user.username + '(' + index.toString() +')',
-                                    style: TextStyle(fontSize: 10, color: Colors.brown),
-                                    textAlign: TextAlign.left,
-                                  ),
-                                  subtitle: _buildMessage(joinMessage, message)
-                                )
+                              //decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
+                              child: _buildChatItem(message, index),
                           );
                         }
                     )),
@@ -144,10 +125,48 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  _buildMessage(bool joinMessage, Message message) {
+  _buildChatItem(Message message, int index) {
+    log("msg=" + index.toString() + message.toString());
+    bool specialMessage = message.t != null;
+    String url = message.user.avatarUrl == null ?
+                    serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
+                    message.user.avatarUrl;
+    String userName = _getUserName(message);
+    String newMessage = message.msg;
+    switch (message.t) {
+      case 'au': newMessage = '$userName added ${message.msg}'; break;
+      case 'uj': newMessage = '$userName joined'; break;
+      case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
+      case 'room_changed_description': newMessage = '$userName change room description'; break;
+    }
+    return ListTile(
+      dense: true,
+      leading: Container(
+          width: specialMessage ? 20 : 40,
+          height: specialMessage ? 20 : 40,
+          child: Image.network(url)
+      ),
+      title: Text(
+        userName + '(' + index.toString() +')',
+        style: TextStyle(fontSize: 10, color: Colors.brown),
+        textAlign: TextAlign.left,
+      ),
+      subtitle: _buildMessage(message, userName, newMessage),
+    );
+  }
+  _getUserName(Message message) {
+    String userName = '';
+    if (message.user.username != null)
+      userName += ' ' + message.user.username;
+    if (message.user.name != null)
+      userName += ' ' + message.user.name;
+    return userName;
+  }
+
+  _buildMessage(Message message, String userName, String newMessage) {
     if (message.attachments == null || message.attachments.length == 0) {
       return Text(
-        joinMessage ? message.user.username + ' joined' : message.msg,
+        newMessage,
         style: TextStyle(fontSize: 10, color: Colors.blueAccent),
       );
     } else {
@@ -162,7 +181,7 @@ class _ChatViewState extends State<ChatView> {
               var attachment = attachments[index];
               return Column(children: <Widget>[
                 getImage(attachment.imageUrl),
-                Text(attachment.description),
+                attachment.description != null ? Text(attachment.description) : Container(),
               ]);
             }
         ));

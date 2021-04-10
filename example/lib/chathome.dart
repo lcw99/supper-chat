@@ -70,7 +70,7 @@ class _ChatHomeState extends State<ChatHome> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(channel.name != null ? channel.name : widget.title),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
