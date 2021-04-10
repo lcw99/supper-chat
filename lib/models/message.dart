@@ -189,40 +189,16 @@ class Message {
 
   @override
   String toString() {
-    return 'Message{_id: $id, alias: $alias, msg: $msg, parseUrls: $parseUrls, bot: $bot, groupable: $groupable, t: $t, ts: $ts, user: $user, rid: $rid, _updatedAt: $updatedAt, reactions: $reactions, mentions: $mentions, channels: $channels, starred: $starred, emoji: $emoji, avatar: $avatar, attachments: $attachments, editedBy: $editedBy, editedBy: $editedBy, urls: $urls}';
+    return 'Message{"_id": "$id", "alias": "$alias", "msg": "$msg", "parseUrls": "$parseUrls", "bot": "$bot", "groupable": "$groupable", "t": "$t", "ts": "$ts", '
+        '"user": "$user", "rid": "$rid", "_updatedAt": "$updatedAt", "reactions": "$reactions", "mentions": "$mentions", "channels": "$channels", "starred": "$starred", '
+        '"emoji": "$emoji", "avatar": "$avatar", "attachments": $attachments, "editedBy": "$editedBy", "editedBy": "$editedBy", "urls": "$urls"}';
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is Message &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          alias == other.alias &&
-          msg == other.msg &&
-          parseUrls == other.parseUrls &&
-          bot == other.bot &&
-          groupable == other.groupable &&
-          t == other.t &&
-          ts == other.ts &&
-          user == other.user &&
-          rid == other.rid &&
-          updatedAt == other.updatedAt &&
-          DeepCollectionEquality().equals(
-              reactions != null ? reactions!.keys : null,
-              other.reactions != null ? other.reactions!.keys : null) &&
-          DeepCollectionEquality().equals(
-              reactions != null ? reactions!.values : null,
-              other.reactions != null ? other.reactions!.values : null) &&
-          DeepCollectionEquality().equals(mentions, other.mentions) &&
-          DeepCollectionEquality().equals(channels, other.channels) &&
-          DeepCollectionEquality().equals(starred, other.starred) &&
-          emoji == other.emoji &&
-          avatar == other.avatar &&
-          DeepCollectionEquality().equals(attachments, other.attachments) &&
-          editedBy == other.editedBy &&
-          editedAt == other.editedAt &&
-          DeepCollectionEquality().equals(urls, other.urls);
+          id == other.id;
 
   @override
   int get hashCode =>

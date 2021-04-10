@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'dart:developer';
+
+import 'package:http/http.dart' as http;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -76,8 +81,8 @@ class _ChatViewState extends State<ChatView> {
                         shrinkWrap: true,
                         itemBuilder: (context, index) {
                           Message message = chatData[index];
+                          //log("msg=" + index.toString() + message.toString());
                           bool joinMessage = message.t != null && message.t == 'uj';
-                          //debugPrint("msg=" + index.toString() + message.toString());
                           String url = message.user.avatarUrl == null ?
                               serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
                               message.user.avatarUrl;
@@ -96,10 +101,7 @@ class _ChatViewState extends State<ChatView> {
                                     style: TextStyle(fontSize: 10, color: Colors.brown),
                                     textAlign: TextAlign.left,
                                   ),
-                                  subtitle: Text(
-                                    joinMessage ? message.user.username + ' joined' : message.msg,
-                                    style: TextStyle(fontSize: 10, color: Colors.blueAccent),
-                                  )
+                                  subtitle: _buildMessage(joinMessage, message)
                                 )
                           );
                         }
@@ -142,6 +144,39 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
+  _buildMessage(bool joinMessage, Message message) {
+    if (message.attachments == null || message.attachments.length == 0) {
+      return Text(
+        joinMessage ? message.user.username + ' joined' : message.msg,
+        style: TextStyle(fontSize: 10, color: Colors.blueAccent),
+      );
+    } else {
+      var attachments = message.attachments;
+      return Container(
+        height: 150,
+        child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: attachments.length,
+            itemExtent: 200,
+            itemBuilder: (context, index) {
+              var attachment = attachments[index];
+              return Column(children: <Widget>[
+                getImage(attachment.imageUrl),
+                Text(attachment.description),
+              ]);
+            }
+        ));
+    }
+  }
+
+  Widget getImage(String imagePath) {
+    Map<String, String> header = {
+      'X-Auth-Token': widget.authRC.data.authToken,
+      'X-User-Id': widget.authRC.data.userId
+    };
+    return Image.network(serverUri.replace(path: imagePath).toString(), headers: header, fit: BoxFit.fitWidth, width: 200,);
+  }
+
   Future<void> _postMessage() async {
     if (_teController.text.isNotEmpty) {
       MessageService messageService = MessageService(rocketHttpService);
@@ -161,3 +196,4 @@ class _ChatViewState extends State<ChatView> {
     return messages;
   }
 }
+

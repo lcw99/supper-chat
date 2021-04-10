@@ -42,7 +42,7 @@ class _ChatHomeState extends State<ChatHome> {
   WebSocketChannel webSocketChannel;
   WebSocketService webSocketService = WebSocketService();
 
-  final StreamController<rocket_notification.Notification> notificationController = StreamController();
+  final StreamController<rocket_notification.Notification> notificationController = StreamController<rocket_notification.Notification>.broadcast();
   Stream<rocket_notification.Notification> notificationStream;
 
   @override
@@ -158,6 +158,7 @@ class _ChatHomeState extends State<ChatHome> {
         break;
       case 1:
         return ChatView(authRC: widget.authRC, channel: channel, notificationStream: notificationStream);
+        //return Container();
         break;
     }
   }

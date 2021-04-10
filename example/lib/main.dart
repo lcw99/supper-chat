@@ -7,7 +7,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/new/user_new.dart';
-import 'package:rocket_chat_connector_flutter/models/user.dart';
+import 'package:rocket_chat_connector_flutter/models/user.dart' as rocket_user;
 import 'package:rocket_chat_connector_flutter/services/authentication_service.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
@@ -101,7 +101,6 @@ class _LoginHomeState extends State<LoginHome> {
     }
 
     if (authFirebase.currentUser == null) {
-
       user = await googleSignIn.signIn();
       final GoogleSignInAuthentication googleAuth = await user.authentication;
 
@@ -110,13 +109,13 @@ class _LoginHomeState extends State<LoginHome> {
         idToken: googleAuth.idToken,
       );
 
-      await authFirebase.signInWithCredential(credential);
+      var userCredential = await authFirebase.signInWithCredential(credential);
     }
 
     if (user != null) {
       var ss = user.email.split("@");
       UserNew userNew = UserNew(username: ss[0], name: user.displayName, email: user.email, pass: user.id);
-      User userRC = await UserService(rocketHttpService).register(userNew);
+      rocket_user.User userRC = await UserService(rocketHttpService).register(userNew);
       print("user=" + userRC.toString());
     }
   }
@@ -220,7 +219,7 @@ class _LoginHomeState extends State<LoginHome> {
 
   @override
   Widget build(BuildContext context) {
-    User user;
+    rocket_user.User user;
 
     if (triedSilentLogin == false) {
       silentLogin(context);

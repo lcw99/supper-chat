@@ -78,7 +78,6 @@ class ChannelService {
   }
 
   Future<ChannelMessages> history(ChannelHistoryFilter filter, Authentication authentication) async {
-    debugPrint("=================================channels.history: offset=" + filter.offset.toString());
     http.Response response = await _httpService.getWithFilter(
       '/api/v1/channels.history',
       filter,
@@ -86,7 +85,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    //debugPrint("channels.history resp=" + resp, wrapWidth: 1024);
+    //log("channels.history resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));
@@ -121,8 +120,6 @@ class ChannelService {
     http.Response response = await _httpService.get(
       '/api/v1/channels.list', authentication
     );
-
-    //print("channel list resp=" + utf8.decode(response.bodyBytes));
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {

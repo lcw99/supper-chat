@@ -1,5 +1,5 @@
-importScripts("https://www.gstatic.com/firebasejs/8.3.2/firebase-app.js");
-importScripts("https://www.gstatic.com/firebasejs/8.3.2/firebase-messaging.js");
+importScripts("https://www.gstatic.com/firebasejs/8.3.3/firebase-app.js");
+importScripts("https://www.gstatic.com/firebasejs/8.3.3/firebase-messaging.js");
 
 //Using singleton breaks instantiating messaging()
 // App firebase = FirebaseWeb.instance.app;
@@ -16,20 +16,15 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
-messaging.getToken({vapidKey: "36ae179dbd89791de89a6220f2992fe099381e5b"});
-messaging.onBackgroundMessage((payload) => {
+messaging.setBackgroundMessageHandler(function(payload) {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
   // Customize notification here
-  const notificationTitle = 'Background Message Title';
-  const notificationOptions = {
+  var notificationTitle = 'Background Message Title';
+  var notificationOptions = {
     body: 'Background Message body.',
     icon: '/firebase-logo.png'
   };
 
-  self.registration.showNotification(notificationTitle,
+  return self.registration.showNotification(notificationTitle,
     notificationOptions);
-});
-
-self.addEventListener('notificationclick', function (event) {
-    console.log('notification received: ', event)
 });
