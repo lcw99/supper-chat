@@ -219,16 +219,6 @@ class _LoginHomeState extends State<LoginHome> {
       print('Got a message whilst in the foreground!');
       print('Message data: ${message.data}');
 
-      Fluttertoast.showToast(
-          msg: message.data['title'],
-          toastLength: Toast.LENGTH_LONG,
-          gravity: ToastGravity.CENTER,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0
-      );
-
       if (message.notification != null) {
         print('Message also contained a notification: ${message.notification}');
       }

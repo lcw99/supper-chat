@@ -36,6 +36,7 @@ class _ChatHomeState extends State<ChatHome> {
   int _selectedPage = 0;
 
   String channelId = '';
+  String channelName = '';
 
   bool firebaseInitialized = false;
 
@@ -49,19 +50,6 @@ class _ChatHomeState extends State<ChatHome> {
   void initState() {
     super.initState();
 
-    print('**** payload= ${widget.payload}');
-    if (widget.payload != null) {
-      var json = jsonDecode(widget.payload);
-      if (json['rid'] != null) {
-        print('**** rid= ${json['rid']}');
-        _setChannel(json['rid'].toString());
-      }
-    }
-
-  }
-
-  @override
-  Widget build(BuildContext context) {
     notificationStream = notificationController.stream;
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
     webSocketService.streamNotifyUserSubscribe(webSocketChannel, widget.user);
@@ -71,16 +59,29 @@ class _ChatHomeState extends State<ChatHome> {
       if (notification.msg == NotificationType.PING)
         webSocketService.streamChannelMessagesPong(webSocketChannel);
       else {
-        //print("***got noti= " + data);
+        print("***got noti= " + data);
         notificationController.add(notification);
       }
       onError() {}
       onDone() {}
     });
 
+    print('**** payload= ${widget.payload}');
+    if (widget.payload != null) {
+      var json = jsonDecode(widget.payload);
+      if (json['rid'] != null) {
+        print('**** rid= ${json['rid']}');
+        _setChannel(json['rid'], json['name']);
+      }
+    }
+
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(channelName != '' ? channelName : widget.title),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -126,7 +127,7 @@ class _ChatHomeState extends State<ChatHome> {
                     itemCount: r.channelList.length,
                     itemBuilder: (context, index)  {
                       return ListTile(
-                        onTap: () { _setChannel(r.channelList[index].id); },
+                        onTap: () { _setChannel(r.channelList[index].id, r.channelList[index].name); },
                         title: Text(r.channelList[index].name, style: TextStyle(color: Colors.black45)),
                         subtitle: Text(r.channelList[index].id, style: TextStyle(color: Colors.blue)),
                         leading: Container(
@@ -160,10 +161,11 @@ class _ChatHomeState extends State<ChatHome> {
     });
   }
 
-  _setChannel(String _channelId) {
+  _setChannel(String _channelId, String _channelName) {
     print('**** setChannel=$_channelId');
     setState(() {
       channelId = _channelId;
+      channelName = _channelName;
       _selectedPage = 1;
     });
   }
