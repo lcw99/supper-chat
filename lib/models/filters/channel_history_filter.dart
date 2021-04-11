@@ -1,26 +1,27 @@
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
-import 'package:rocket_chat_connector_flutter/models/filters/channel_filter.dart';
+import 'filter.dart';
 
-class ChannelHistoryFilter extends ChannelFilter {
+class ChannelHistoryFilter extends Filter {
   DateTime? latest;
   DateTime? oldest;
   bool? inclusive;
   int? offset;
   int? count;
   bool? unreads;
+  String? roomId;
 
-  ChannelHistoryFilter(
-    Channel channel, {
+  ChannelHistoryFilter({
     this.latest,
     this.oldest,
     this.inclusive,
     this.offset,
     this.count,
     this.unreads,
-  }) : super(channel);
+    this.roomId,
+  }) : super();
 
   Map<String, dynamic> toMap() => {
-        'roomId': channel.id,
+        'roomId': roomId,
         'latest': latest != null ? latest!.toIso8601String() : null,
         'oldest': oldest != null ? oldest!.toIso8601String() : null,
         'inclusive': inclusive,
@@ -31,7 +32,7 @@ class ChannelHistoryFilter extends ChannelFilter {
 
   @override
   String toString() {
-    return 'ChannelHistoryFilter{latest: $latest, oldest: $oldest, inclusive: $inclusive, offset: $offset, count: $count, unreads: $unreads}';
+    return 'ChannelHistoryFilter{latest: $latest, oldest: $oldest, inclusive: $inclusive, offset: $offset, count: $count, unreads: $unreads, roomid: $roomId}';
   }
 
   @override
@@ -45,6 +46,7 @@ class ChannelHistoryFilter extends ChannelFilter {
           inclusive == other.inclusive &&
           offset == other.offset &&
           count == other.count &&
+          roomId == other.roomId &&
           unreads == other.unreads;
 
   @override
@@ -55,5 +57,6 @@ class ChannelHistoryFilter extends ChannelFilter {
       inclusive.hashCode ^
       offset.hashCode ^
       count.hashCode ^
+      roomId.hashCode ^
       unreads.hashCode;
 }

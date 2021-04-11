@@ -22,11 +22,11 @@ import 'chatview.dart';
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
 
 class ChatHome extends StatefulWidget {
+  ChatHome({Key key, @required this.title, @required this.user, @required this.authRC, this.payload}) : super(key: key);
   final String title;
   final User user;
   final Authentication authRC;
-
-  ChatHome({Key key, @required this.title, @required this.user, @required this.authRC}) : super(key: key);
+  final String payload;
 
   @override
   _ChatHomeState createState() => _ChatHomeState();
@@ -35,8 +35,7 @@ class ChatHome extends StatefulWidget {
 class _ChatHomeState extends State<ChatHome> {
   int _selectedPage = 0;
 
-  Channel channel = Channel(id: "myChannelId");
-  Room room = Room(id: "myRoomId");
+  String channelId = '';
 
   bool firebaseInitialized = false;
 
@@ -49,6 +48,16 @@ class _ChatHomeState extends State<ChatHome> {
   @override
   void initState() {
     super.initState();
+
+    print('**** payload= ${widget.payload}');
+    if (widget.payload != null) {
+      var json = jsonDecode(widget.payload);
+      if (json['rid'] != null) {
+        print('**** rid= ${json['rid']}');
+        _setChannel(json['rid'].toString());
+      }
+    }
+
   }
 
   @override
@@ -62,7 +71,7 @@ class _ChatHomeState extends State<ChatHome> {
       if (notification.msg == NotificationType.PING)
         webSocketService.streamChannelMessagesPong(webSocketChannel);
       else {
-        print("***got noti= " + data);
+        //print("***got noti= " + data);
         notificationController.add(notification);
       }
       onError() {}
@@ -71,33 +80,13 @@ class _ChatHomeState extends State<ChatHome> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(channel.name != null ? channel.name : widget.title),
+        title: Text(widget.title),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            /*
-            StreamBuilder(
-              stream: webSocketChannel.stream,
-              builder: (context, snapshot) {
-                print(snapshot.data);
-                String message;
-                if (snapshot.hasError) {
-                  message = "websocket error!!";
-                } else if (snapshot.hasData) {
-                  message = rocket_notification.Notification.fromMap(jsonDecode(snapshot.data)).toString();
-                  webSocketService.streamNotifyUserSubscribe(webSocketChannel, widget.user);
-                }
-                print(message);
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 0.0),
-                  //child: Text(message != null ? message : ''),
-                  child: Text(''),
-                );
-              },
-            ), */
             _buildPage(),
           ],
         ),
@@ -137,7 +126,7 @@ class _ChatHomeState extends State<ChatHome> {
                     itemCount: r.channelList.length,
                     itemBuilder: (context, index)  {
                       return ListTile(
-                        onTap: () { _setChannel(index, r.channelList[index]); },
+                        onTap: () { _setChannel(r.channelList[index].id); },
                         title: Text(r.channelList[index].name, style: TextStyle(color: Colors.black45)),
                         subtitle: Text(r.channelList[index].id, style: TextStyle(color: Colors.blue)),
                         leading: Container(
@@ -147,7 +136,7 @@ class _ChatHomeState extends State<ChatHome> {
                             Image.network(serverUri.replace(path: '/avatar/room/${r.channelList[index].id}').toString()) :
                             const Icon(Icons.group)),
                         dense: true,
-                        selected: channel.id == r.channelList[index].id,
+                        selected: channelId == r.channelList[index].id,
                       );
                     },
                   ),
@@ -158,7 +147,7 @@ class _ChatHomeState extends State<ChatHome> {
             });
         break;
       case 1:
-        return ChatView(authRC: widget.authRC, channel: channel, notificationStream: notificationStream);
+        return ChatView(authRC: widget.authRC, channelId: channelId, notificationStream: notificationStream);
         //return Container();
         break;
     }
@@ -171,12 +160,12 @@ class _ChatHomeState extends State<ChatHome> {
     });
   }
 
-  _setChannel(int _index, Channel _channel) {
+  _setChannel(String _channelId) {
+    print('**** setChannel=$_channelId');
     setState(() {
-      channel = _channel;
+      channelId = _channelId;
       _selectedPage = 1;
     });
-    debugPrint("channel name=" + channel.name);
   }
 
   _getChannelList() {
@@ -187,8 +176,7 @@ class _ChatHomeState extends State<ChatHome> {
   }
 
   void _sendMessage(String msg) {
-    webSocketService.sendMessageOnChannel(msg, webSocketChannel, channel);
-    webSocketService.sendMessageOnRoom(msg, webSocketChannel, room);
+    webSocketService.sendMessageOnChannel(msg, webSocketChannel, channelId);
   }
 
   @override

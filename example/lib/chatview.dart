@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
-import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
@@ -25,9 +24,9 @@ import 'package:rocket_chat_connector_flutter/services/http_service.dart' as roc
 class ChatView extends StatefulWidget {
   final Stream<rocket_notification.Notification> notificationStream;
   final Authentication authRC;
-  final Channel channel;
+  final String channelId;
 
-  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.channel}) : super(key: key);
+  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.channelId}) : super(key: key);
 
   @override
   _ChatViewState createState() => _ChatViewState();
@@ -136,7 +135,7 @@ class _ChatViewState extends State<ChatView> {
   }
 
   _buildChatItem(Message message, int index) {
-    log("msg=" + index.toString() + message.toString());
+    //log("msg=" + index.toString() + message.toString());
     bool specialMessage = message.t != null;
     String url = message.user.avatarUrl == null ?
                     serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
@@ -211,7 +210,7 @@ class _ChatViewState extends State<ChatView> {
     if (_teController.text.isNotEmpty) {
       final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
       MessageService messageService = MessageService(rocketHttpService);
-      MessageNew msg = MessageNew(channel: widget.channel.id, roomId: widget.channel.name, text: _teController.text);
+      MessageNew msg = MessageNew(roomId: widget.channelId, text: _teController.text);
       MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
       _teController.text = '';
       setState(() {
@@ -229,7 +228,7 @@ class _ChatViewState extends State<ChatView> {
     if (pickedFile != null) {
       File file = File(pickedFile.path);
       String desc= await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
-      Message newMessage = await messageService.roomImageUpload(widget.channel.id, widget.authRC, file, desc: desc);
+      Message newMessage = await messageService.roomImageUpload(widget.channelId, widget.authRC, file, desc: desc);
       setState(() {
         chatData.add(newMessage);
       });
@@ -241,7 +240,7 @@ class _ChatViewState extends State<ChatView> {
   Future<ChannelMessages> _getChannelMessages(int count, int offset) {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     ChannelService channelService = ChannelService(rocketHttpService);
-    ChannelHistoryFilter filter = ChannelHistoryFilter(widget.channel, count: count, offset: offset);
+    ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.channelId, count: count, offset: offset);
     Future<ChannelMessages> messages = channelService.history(filter, widget.authRC);
     return messages;
   }

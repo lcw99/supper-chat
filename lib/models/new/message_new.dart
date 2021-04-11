@@ -6,7 +6,6 @@ import 'package:rocket_chat_connector_flutter/models/message_attachment.dart';
 class MessageNew {
   String? alias;
   String? avatar;
-  String? channel;
   String? emoji;
   String? roomId;
   String? text;
@@ -15,7 +14,6 @@ class MessageNew {
   MessageNew({
     this.alias,
     this.avatar,
-    this.channel,
     this.emoji,
     this.roomId,
     this.text,
@@ -26,7 +24,6 @@ class MessageNew {
     if (json != null) {
       alias = json['alias'];
       avatar = json['avatar'];
-      channel = json['channel'];
       emoji = json['emoji'];
       roomId = json['roomId'];
       text = json['text'];
@@ -55,9 +52,6 @@ class MessageNew {
     if (avatar != null) {
       map['avatar'] = avatar;
     }
-    if (channel != null) {
-      map['channel'] = channel;
-    }
     if (emoji != null) {
       map['emoji'] = emoji;
     }
@@ -80,7 +74,7 @@ class MessageNew {
 
   @override
   String toString() {
-    return 'MessageNew{alias: $alias, avatar: $avatar, channel: $channel, emoji: $emoji, roomId: $roomId, text: $text, attachments: $attachments}';
+    return 'MessageNew{alias: $alias, avatar: $avatar, emoji: $emoji, roomId: $roomId, text: $text, attachments: $attachments}';
   }
 
   @override
@@ -90,7 +84,6 @@ class MessageNew {
           runtimeType == other.runtimeType &&
           alias == other.alias &&
           avatar == other.avatar &&
-          channel == other.channel &&
           emoji == other.emoji &&
           roomId == other.roomId &&
           text == other.text &&
@@ -100,7 +93,6 @@ class MessageNew {
   int get hashCode =>
       alias.hashCode ^
       avatar.hashCode ^
-      channel.hashCode ^
       emoji.hashCode ^
       roomId.hashCode ^
       text.hashCode ^

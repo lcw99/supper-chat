@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FBA;
@@ -20,6 +22,7 @@ import 'chathome.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _initNotification();
   runApp(SuperChat());
 }
 
@@ -31,13 +34,60 @@ final rocket_http_service.HttpService rocketHttpService = rocket_http_service.Ht
 
 final authFirebase = FBA.FirebaseAuth.instance;
 final googleSignIn = GoogleSignIn();
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+final navGlobalKey = new GlobalKey<NavigatorState>();
+String notificationPayload;
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // If you're going to use other Firebase services in the background, such as Firestore,
   // make sure you call `initializeApp` before using other Firebase services.
   await Firebase.initializeApp();
 
+  _androidNotification(message);
+
   print("Handling a background message: ${message.data}");
+}
+
+_androidNotification(RemoteMessage message) async {
+  const AndroidNotificationDetails androidPlatformChannelSpecifics =
+  AndroidNotificationDetails(
+      'Super Chat', 'Super Chat', 'Super Chat',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false);
+  const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+  String _payload;
+  if (message.data['ejson'] != null)
+    _payload = message.data['ejson'];
+  await flutterLocalNotificationsPlugin.show(
+      0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: _payload);
+}
+
+Future<void> _onSelectNotification(String payload) async {
+  print("onSelectNotification payload=$payload");
+  navGlobalKey.currentState.push(MaterialPageRoute(builder: (context) => LoginHome()));
+  notificationPayload = payload;
+}
+
+Future<void> onDidReceiveLocalNotification(int id, String title, String body, String payload) async {
+}
+
+_initNotification() async {
+  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_notification');
+  final IOSInitializationSettings initializationSettingsIOS = IOSInitializationSettings(onDidReceiveLocalNotification: onDidReceiveLocalNotification);
+  final MacOSInitializationSettings initializationSettingsMacOS = MacOSInitializationSettings();
+  final InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+      macOS: initializationSettingsMacOS);
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings, onSelectNotification: _onSelectNotification);
+  notificationPayload = null;
+
+  final notificationAppLaunchDetails = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+  if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+    notificationPayload = notificationAppLaunchDetails.payload;
+    print("=============== called from notification = $notificationPayload");
+  }
 }
 
 class SuperChat extends StatelessWidget {
@@ -47,27 +97,27 @@ class SuperChat extends StatelessWidget {
 
     return MaterialApp(
       title: title,
+      navigatorKey: navGlobalKey,
       home: MainHome(),
     );
   }
 }
 
-class MainHome extends StatelessWidget {
-  // Define an async function to initialize FlutterFire
+class MainHome extends StatefulWidget {
+  const MainHome({Key key}) : super(key: key);
 
+  @override
+  State<StatefulWidget> createState() {
+    return _MainHome();
+  }
+}
+
+class _MainHome extends State<MainHome> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Fluttergram',
+      title: 'Super Chat',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or press Run > Flutter Hot Reload in IntelliJ). Notice that the
-        // counter didn't reset back to zero; the application is not restarted.
           primarySwatch: Colors.blue,
           buttonColor: Colors.pink,
           primaryIconTheme: IconThemeData(color: Colors.black)),
@@ -77,12 +127,15 @@ class MainHome extends StatelessWidget {
 }
 
 class LoginHome extends StatefulWidget {
+  LoginHome({Key key, this.title}) : super(key: key);
+
   final String title;
 
-  LoginHome({Key key, @required this.title}) : super(key: key);
-
   @override
-  _LoginHomeState createState() => _LoginHomeState();
+  _LoginHomeState createState() {
+    print('_LoginHomeState createState payload=$notificationPayload');
+    return _LoginHomeState();
+  }
 }
 
 class _LoginHomeState extends State<LoginHome> {
@@ -91,8 +144,6 @@ class _LoginHomeState extends State<LoginHome> {
   bool firebaseInitialized = false;
 
   String firebaseToken;
-  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
 
   Future<Null> _ensureLoggedIn(BuildContext context) async {
     GoogleSignInAccount user = googleSignIn.currentUser;
@@ -143,7 +194,6 @@ class _LoginHomeState extends State<LoginHome> {
     }
   }
 
-
   Future<FirebaseApp> initializeFlutterFire() async {
     debugPrint("start flutter fire...");
 
@@ -183,28 +233,10 @@ class _LoginHomeState extends State<LoginHome> {
         print('Message also contained a notification: ${message.notification}');
       }
 
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-      AndroidNotificationDetails(
-          'Super Chat', 'Super Chat', 'Super Chat',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: false);
-      const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-      await flutterLocalNotificationsPlugin.show(
-          0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: 'item x');
+      _androidNotification(message);
     });
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    // initialise the plugin. app_icon needs to be a added as a drawable resource to the Android head project
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_notification');
-    final IOSInitializationSettings initializationSettingsIOS = IOSInitializationSettings(onDidReceiveLocalNotification: onDidReceiveLocalNotification);
-    final MacOSInitializationSettings initializationSettingsMacOS = MacOSInitializationSettings();
-    final InitializationSettings initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
-        iOS: initializationSettingsIOS,
-        macOS: initializationSettingsMacOS);
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings, onSelectNotification: selectNotification);
 
     return app;
   }
@@ -269,7 +301,9 @@ class _LoginHomeState extends State<LoginHome> {
               user = auth.data.me;
 
               registerToken(auth);
-              return ChatHome(title: 'Super Chat', user: user, authRC: auth);
+              var _np = notificationPayload;
+              notificationPayload = null;
+              return ChatHome(title: 'Super Chat', user: user, authRC: auth, payload: _np,);
               //return Container();
             } else {
               return Center(child: CircularProgressIndicator());
@@ -320,10 +354,5 @@ class _LoginHomeState extends State<LoginHome> {
     });
   }
 
-  Future onDidReceiveLocalNotification(int id, String title, String body, String payload) {
-  }
-
-  Future selectNotification(String payload) {
-  }
 }
 

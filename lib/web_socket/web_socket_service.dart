@@ -97,13 +97,13 @@ class WebSocketService {
   }
 
   void sendMessageOnChannel(
-      String message, WebSocketChannel webSocketChannel, Channel channel) {
+      String message, WebSocketChannel webSocketChannel, String channelId) {
     Map msg = {
       "msg": "method",
       "method": "sendMessage",
       "id": "42",
       "params": [
-        {"rid": channel.id, "msg": message}
+        {"rid": channelId, "msg": message}
       ]
     };
 
