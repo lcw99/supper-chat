@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FBA;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -90,6 +91,8 @@ class _LoginHomeState extends State<LoginHome> {
   bool firebaseInitialized = false;
 
   String firebaseToken;
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
 
   Future<Null> _ensureLoggedIn(BuildContext context) async {
     GoogleSignInAccount user = googleSignIn.currentUser;
@@ -162,7 +165,7 @@ class _LoginHomeState extends State<LoginHome> {
     // Used to get the current FCM token
     firebaseToken = await _messaging.getToken();
     print('Token: $firebaseToken');
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
       print('Got a message whilst in the foreground!');
       print('Message data: ${message.data}');
 
@@ -179,9 +182,29 @@ class _LoginHomeState extends State<LoginHome> {
       if (message.notification != null) {
         print('Message also contained a notification: ${message.notification}');
       }
+
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+      AndroidNotificationDetails(
+          'Super Chat', 'Super Chat', 'Super Chat',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: false);
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+      await flutterLocalNotificationsPlugin.show(
+          0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: 'item x');
     });
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // initialise the plugin. app_icon needs to be a added as a drawable resource to the Android head project
+    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_notification');
+    final IOSInitializationSettings initializationSettingsIOS = IOSInitializationSettings(onDidReceiveLocalNotification: onDidReceiveLocalNotification);
+    final MacOSInitializationSettings initializationSettingsMacOS = MacOSInitializationSettings();
+    final InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+        macOS: initializationSettingsMacOS);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings, onSelectNotification: selectNotification);
 
     return app;
   }
@@ -295,6 +318,12 @@ class _LoginHomeState extends State<LoginHome> {
       });
       debugPrint("inited flutter fire...");
     });
+  }
+
+  Future onDidReceiveLocalNotification(int id, String title, String body, String payload) {
+  }
+
+  Future selectNotification(String payload) {
   }
 }
 

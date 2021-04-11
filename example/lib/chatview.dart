@@ -1,11 +1,10 @@
-import 'dart:convert';
 import 'dart:developer';
-
-import 'package:http/http.dart' as http;
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
@@ -18,7 +17,10 @@ import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:rocket_chat_connector_flutter/web_socket/notification_type.dart';
+import 'package:superchat/input_file_desc.dart';
 import 'constants/constants.dart';
+
+import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 
 class ChatView extends StatefulWidget {
   final Stream<rocket_notification.Notification> notificationStream;
@@ -38,6 +40,7 @@ class _ChatViewState extends State<ChatView> {
 
   List<Message> chatData = [];
   bool historyEnd = false;
+  final picker = ImagePicker();
 
   @override
   void initState() {
@@ -112,9 +115,16 @@ class _ChatViewState extends State<ChatView> {
                       ),
                     )),
                     InkWell(
+                      onTap: _pickImage,
+                      child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
+                    ),
+                    Container(
+                      margin: EdgeInsets.only(left: 10),
+                        child:
+                    InkWell(
                       onTap: _postMessage,
-                      child: Icon(Icons.send, color: Colors.blueAccent,),
-                    ), // This trailing comma makes auto-formatting nicer for build methods.
+                      child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
+                    )),
                   ])
                   )
               ]),
@@ -142,6 +152,7 @@ class _ChatViewState extends State<ChatView> {
     return ListTile(
       dense: true,
       leading: Container(
+          alignment: Alignment.centerLeft,
           width: specialMessage ? 20 : 40,
           height: specialMessage ? 20 : 40,
           child: Image.network(url)
@@ -193,11 +204,12 @@ class _ChatViewState extends State<ChatView> {
       'X-Auth-Token': widget.authRC.data.authToken,
       'X-User-Id': widget.authRC.data.userId
     };
-    return Image.network(serverUri.replace(path: imagePath).toString(), headers: header, fit: BoxFit.fitWidth, width: 200,);
+    return Image.network(serverUri.replace(path: imagePath).toString(), headers: header, fit: BoxFit.fitHeight, height: 130,);
   }
 
   Future<void> _postMessage() async {
     if (_teController.text.isNotEmpty) {
+      final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
       MessageService messageService = MessageService(rocketHttpService);
       MessageNew msg = MessageNew(channel: widget.channel.id, roomId: widget.channel.name, text: _teController.text);
       MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
@@ -208,7 +220,26 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+    MessageService messageService = MessageService(rocketHttpService);
+
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      File file = File(pickedFile.path);
+      String desc= await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
+      Message newMessage = await messageService.roomImageUpload(widget.channel.id, widget.authRC, file, desc: desc);
+      setState(() {
+        chatData.add(newMessage);
+      });
+    } else {
+      print('No image selected.');
+    }
+  }
+
   Future<ChannelMessages> _getChannelMessages(int count, int offset) {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     ChannelService channelService = ChannelService(rocketHttpService);
     ChannelHistoryFilter filter = ChannelHistoryFilter(widget.channel, count: count, offset: offset);
     Future<ChannelMessages> messages = channelService.history(filter, widget.authRC);

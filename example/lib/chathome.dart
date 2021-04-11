@@ -15,6 +15,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'constants/constants.dart';
+import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 
 import 'chatview.dart';
 
@@ -179,6 +180,7 @@ class _ChatHomeState extends State<ChatHome> {
   }
 
   _getChannelList() {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     ChannelService channelService = ChannelService(rocketHttpService);
     Future<ChannelListResponse> respChannelList = channelService.list(widget.authRC);
     return respChannelList;

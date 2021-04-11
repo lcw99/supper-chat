@@ -55,6 +55,10 @@ class HttpService {
 
     return header;
   }
+
+  Uri? getUri() {
+    return _apiUrl;
+  }
 }
 
 String _urlEncode(Map object) {

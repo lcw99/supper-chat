@@ -10,8 +10,7 @@ import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/services/authentication_service.dart';
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
-import 'package:rocket_chat_connector_flutter/services/http_service.dart'
-    as rocket_http_service;
+import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/subscription_service.dart';
 
