@@ -11,6 +11,7 @@ import 'package:rocket_chat_connector_flutter/models/filters/channel_history_fil
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/new/message_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/message_new_response.dart';
+import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
@@ -26,8 +27,9 @@ class ChatView extends StatefulWidget {
   final Stream<rocket_notification.Notification> notificationStream;
   final Authentication authRC;
   final model.Room room;
+  final User me;
 
-  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room}) : super(key: key);
+  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room, @required this.me}) : super(key: key);
 
   @override
   _ChatViewState createState() => _ChatViewState();
@@ -64,7 +66,19 @@ class _ChatViewState extends State<ChatView> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
+    String title = widget.room.id;
+    if (widget.room.name != null)
+      title = widget.room.name;
+    else if (widget.room.usernames != null)
+      title = widget.room.usernames.toString();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+      ),
+
+      body: Column(children: <Widget>[
+      FutureBuilder(
         future: _getChannelMessages(chatItemCount, chatItemOffset),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
           if (snapshot.hasData) {
@@ -144,7 +158,7 @@ class _ChatViewState extends State<ChatView> {
           } else
             return Container();
         }
-    );
+    )]));
   }
 
   _buildChatItem(Message message, int index) {
@@ -162,6 +176,9 @@ class _ChatViewState extends State<ChatView> {
       case 'room_changed_description': newMessage = '$userName change room description'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
     }
+    Color userNameColor = Colors.brown;
+    if (message.user.id == widget.me.id)
+      userNameColor = Colors.green.shade900;
     return ListTile(
       dense: true,
       leading: Container(
@@ -172,7 +189,7 @@ class _ChatViewState extends State<ChatView> {
       ),
       title: Text(
         userName + '(' + index.toString() +')',
-        style: TextStyle(fontSize: 10, color: Colors.brown),
+        style: TextStyle(fontSize: 10, color: userNameColor),
         textAlign: TextAlign.left,
       ),
       subtitle: _buildMessage(message, userName, newMessage),

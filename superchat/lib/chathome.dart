@@ -144,7 +144,11 @@ class _ChatHomeState extends State<ChatHome> {
                         }
                       }
                       return ListTile(
-                        onTap: () { _setChannel(room); },
+                        onTap: () {
+                          _setChannel(room);
+                          Navigator.push(context, MaterialPageRoute(builder:
+                              (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user,)));
+                        },
                         title: Text(roomName, style: TextStyle(color: Colors.black)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,8 +177,7 @@ class _ChatHomeState extends State<ChatHome> {
             });
         break;
       case 1:
-        return ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream,);
-        //return Container();
+        return Container();
         break;
     }
   }
@@ -196,7 +199,7 @@ class _ChatHomeState extends State<ChatHome> {
     print('**** setChannel=${room.id}');
     setState(() {
       selectedRoom = room;
-      selectedPage = 1;
+      //selectedPage = 1;
     });
   }
 
