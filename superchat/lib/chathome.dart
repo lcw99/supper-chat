@@ -42,10 +42,9 @@ class ChatHome extends StatefulWidget {
 }
 
 class _ChatHomeState extends State<ChatHome> {
-  int _selectedPage = 0;
+  int selectedPage = 0;
 
-  String channelId = '';
-  String channelName = '';
+  model.Room selectedRoom;
 
   bool firebaseInitialized = false;
 
@@ -78,9 +77,10 @@ class _ChatHomeState extends State<ChatHome> {
     print('**** payload= ${widget.payload}');
     if (widget.payload != null) {
       var json = jsonDecode(widget.payload);
-      if (json['rid'] != null) {
-        print('**** rid= ${json['rid']}');
-        _setChannel(json['rid'], json['name']);
+      String _rid = json['rid'];
+      if (_rid != null) {
+        print('**** rid= $_rid');
+        _setChannelById(_rid);
       }
     }
 
@@ -90,7 +90,7 @@ class _ChatHomeState extends State<ChatHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(channelName != null && channelName != '' ? channelName : widget.title),
+        title: Text(widget.title),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -114,7 +114,7 @@ class _ChatHomeState extends State<ChatHome> {
             backgroundColor: Colors.green,
           ),
         ],
-        currentIndex: _selectedPage,
+        currentIndex: selectedPage,
         selectedItemColor: Colors.amber[800],
         onTap: _onBottomNaviTapped,
       ),
@@ -122,8 +122,8 @@ class _ChatHomeState extends State<ChatHome> {
   }
 
   _buildPage() {
-    debugPrint("_buildPage=" + _selectedPage.toString());
-    switch(_selectedPage) {
+    debugPrint("_buildPage=" + selectedPage.toString());
+    switch(selectedPage) {
       case 0:
         return FutureBuilder<List<model.Room>>(
             //future: _getChannelList(),
@@ -144,7 +144,7 @@ class _ChatHomeState extends State<ChatHome> {
                         }
                       }
                       return ListTile(
-                        onTap: () { _setChannel(room.id, room.name); },
+                        onTap: () { _setChannel(room); },
                         title: Text(roomName, style: TextStyle(color: Colors.black)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +162,7 @@ class _ChatHomeState extends State<ChatHome> {
                             Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(), fit: BoxFit.fitWidth,) :
                             const Icon(Icons.group)),
                         dense: true,
-                        selected: channelId == room.id,
+                        selected: selectedRoom != null ? selectedRoom.id == room.id : false,
                       );
                     },
                   ),
@@ -173,33 +173,30 @@ class _ChatHomeState extends State<ChatHome> {
             });
         break;
       case 1:
-        return ChatView(authRC: widget.authRC, channelId: channelId, notificationStream: notificationStream);
+        return ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream,);
         //return Container();
         break;
     }
   }
 
-  _getChannelUnreadCount(String channelId, ) async {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    ChannelService channelService = ChannelService(rocketHttpService);
-    ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: channelId, count: 1, offset: 0, unreads: true);
-    var messages = await channelService.history(filter, widget.authRC);
-    log('_getChannelUnreadCount =========== $messages');
-  }
-
   void _onBottomNaviTapped(int index) {
     debugPrint("_onBottomNaviTapped =" + index.toString());
     setState(() {
-      _selectedPage = index;
+      selectedPage = index;
     });
   }
 
-  _setChannel(String _channelId, String _channelName) {
-    print('**** setChannel=$_channelId');
+  _setChannelById(String rid) async {
+    db.Room dbRoom = await locator<db.ChatDatabase>().getRoom(rid);
+    model.Room room = model.Room.fromMap(jsonDecode(dbRoom.info));
+    _setChannel(room);
+  }
+
+  _setChannel(model.Room room) {
+    print('**** setChannel=${room.id}');
     setState(() {
-      channelId = _channelId;
-      channelName = _channelName;
-      _selectedPage = 1;
+      selectedRoom = room;
+      selectedPage = 1;
     });
   }
 
@@ -243,10 +240,6 @@ class _ChatHomeState extends State<ChatHome> {
     }
 
     return roomList;
-  }
-
-  void _sendMessage(String msg) {
-    webSocketService.sendMessageOnChannel(msg, webSocketChannel, channelId);
   }
 
   @override

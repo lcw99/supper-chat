@@ -80,9 +80,12 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<ChannelMessages> history(ChannelHistoryFilter filter, Authentication authentication) async {
+  Future<ChannelMessages> roomHistory(ChannelHistoryFilter filter, Authentication authentication, String roomType) async {
+    String path = '/api/v1/channels.history';
+    if (roomType == 'd')
+      path = '/api/v1/im.history';
     http.Response response = await _httpService.getWithFilter(
-      '/api/v1/channels.history',
+      path,
       filter,
       authentication,
     );
