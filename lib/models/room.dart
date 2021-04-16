@@ -28,6 +28,8 @@ class Room {
     this.avatarETag,
     this.topic,
     this.announcement,
+    this.usernames,
+    this.uids,
   });
 
   String? id;
@@ -48,6 +50,8 @@ class Room {
   String? avatarETag;
   String? topic;
   String? announcement;
+  List<String>? usernames;
+  List<String>? uids;
 
   factory Room.fromMap(Map<String, dynamic> json) => Room(
     id: json["_id"] == null ? null : json["_id"],
@@ -68,6 +72,8 @@ class Room {
     avatarETag: json["avatarETag"] == null ? null : json["avatarETag"],
     topic: json["topic"] == null ? null : json["topic"],
     announcement: json["announcement"] == null ? null : json["announcement"],
+    usernames: json["usernames"] == null ? null : List<String>.from(json["usernames"].map((x) => x)),
+    uids: json["uids"] == null ? null : List<String>.from(json["uids"].map((x) => x)),
   );
 
   Map<String, dynamic> toMap() => {
@@ -89,6 +95,8 @@ class Room {
     "avatarETag": avatarETag == null ? null : avatarETag,
     "topic": topic == null ? null : topic,
     "announcement": announcement == null ? null : announcement,
+    "usernames": usernames == null ? null : List<dynamic>.from(usernames!.map((x) => x)),
+    "uids": uids == null ? null : List<dynamic>.from(uids!.map((x) => x)),
   };
 }
 
