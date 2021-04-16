@@ -71,6 +71,14 @@ class SubscriptionUpdate {
 
   @override
   String toString() {
-    return 'SubscriptionUpdate{id: $id, open: $open, alert: $alert, unread: $unread, userMentions: $userMentions, groupMentions: $groupMentions, ts: $ts, rid: $rid, name: $name, fName: $fName, t: $t, u: $u, ls: $ls, updatedAt: $updatedAt, roles: $roles}';
+    return jsonEncode(this);
+    //return 'SubscriptionUpdate{id: $id, open: $open, alert: $alert, unread: $unread, userMentions: $userMentions, groupMentions: $groupMentions, ts: $ts, rid: $rid, name: $name, fName: $fName, t: $t, u: $u, ls: $ls, updatedAt: $updatedAt, roles: $roles}';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+          other is SubscriptionUpdate &&
+              rid == other.rid;
+
 }
