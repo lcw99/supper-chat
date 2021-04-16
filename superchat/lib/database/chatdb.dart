@@ -65,6 +65,7 @@ class ChatDatabase extends _$ChatDatabase {
   Future<List<Room>> get getAllRooms => select(rooms).get();
   Future upsertRoom(Room room) => into(rooms).insertOnConflictUpdate(room);
   Future deleteRoom(String _rid) => (delete(rooms)..where((t) => t.rid.equals(_rid))).go();
+  Future<Room> getRoom(String _rid) => (select(rooms)..where((t) => t.rid.equals(_rid))).getSingleOrNull();
 
   Future<KeyValue> getValueByKey(String key) {
     return (select(keyValues)..where((t) => t.key.equals(key))).getSingleOrNull();

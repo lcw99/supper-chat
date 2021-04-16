@@ -20,13 +20,14 @@ import 'package:superchat/input_file_desc.dart';
 import 'constants/constants.dart';
 
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
+import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 
 class ChatView extends StatefulWidget {
   final Stream<rocket_notification.Notification> notificationStream;
   final Authentication authRC;
-  final String channelId;
+  final model.Room room;
 
-  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.channelId}) : super(key: key);
+  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room}) : super(key: key);
 
   @override
   _ChatViewState createState() => _ChatViewState();
@@ -45,7 +46,7 @@ class _ChatViewState extends State<ChatView> {
   void initState() {
     widget.notificationStream.listen((event) {
       if (event.msg == NotificationType.CHANGED) {
-        if (event.fields.args.length > 0 && event.fields.args[0].payload.rid == widget.channelId) {
+        if (event.fields.args.length > 0 && event.fields.args[0].payload.rid == widget.room.id) {
           setState(() {
             chatItemOffset = 0;
           });
@@ -78,8 +79,8 @@ class _ChatViewState extends State<ChatView> {
 
               final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
               ChannelService channelService = ChannelService(rocketHttpService);
-              channelService.markAsRead(widget.channelId, widget.authRC);
-              debugPrint("----------- mark channel(${widget.channelId}) as read");
+              channelService.markAsRead(widget.room.id, widget.authRC);
+              debugPrint("----------- mark channel(${widget.room.id}) as read");
             } else {
               historyEnd = true;
             }
@@ -223,7 +224,7 @@ class _ChatViewState extends State<ChatView> {
     if (_teController.text.isNotEmpty) {
       final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
       MessageService messageService = MessageService(rocketHttpService);
-      MessageNew msg = MessageNew(roomId: widget.channelId, text: _teController.text);
+      MessageNew msg = MessageNew(roomId: widget.room.id, text: _teController.text);
       MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
       _teController.text = '';
       setState(() {
@@ -241,7 +242,7 @@ class _ChatViewState extends State<ChatView> {
     if (pickedFile != null) {
       File file = File(pickedFile.path);
       String desc= await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
-      Message newMessage = await messageService.roomImageUpload(widget.channelId, widget.authRC, file, desc: desc);
+      Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
       setState(() {
         chatData.add(newMessage);
       });
@@ -253,8 +254,8 @@ class _ChatViewState extends State<ChatView> {
   Future<ChannelMessages> _getChannelMessages(int count, int offset) {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     ChannelService channelService = ChannelService(rocketHttpService);
-    ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.channelId, count: count, offset: offset);
-    Future<ChannelMessages> messages = channelService.history(filter, widget.authRC);
+    ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
+    Future<ChannelMessages> messages = channelService.roomHistory(filter, widget.authRC, widget.room.t);
     return messages;
   }
 }
