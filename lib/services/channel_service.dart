@@ -11,10 +11,13 @@ import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_counters_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
+import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/new/channel_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_new_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
+import 'package:rocket_chat_connector_flutter/models/room_update.dart';
+import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart';
 
 class ChannelService {
@@ -58,8 +61,8 @@ class ChannelService {
   }
 
   Future<bool> markAsRead(
-      Channel channel, Authentication authentication) async {
-    Map<String, String?> body = {"rid": channel.id};
+      String channelId, Authentication authentication) async {
+    Map<String, String?> body = {"rid": channelId};
 
     http.Response response = await _httpService.post(
       '/api/v1/subscriptions.read',
@@ -85,7 +88,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    //log("channels.history resp=$resp");
+    log("channels.history resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));
@@ -123,9 +126,65 @@ class ChannelService {
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return ChannelListResponse.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
+        var resp = utf8.decode(response.bodyBytes);
+        log("channels.list resp=$resp");
+        return ChannelListResponse.fromMap(jsonDecode(resp));
       } else {
         return ChannelListResponse();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<Subscription> getSubscriptions(Authentication authentication, UpdatedSinceFilter? updateSince) async {
+    http.Response response;
+    if (updateSince != null) {
+      response = await _httpService.get(
+        '/api/v1/subscriptions.get',
+        authentication,
+      );
+    } else {
+      response = await _httpService.getWithFilter(
+        '/api/v1/subscriptions.get',
+        updateSince!,
+        authentication,
+      );
+    }
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        var resp = utf8.decode(response.bodyBytes);
+        //log("channels.list resp=$resp");
+        return Subscription.fromMap(jsonDecode(resp));
+      } else {
+        return Subscription();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<RoomUpdate> getRooms(Authentication authentication, UpdatedSinceFilter? updateSince) async {
+    http.Response response;
+    if (updateSince == null) {
+      response = await _httpService.get(
+        '/api/v1/rooms.get',
+        authentication,
+      );
+    } else {
+      response = await _httpService.getWithFilter(
+        '/api/v1/rooms.get',
+        updateSince,
+        authentication,
+      );
+    }
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        var resp = utf8.decode(response.bodyBytes);
+        log("getRooms resp=$resp");
+        return RoomUpdate.fromMap(jsonDecode(resp));
+      } else {
+        return RoomUpdate();
       }
     }
     throw RocketChatException(response.body);

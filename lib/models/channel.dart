@@ -10,6 +10,9 @@ class Channel {
   User? user;
   DateTime? ts;
   String? avatarETag;
+  String? description;
+  String? topic;
+  String? announcement;
 
   Channel({
     this.id,
@@ -20,6 +23,9 @@ class Channel {
     this.user,
     this.ts,
     this.avatarETag,
+    this.description,
+    this.topic,
+    this.announcement,
   });
 
   Channel.fromMap(Map<String, dynamic>? json) {
@@ -32,6 +38,9 @@ class Channel {
       user = json['u'] != null ? User.fromMap(json['u']) : null;
       ts = DateTime.parse(json['ts']);
       avatarETag = json['avatarETag'];
+      description = json['description'];
+      topic = json['topic'];
+      announcement = json['announcement'];
     }
   }
 
@@ -44,26 +53,22 @@ class Channel {
         'u': user != null ? user!.toMap() : null,
         'ts': ts != null ? ts!.toIso8601String() : null,
         'avatarETag': avatarETag,
+        'description': description,
+        'topic': topic,
+        'announcement': announcement,
       };
 
   @override
   String toString() {
-    return 'Channel{_id: $id, name: $name, t: $t, usernames: $usernames, msgs: $msgs, user: $user, ts: $ts, avatarETag: $avatarETag}';
+    return 'Channel{_id: $id, name: $name, t: $t, usernames: $usernames, msgs: $msgs, user: $user, ts: $ts, '
+        'avatarETag: $avatarETag}, description: $description, topic: $topic, announcement: $announcement';
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is Channel &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          name == other.name &&
-          avatarETag == other.avatarETag &&
-          t == other.t &&
-          DeepCollectionEquality().equals(usernames, other.usernames) &&
-          msgs == other.msgs &&
-          user == other.user &&
-          ts == other.ts;
+          id == other.id;
 
   @override
   int get hashCode =>
@@ -74,5 +79,8 @@ class Channel {
       msgs.hashCode ^
       user.hashCode ^
       avatarETag.hashCode ^
+      description.hashCode ^
+      topic.hashCode ^
+      announcement.hashCode ^
       ts.hashCode;
 }

@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1018422454473",
+    "project_id": "rocketchat-3a145",
+    "storage_bucket": "rocketchat-3a145.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1018422454473:android:db3ef3316f8f10ffdc8518",
+        "android_client_info": {
+          "package_name": "co.smallet.superchat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1018422454473-afa9fck2gt71cft3tmj27g39np49l75a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.smallet.superchat",
+            "certificate_hash": "2dc07e1a4e48ad5857c0e0f7fe87115cd0da730b"
+          }
+        },
+        {
+          "client_id": "1018422454473-qtc707himddnnnblg8kssh9bqucp39pl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.smallet.superchat",
+            "certificate_hash": "a9270a28b8127cb2cfb0ac50a4bf4cbccc218556"
+          }
+        },
+        {
+          "client_id": "1018422454473-b13472mituo8180iog5huq06sl95i5jh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDplzE4EfZKY6wlJij4kfaDZNqI6J7pxsk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1018422454473-b13472mituo8180iog5huq06sl95i5jh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
