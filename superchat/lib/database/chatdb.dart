@@ -13,7 +13,6 @@ const String lastUpdate = 'lastUpdate';
 
 class Rooms extends Table {
   TextColumn get rid => text()();
-  TextColumn get name => text()();
   TextColumn get info => text()();
 
   @override
@@ -49,7 +48,19 @@ class ChatDatabase extends _$ChatDatabase {
   // you should bump this number whenever you change or add a table definition. Migrations
   // are covered later in this readme.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+      onCreate: (Migrator m) {
+        return m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from == 1) {
+          await m.alterTable(TableMigration(rooms));
+        }
+      }
+  );
 
   Future<List<Room>> get getAllRooms => select(rooms).get();
   Future upsertRoom(Room room) => into(rooms).insertOnConflictUpdate(room);

@@ -90,7 +90,7 @@ class _ChatHomeState extends State<ChatHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(channelName != '' ? channelName : widget.title),
+        title: Text(channelName != null && channelName != '' ? channelName : widget.title),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -137,9 +137,15 @@ class _ChatHomeState extends State<ChatHome> {
                     itemCount: roomList.length,
                     itemBuilder: (context, index)  {
                       model.Room room = roomList[index];
+                      String roomName = room.name;
+                      if (roomName == null) {
+                        if (room.t == 'd') {
+                          roomName = room.usernames.toString();
+                        }
+                      }
                       return ListTile(
                         onTap: () { _setChannel(room.id, room.name); },
-                        title: Text(room.name, style: TextStyle(color: Colors.black)),
+                        title: Text(roomName, style: TextStyle(color: Colors.black)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
@@ -224,11 +230,13 @@ class _ChatHomeState extends State<ChatHome> {
       print('room updated');
       await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
       for (model.Room mr in updatedRoom) {
-        await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, name: mr.name, info: jsonEncode(mr.toMap())));
+        String info = jsonEncode(mr.toMap());
+        await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, info: info));
       }
     }
 
     var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
+    print('dbRooms = ${dbRooms.length}');
     List<model.Room> roomList = [];
     for (db.Room dr in dbRooms) {
       roomList.add(model.Room.fromMap(jsonDecode(dr.info)));
