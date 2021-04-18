@@ -6,21 +6,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
-import 'package:rocket_chat_connector_flutter/models/channel.dart';
-import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
-import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
-import 'package:rocket_chat_connector_flutter/web_socket/notification_args.dart';
-import 'package:rocket_chat_connector_flutter/web_socket/notification_type.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/web_socket_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
-import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'constants/constants.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
@@ -64,20 +58,29 @@ class _ChatHomeState extends State<ChatHome> {
     notificationStream = notificationController.stream;
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
     webSocketService.streamNotifyUserSubscribe(webSocketChannel, widget.user);
+    webSocketService.streamRoomNotifyAll(webSocketChannel);
     webSocketChannel.stream.listen((event) {
-      rocket_notification.Notification notification = rocket_notification.Notification.fromMap(jsonDecode(event));
-      String data = notification.toString();
-      if (notification.msg == NotificationType.PING)
+      var e = jsonDecode(event);
+      print('event=${event}');
+      rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
+      String data = jsonEncode(notification.toMap());
+      if (notification.msg == 'ping')
         webSocketService.streamChannelMessagesPong(webSocketChannel);
-      else if (notification.msg == NotificationType.CHANGED) {
+      else {
         print("***got noti= " + data);
-        notificationController.add(notification);
-        setState(() {});
+        if (notification.msg == 'changed') {
+          notificationController.add(notification);
+          setState(() {});
 
-        if (notification.fields != null && notification.fields.args != null && notification.fields.args.length > 0) {
-          NotificationArgs args = notification.fields.args[0];
-          RemoteMessage message = RemoteMessage(data: {'title': args.title, 'message': args.text, 'ejson': args.payload.toString()});
-          androidNotification(message);
+          if (notification.notificationFields != null && notification.notificationFields.notificationArgs != null &&
+              notification.notificationFields.notificationArgs.length > 0) {
+            var arg = notification.notificationFields.notificationArgs[0];
+            var ejson = arg.notificationPayload != null ? jsonEncode(arg.notificationPayload.toMap()) : null;
+            if (ejson != null) {
+              RemoteMessage message = RemoteMessage(data: {'title': arg.title, 'message': arg.text, 'ejson': ejson});
+              androidNotification(message);
+            }
+          }
         }
       }
       onError() {}
@@ -212,6 +215,7 @@ class _ChatHomeState extends State<ChatHome> {
   _setChannel(model.Room room) async {
     print('**** setChannel=${room.id}');
     selectedRoom = room;
+    webSocketService.streamRoomMessagesSubscribe(webSocketChannel, selectedRoom.id);
     bool refresh = false;
     if (room.subscription != null && room.subscription.unread > 0) {
       clearUnreadOnDB(room);

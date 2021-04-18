@@ -50,17 +50,6 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
-  void streamChannelMessagesSubscribe(
-      WebSocketChannel webSocketChannel, Channel channel) {
-    Map msg = {
-      "msg": "sub",
-      "id": channel.id! + "subscription-id",
-      "name": "stream-room-messages",
-      "params": [channel.id, false]
-    };
-    webSocketChannel.sink.add(jsonEncode(msg));
-  }
-
   void streamChannelMessagesUnsubscribe(WebSocketChannel webSocketChannel, Channel channel) {
     Map msg = {
       "msg": "unsub",
@@ -76,15 +65,28 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
-  void streamRoomMessagesSubscribe(
-      WebSocketChannel webSocketChannel, Room room) {
+  void streamRoomMessagesSubscribe(WebSocketChannel webSocketChannel, String rid) {
     Map msg = {
       "msg": "sub",
-      "id": room.id! + "subscription-id",
+      "id": "${rid}subscription-id",
       "name": "stream-room-messages",
-      "params": [room.id, false]
+      "params": ["$rid", false]
     };
-    webSocketChannel.sink.add(jsonEncode(msg));
+    var data = jsonEncode(msg);
+    print('socket=$data');
+    webSocketChannel.sink.add(data);
+  }
+
+  void streamRoomNotifyAll(WebSocketChannel webSocketChannel) {
+    Map msg = {
+      "msg": "sub",
+      "id": "subscription-id-9999",
+      "name": "stream-notify-all",
+      "params": ["event", false]
+    };
+    var data = jsonEncode(msg);
+    print('socket=$data');
+    webSocketChannel.sink.add(data);
   }
 
   void streamRoomMessagesUnsubscribe(
