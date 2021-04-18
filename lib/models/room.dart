@@ -4,6 +4,9 @@
 
 import 'dart:convert';
 
+import 'package:rocket_chat_connector_flutter/models/subscription.dart';
+import 'package:rocket_chat_connector_flutter/models/message_user.dart';
+
 Room roomFromMap(String str) => Room.fromMap(json.decode(str));
 
 String roomToMap(Room data) => json.encode(data.toMap());
@@ -30,14 +33,17 @@ class Room {
     this.announcement,
     this.usernames,
     this.uids,
+    this.subscription,
   });
+
+  Subscription? subscription;
 
   String? id;
   String? name;
   String? fname;
   String? t;
   int? usersCount;
-  RoomU? u;
+  MessageUser? u;
   CustomFields? customFields;
   bool? broadcast;
   bool? encrypted;
@@ -59,7 +65,7 @@ class Room {
     fname: json["fname"] == null ? null : json["fname"],
     t: json["t"] == null ? null : json["t"],
     usersCount: json["usersCount"] == null ? null : json["usersCount"],
-    u: json["u"] == null ? null : RoomU.fromMap(json["u"]),
+    u: json["u"] == null ? null : MessageUser.fromMap(json["u"]),
     customFields: json["customFields"] == null ? null : CustomFields.fromMap(json["customFields"]),
     broadcast: json["broadcast"] == null ? null : json["broadcast"],
     encrypted: json["encrypted"] == null ? null : json["encrypted"],
@@ -74,6 +80,7 @@ class Room {
     announcement: json["announcement"] == null ? null : json["announcement"],
     usernames: json["usernames"] == null ? null : List<String>.from(json["usernames"].map((x) => x)),
     uids: json["uids"] == null ? null : List<String>.from(json["uids"].map((x) => x)),
+    subscription: json["subscription"] == null ? null : Subscription.fromMap(json["subscription"]),
   );
 
   Map<String, dynamic> toMap() => {
@@ -97,6 +104,7 @@ class Room {
     "announcement": announcement == null ? null : announcement,
     "usernames": usernames == null ? null : List<dynamic>.from(usernames!.map((x) => x)),
     "uids": uids == null ? null : List<dynamic>.from(uids!.map((x) => x)),
+    "subscription": subscription == null ? null : subscription!.toMap(),
   };
 }
 
@@ -126,7 +134,7 @@ class LastMessage {
   String? rid;
   String? msg;
   DateTime? ts;
-  LastMessageU? u;
+  MessageUser? u;
   DateTime? updatedAt;
   List<dynamic>? mentions;
   List<dynamic>? channels;
@@ -136,7 +144,7 @@ class LastMessage {
     rid: json["rid"] == null ? null : json["rid"],
     msg: json["msg"] == null ? null : json["msg"],
     ts: json["ts"] == null ? null : DateTime.parse(json["ts"]),
-    u: json["u"] == null ? null : LastMessageU.fromMap(json["u"]),
+    u: json["u"] == null ? null : MessageUser.fromMap(json["u"]),
     updatedAt: json["_updatedAt"] == null ? null : DateTime.parse(json["_updatedAt"]),
     mentions: json["mentions"] == null ? null : List<dynamic>.from(json["mentions"].map((x) => x)),
     channels: json["channels"] == null ? null : List<dynamic>.from(json["channels"].map((x) => x)),
@@ -154,46 +162,3 @@ class LastMessage {
   };
 }
 
-class LastMessageU {
-  LastMessageU({
-    this.id,
-    this.username,
-    this.name,
-  });
-
-  String? id;
-  String? username;
-  String? name;
-
-  factory LastMessageU.fromMap(Map<String, dynamic> json) => LastMessageU(
-    id: json["_id"] == null ? null : json["_id"],
-    username: json["username"] == null ? null : json["username"],
-    name: json["name"] == null ? null : json["name"],
-  );
-
-  Map<String, dynamic> toMap() => {
-    "_id": id == null ? null : id,
-    "username": username == null ? null : username,
-    "name": name == null ? null : name,
-  };
-}
-
-class RoomU {
-  RoomU({
-    this.id,
-    this.username,
-  });
-
-  String? id;
-  String? username;
-
-  factory RoomU.fromMap(Map<String, dynamic> json) => RoomU(
-    id: json["_id"] == null ? null : json["_id"],
-    username: json["username"] == null ? null : json["username"],
-  );
-
-  Map<String, dynamic> toMap() => {
-    "_id": id == null ? null : id,
-    "username": username == null ? null : username,
-  };
-}

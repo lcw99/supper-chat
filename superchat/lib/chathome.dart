@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -9,10 +10,11 @@ import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
-import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
+import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
+import 'package:rocket_chat_connector_flutter/web_socket/notification_args.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification_type.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/web_socket_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -22,6 +24,7 @@ import 'package:rocket_chat_connector_flutter/models/response/channel_list_respo
 import 'constants/constants.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
+import 'wigets/unread_counter.dart';
 
 import 'chatview.dart';
 import 'database/chatdb.dart' as db;
@@ -43,7 +46,7 @@ class ChatHome extends StatefulWidget {
 
 class _ChatHomeState extends State<ChatHome> {
   int selectedPage = 0;
-
+  int totalUnread = 0;
   model.Room selectedRoom;
 
   bool firebaseInitialized = false;
@@ -66,9 +69,16 @@ class _ChatHomeState extends State<ChatHome> {
       String data = notification.toString();
       if (notification.msg == NotificationType.PING)
         webSocketService.streamChannelMessagesPong(webSocketChannel);
-      else {
+      else if (notification.msg == NotificationType.CHANGED) {
         print("***got noti= " + data);
         notificationController.add(notification);
+        setState(() {});
+
+        if (notification.fields != null && notification.fields.args != null && notification.fields.args.length > 0) {
+          NotificationArgs args = notification.fields.args[0];
+          RemoteMessage message = RemoteMessage(data: {'title': args.title, 'message': args.text, 'ejson': args.payload.toString()});
+          androidNotification(message);
+        }
       }
       onError() {}
       onDone() {}
@@ -89,18 +99,7 @@ class _ChatHomeState extends State<ChatHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _buildPage(),
-          ],
-        ),
-      ),
+      body: _buildPage(),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -131,13 +130,29 @@ class _ChatHomeState extends State<ChatHome> {
             builder: (context, AsyncSnapshot<List<model.Room>> snapshot) {
               if (snapshot.hasData) {
                 List<model.Room> roomList = snapshot.data;
-                return Expanded(
-                  child: ListView.builder(
-                    scrollDirection: Axis.vertical,
-                    itemCount: roomList.length,
-                    itemBuilder: (context, index)  {
+                return CustomScrollView(slivers: <Widget>[
+                  SliverAppBar(
+                    expandedHeight: 200.0,
+                    floating: false,
+                    pinned: true,
+                    flexibleSpace: FlexibleSpaceBar(
+                        centerTitle: true,
+                        title: Row(children: <Widget>[
+                          Text(widget.title),
+                          UnreadCounter(unreadCount: totalUnread),
+                        ]),
+                        background: Image.network(
+                          "https://images.pexels.com/photos/907485/pexels-photo-907485.jpeg?auto=compress&cs=tinysrgb&h=350",
+                          fit: BoxFit.cover,
+                        )),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
                       model.Room room = roomList[index];
                       String roomName = room.name;
+                      int unreadCount = 0;
+                      if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
+                        unreadCount = room.subscription.unread;
                       if (roomName == null) {
                         if (room.t == 'd') {
                           roomName = room.usernames.toString();
@@ -146,8 +161,6 @@ class _ChatHomeState extends State<ChatHome> {
                       return ListTile(
                         onTap: () {
                           _setChannel(room);
-                          Navigator.push(context, MaterialPageRoute(builder:
-                              (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user,)));
                         },
                         title: Text(roomName, style: TextStyle(color: Colors.black)),
                         subtitle: Column(
@@ -165,12 +178,13 @@ class _ChatHomeState extends State<ChatHome> {
                           child: room.avatarETag != null ?
                             Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(), fit: BoxFit.fitWidth,) :
                             const Icon(Icons.group)),
+                        trailing: UnreadCounter(unreadCount: unreadCount),
                         dense: true,
                         selected: selectedRoom != null ? selectedRoom.id == room.id : false,
                       );
-                    },
+                    }, childCount: roomList.length,
                   ),
-                );
+                )]);
               } else {
                 return Center(child: CircularProgressIndicator());
               }
@@ -195,19 +209,19 @@ class _ChatHomeState extends State<ChatHome> {
     _setChannel(room);
   }
 
-  _setChannel(model.Room room) {
+  _setChannel(model.Room room) async {
     print('**** setChannel=${room.id}');
-    setState(() {
-      selectedRoom = room;
-      //selectedPage = 1;
-    });
-  }
-
-  _getChannelList() async {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    ChannelService channelService = ChannelService(rocketHttpService);
-    Future<ChannelListResponse> respChannelList = channelService.list(widget.authRC);
-    return respChannelList;
+    selectedRoom = room;
+    bool refresh = false;
+    if (room.subscription != null && room.subscription.unread > 0) {
+      //clearUnreadOnDB(room);
+      refresh = true;
+    }
+    final result = await Navigator.push(context, MaterialPageRoute(
+        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user,)),
+    );
+    if (refresh)
+      setState(() {});
   }
 
   Future<List<model.Room>> _getMyRoomList() async {
@@ -222,24 +236,43 @@ class _ChatHomeState extends State<ChatHome> {
     ChannelService channelService = ChannelService(rocketHttpService);
     UpdatedSinceFilter filter = UpdatedSinceFilter(updateSince);
     RoomUpdate roomUpdate = await channelService.getRooms(widget.authRC, filter);
-    //Subscription subs = await channelService.getSubscriptions(widget.authRC, filter);
+    SubscriptionUpdate subsUpdate = await channelService.getSubscriptions(widget.authRC, filter);
     List<model.Room> updatedRoom = roomUpdate.update;
     print('updatedRoom.length = ${updatedRoom.length}');
 
     if (updatedRoom.isNotEmpty) {
       print('room updated');
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
       for (model.Room mr in updatedRoom) {
+        mr.subscription = subsUpdate.update.firstWhere((e) => e.rid == mr.id, orElse: () => null);
         String info = jsonEncode(mr.toMap());
         await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, info: info));
       }
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
+    }
+
+    List<model.Room> removedRoom = roomUpdate.remove;
+    print('removedRoom.length = ${removedRoom.length}');
+
+    if (removedRoom.isNotEmpty) {
+      print('room removed');
+      for (model.Room mr in removedRoom) {
+        String info = jsonEncode(mr.toMap());
+        await locator<db.ChatDatabase>().deleteRoom(mr.id);
+      }
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
     }
 
     var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
     print('dbRooms = ${dbRooms.length}');
     List<model.Room> roomList = [];
+    totalUnread = 0;
     for (db.Room dr in dbRooms) {
-      roomList.add(model.Room.fromMap(jsonDecode(dr.info)));
+      model.Room room = model.Room.fromMap(jsonDecode(dr.info));
+      if (room.subscription != null) {
+        print('room unread=${room.subscription.unread}');
+        totalUnread += room.subscription.unread;
+      }
+      roomList.add(room);
     }
 
     return roomList;
@@ -249,5 +282,15 @@ class _ChatHomeState extends State<ChatHome> {
   void dispose() {
     webSocketChannel.sink.close();
     super.dispose();
+  }
+
+  clearUnreadOnDB(model.Room room) async {
+    db.Room dr = await locator<db.ChatDatabase>().getRoom(room.id);
+    model.Room mr = model.Room.fromMap(jsonDecode(dr.info));
+    if (mr.subscription != null) {
+      mr.subscription.unread = 0;
+      String info = jsonEncode(mr.toMap());
+      await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, info: info));
+    }
   }
 }
