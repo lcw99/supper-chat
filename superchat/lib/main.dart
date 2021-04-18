@@ -52,12 +52,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // make sure you call `initializeApp` before using other Firebase services.
   await Firebase.initializeApp();
 
-  _androidNotification(message);
+  androidNotification(message);
 
   print("Handling a background message: ${message.data}");
 }
 
-_androidNotification(RemoteMessage message) async {
+androidNotification(RemoteMessage message) async {
   const AndroidNotificationDetails androidPlatformChannelSpecifics =
   AndroidNotificationDetails(
       'Super Chat', 'Super Chat', 'Super Chat',
@@ -232,7 +232,7 @@ class _LoginHomeState extends State<LoginHome> {
         print('Message also contained a notification: ${message.notification}');
       }
 
-      _androidNotification(message);
+      //androidNotification(message);
     });
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);

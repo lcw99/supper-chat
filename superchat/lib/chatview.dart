@@ -44,13 +44,19 @@ class _ChatViewState extends State<ChatView> {
   bool historyEnd = false;
   final picker = ImagePicker();
 
+  final _scrollController = ScrollController();
+
+  bool needScrollToBottom = true;
+
   @override
   void initState() {
     widget.notificationStream.listen((event) {
       if (event.msg == NotificationType.CHANGED) {
-        if (event.fields.args.length > 0 && event.fields.args[0].payload.rid == widget.room.id) {
+        if (event.fields.args.length > 0 && event.fields.args[0].payload.rid == widget.room.id && this.mounted) {
           setState(() {
             chatItemOffset = 0;
+            needScrollToBottom = true;
+            print('notified!!!');
           });
         }
       }
@@ -61,6 +67,7 @@ class _ChatViewState extends State<ChatView> {
   @override
   void dispose() {
     _teController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -73,12 +80,33 @@ class _ChatViewState extends State<ChatView> {
       title = widget.room.usernames.toString();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
+      bottomNavigationBar: Container(
+          child:
+          Row(children: <Widget>[
+            Expanded(child:
+            Form(
+              child: TextFormField(
+                controller: _teController,
+                keyboardType: TextInputType.multiline,
+                maxLines: null,
+                decoration: InputDecoration(hintText: 'New message', contentPadding: EdgeInsets.all(10)),
+              ),
+            )),
+            InkWell(
+              onTap: _pickImage,
+              child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
+            ),
+            Container(
+                margin: EdgeInsets.only(left: 10),
+                child:
+                InkWell(
+                  onTap: _postMessage,
+                  child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
+                )),
+          ])
       ),
-
-      body: Column(children: <Widget>[
-      FutureBuilder(
+      body:
+        FutureBuilder(
         future: _getChannelMessages(chatItemCount, chatItemOffset),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
           if (snapshot.hasData) {
@@ -87,17 +115,52 @@ class _ChatViewState extends State<ChatView> {
               for (Message m in channelMessages)
                 if (!chatData.contains(m))
                   chatData.add(m);
-              chatData.sort((a, b) { return b.ts.compareTo(a.ts); });
+              chatData.sort((a, b) { return a.ts.compareTo(b.ts); });
               debugPrint("msg count=" + channelMessages.length.toString());
               debugPrint("total msg count=" + chatData.length.toString());
 
-              final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-              ChannelService channelService = ChannelService(rocketHttpService);
-              channelService.markAsRead(widget.room.id, widget.authRC);
-              debugPrint("----------- mark channel(${widget.room.id}) as read");
+              markAsRead();
             } else {
               historyEnd = true;
             }
+            return NotificationListener<ScrollEndNotification>(
+              onNotification: (notification) {
+                if (notification.metrics.atEdge) {
+                  print("listview Scrollend" + notification.metrics.pixels.toString());
+                  if (!historyEnd && notification.metrics.pixels == 0.0) { // bottom
+                    setState(() {
+                      chatItemOffset += chatItemCount;
+                    });
+                  }
+                }
+                return true;
+              },
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: <Widget>[
+                SliverAppBar(
+                  title: Text(title),
+                  expandedHeight: 100.0,
+                  floating: false,
+                  pinned: true,
+                  flexibleSpace: FlexibleSpaceBar(
+                    centerTitle: true,
+                    background: Image.network(serverUri.replace(path: '/avatar/room/${widget.room.id}', query: 'format=png').toString(),
+                      fit: BoxFit.cover,
+                    )),
+                ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                      Message message = chatData[index];
+                      return Container(
+                        //decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
+                        child: _buildChatItem(message, index),
+                      );
+                    },
+                    childCount: chatData.length,
+                  )
+                )
+            ]));
             return Expanded(
                 child: Column(children: <Widget>[
                   NotificationListener<ScrollEndNotification>(
@@ -128,37 +191,13 @@ class _ChatViewState extends State<ChatView> {
                       return true;
                     },
                 ),
-                Container(
-                  child:
-                  Row(children: <Widget>[
-                    Expanded(child:
-                    Form(
-                      child: TextFormField(
-                        controller: _teController,
-                        keyboardType: TextInputType.multiline,
-                        maxLines: null,
-                        decoration: InputDecoration(hintText: 'New message', contentPadding: EdgeInsets.all(10)),
-                      ),
-                    )),
-                    InkWell(
-                      onTap: _pickImage,
-                      child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
-                    ),
-                    Container(
-                      margin: EdgeInsets.only(left: 10),
-                        child:
-                    InkWell(
-                      onTap: _postMessage,
-                      child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
-                    )),
-                  ])
-                  )
               ]),
             );
           } else
             return Container();
         }
-    )]));
+      )
+    );
   }
 
   _buildChatItem(Message message, int index) {
@@ -245,6 +284,7 @@ class _ChatViewState extends State<ChatView> {
       MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
       _teController.text = '';
       setState(() {
+        needScrollToBottom = true;
         chatData.add(respMsg.message);
       });
     }
@@ -274,6 +314,26 @@ class _ChatViewState extends State<ChatView> {
     ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
     Future<ChannelMessages> messages = channelService.roomHistory(filter, widget.authRC, widget.room.t);
     return messages;
+  }
+
+  scrollToBottom(BuildContext context) {
+    if (_scrollController.hasClients && needScrollToBottom) {
+      needScrollToBottom = false;
+      print('scroll to bottom!!!');
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 200),
+        curve: Curves.fastOutSlowIn,
+      );
+    }
+  }
+
+  Future<void> markAsRead() async {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+    ChannelService channelService = ChannelService(rocketHttpService);
+    await channelService.markAsRead(widget.room.id, widget.authRC);
+    debugPrint("----------- mark channel(${widget.room.id}) as read");
+    Future.delayed(const Duration(milliseconds: 100), () => scrollToBottom(context));
   }
 }
 

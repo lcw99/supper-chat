@@ -17,7 +17,7 @@ import 'package:rocket_chat_connector_flutter/models/response/channel_new_respon
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
-import 'package:rocket_chat_connector_flutter/models/subscription.dart';
+import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart';
 
 class ChannelService {
@@ -60,8 +60,7 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<bool> markAsRead(
-      String channelId, Authentication authentication) async {
+  Future<bool> markAsRead(String channelId, Authentication authentication) async {
     Map<String, String?> body = {"rid": channelId};
 
     http.Response response = await _httpService.post(
@@ -139,9 +138,9 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<Subscription> getSubscriptions(Authentication authentication, UpdatedSinceFilter? updateSince) async {
+  Future<SubscriptionUpdate> getSubscriptions(Authentication authentication, UpdatedSinceFilter updateSinceFilter) async {
     http.Response response;
-    if (updateSince != null) {
+    if (updateSinceFilter.updatedSince == null) {
       response = await _httpService.get(
         '/api/v1/subscriptions.get',
         authentication,
@@ -149,7 +148,7 @@ class ChannelService {
     } else {
       response = await _httpService.getWithFilter(
         '/api/v1/subscriptions.get',
-        updateSince!,
+        updateSinceFilter,
         authentication,
       );
     }
@@ -157,18 +156,18 @@ class ChannelService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         var resp = utf8.decode(response.bodyBytes);
-        //log("channels.list resp=$resp");
-        return Subscription.fromMap(jsonDecode(resp));
+        //log("subscriptions.get resp=$resp");
+        return SubscriptionUpdate.fromMap(jsonDecode(resp));
       } else {
-        return Subscription();
+        return SubscriptionUpdate();
       }
     }
     throw RocketChatException(response.body);
   }
 
-  Future<RoomUpdate> getRooms(Authentication authentication, UpdatedSinceFilter? updateSince) async {
+  Future<RoomUpdate> getRooms(Authentication authentication, UpdatedSinceFilter updateSinceFilter) async {
     http.Response response;
-    if (updateSince == null) {
+    if (updateSinceFilter.updatedSince == null) {
       response = await _httpService.get(
         '/api/v1/rooms.get',
         authentication,
@@ -176,7 +175,7 @@ class ChannelService {
     } else {
       response = await _httpService.getWithFilter(
         '/api/v1/rooms.get',
-        updateSince,
+        updateSinceFilter,
         authentication,
       );
     }
@@ -184,7 +183,7 @@ class ChannelService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         var resp = utf8.decode(response.bodyBytes);
-        log("getRooms resp=$resp");
+        //log("getRooms resp=$resp");
         return RoomUpdate.fromMap(jsonDecode(resp));
       } else {
         return RoomUpdate();
