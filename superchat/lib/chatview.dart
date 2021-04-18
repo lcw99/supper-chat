@@ -16,7 +16,6 @@ import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
-import 'package:rocket_chat_connector_flutter/web_socket/notification_type.dart';
 import 'package:superchat/input_file_desc.dart';
 import 'constants/constants.dart';
 
@@ -51,8 +50,9 @@ class _ChatViewState extends State<ChatView> {
   @override
   void initState() {
     widget.notificationStream.listen((event) {
-      if (event.msg == NotificationType.CHANGED) {
-        if (event.fields.args.length > 0 && event.fields.args[0].payload.rid == widget.room.id && this.mounted) {
+      if (event.msg == 'changed') {
+        if (event.notificationFields.notificationArgs.length > 0 && event.notificationFields.notificationArgs[0].notificationPayload != null &&
+            event.notificationFields.notificationArgs[0].notificationPayload.rid == widget.room.id && this.mounted) {
           setState(() {
             chatItemOffset = 0;
             needScrollToBottom = true;
@@ -80,31 +80,7 @@ class _ChatViewState extends State<ChatView> {
       title = widget.room.usernames.toString();
 
     return Scaffold(
-      bottomNavigationBar: Container(
-          child:
-          Row(children: <Widget>[
-            Expanded(child:
-            Form(
-              child: TextFormField(
-                controller: _teController,
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
-                decoration: InputDecoration(hintText: 'New message', contentPadding: EdgeInsets.all(10)),
-              ),
-            )),
-            InkWell(
-              onTap: _pickImage,
-              child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
-            ),
-            Container(
-                margin: EdgeInsets.only(left: 10),
-                child:
-                InkWell(
-                  onTap: _postMessage,
-                  child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
-                )),
-          ])
-      ),
+      resizeToAvoidBottomInset: true,
       body:
         FutureBuilder(
         future: _getChannelMessages(chatItemCount, chatItemOffset),
@@ -137,6 +113,7 @@ class _ChatViewState extends State<ChatView> {
               },
               child: CustomScrollView(
                 controller: _scrollController,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: <Widget>[
                 SliverAppBar(
                   title: Text(title),
@@ -159,7 +136,34 @@ class _ChatViewState extends State<ChatView> {
                     },
                     childCount: chatData.length,
                   )
-                )
+                ),
+                  SliverToBoxAdapter(child:
+                    Container(child:
+                  Row(children: <Widget>[
+                    Expanded(child:
+                    Form(
+                      child: TextFormField(
+                        autofocus: true,
+                        controller: _teController,
+                        keyboardType: TextInputType.multiline,
+                        maxLines: null,
+                        decoration: InputDecoration(hintText: 'New message', contentPadding: EdgeInsets.all(10)),
+                      ),
+                    )),
+                    InkWell(
+                      onTap: _pickImage,
+                      child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
+                    ),
+                    Container(
+                        margin: EdgeInsets.only(left: 10),
+                        child:
+                        InkWell(
+                          onTap: _postMessage,
+                          child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
+                        )),
+                  ])
+                  ),
+                  )
             ]));
             return Expanded(
                 child: Column(children: <Widget>[
@@ -247,7 +251,7 @@ class _ChatViewState extends State<ChatView> {
     if (message.attachments == null || message.attachments.length == 0) {
       return Text(
         newMessage,
-        style: TextStyle(fontSize: 10, color: Colors.blueAccent),
+        style: TextStyle(fontSize: 14, color: Colors.blueAccent),
       );
     } else {
       var attachments = message.attachments;
