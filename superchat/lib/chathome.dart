@@ -214,7 +214,7 @@ class _ChatHomeState extends State<ChatHome> {
     selectedRoom = room;
     bool refresh = false;
     if (room.subscription != null && room.subscription.unread > 0) {
-      //clearUnreadOnDB(room);
+      clearUnreadOnDB(room);
       refresh = true;
     }
     final result = await Navigator.push(context, MaterialPageRoute(
