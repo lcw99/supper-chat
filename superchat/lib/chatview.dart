@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
@@ -74,6 +75,7 @@ class _ChatViewState extends State<ChatView> {
             int i = chatData.indexWhere((element) => element.id == roomMessage.id);
             if (i >= 0) {
               setState(() {
+                needScrollToBottom = true;
                 chatData[i] = roomMessage;
               });
             } else {  // new message
@@ -119,15 +121,19 @@ class _ChatViewState extends State<ChatView> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       extendBody: false,
-      bottomNavigationBar: showEmojiKeyboard ?Container(child:
-      EmojiKeyboard(
-        height: 250,
-        categoryTitles: null,
-        onEmojiSelected: (Emoji emoji){
-          _teController.text += emoji.text;
-          _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
-        },
-      )) : SizedBox(),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+        showEmojiKeyboard ? Container(child:
+        EmojiKeyboard(
+          height: 250,
+          categoryTitles: null,
+          onEmojiSelected: (Emoji emoji){
+            _teController.text += emoji.text;
+            _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
+          },
+        )) : SizedBox(height: 0,),
+      ]),
       body:
         FutureBuilder(
         future: _getChannelMessages(chatItemCount, chatItemOffset, bUpdateAll),
@@ -136,7 +142,7 @@ class _ChatViewState extends State<ChatView> {
             List<Message> channelMessages = snapshot.data.messages;
             if (snapshot.data.count == -1) {  // updated
               print('!!!!partial update case');
-              markAsRead();
+              markAsReadScheduler();
             } else {
               bUpdateAll = false;
               if (channelMessages.length > 0) {
@@ -149,7 +155,7 @@ class _ChatViewState extends State<ChatView> {
                 debugPrint("msg count=" + channelMessages.length.toString());
                 debugPrint("total msg count=" + chatData.length.toString());
 
-                markAsRead();
+                markAsReadScheduler();
               } else {
                 historyEnd = true;
               }
@@ -193,57 +199,61 @@ class _ChatViewState extends State<ChatView> {
                     childCount: chatData.length,
                   )
                 ),
-                  SliverToBoxAdapter(child:
-                    Container(
-                      padding: EdgeInsets.only(left: 10, right: 10),
-                      child:
-                      Row(children: <Widget>[
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              showEmojiKeyboard = !showEmojiKeyboard;
-                            });
-                            if (showEmojiKeyboard)
-                              SystemChannels.textInput.invokeMethod('TextInput.hide');
-                            else {
-                              myFocusNode.requestFocus();
-                              SystemChannels.textInput.invokeMethod('TextInput.show');
-                            }
-                          },
-                          child: showEmojiKeyboard ?
-                            Icon(Icons.keyboard, color: Colors.blueAccent, size: 40,) :
-                            Icon(Icons.face_rounded, color: Colors.blueAccent, size: 40,),
-                        ),
-                        Expanded(child:
-                        Form(
-                          child: TextFormField(
-                            autofocus: true,
-                            focusNode: myFocusNode,
-                            controller: _teController,
-                            keyboardType: TextInputType.multiline,
-                            maxLines: null,
-                            decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
-                          ),
-                        )),
-                        InkWell(
-                          onTap: _pickImage,
-                          child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
-                        ),
-                        Container(
-                            margin: EdgeInsets.only(left: 10),
-                            child:
-                            InkWell(
-                              onTap: _postMessage,
-                              child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
-                            )),
-                      ])
-                    ),
-                  )
+                SliverToBoxAdapter(
+                  child: _buildInputBox()
+                )
             ]));
           } else
             return Container();
         }
       )
+    );
+  }
+
+  _buildInputBox() {
+    return Container(
+        padding: EdgeInsets.only(left: 10, right: 10),
+        child:
+        Row(children: <Widget>[
+          InkWell(
+            onTap: () {
+              setState(() {
+                showEmojiKeyboard = !showEmojiKeyboard;
+              });
+              if (showEmojiKeyboard)
+                SystemChannels.textInput.invokeMethod('TextInput.hide');
+              else {
+                myFocusNode.requestFocus();
+                SystemChannels.textInput.invokeMethod('TextInput.show');
+              }
+            },
+            child: showEmojiKeyboard ?
+            Icon(Icons.keyboard, color: Colors.blueAccent, size: 40,) :
+            Icon(Icons.face_rounded, color: Colors.blueAccent, size: 40,),
+          ),
+          Expanded(child:
+          Form(
+            child: TextFormField(
+              autofocus: false,
+              focusNode: myFocusNode,
+              controller: _teController,
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+              decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
+            ),
+          )),
+          InkWell(
+            onTap: _pickImage,
+            child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
+          ),
+          Container(
+              margin: EdgeInsets.only(left: 10),
+              child:
+              InkWell(
+                onTap: _postMessage,
+                child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
+              )),
+        ])
     );
   }
 
@@ -295,13 +305,22 @@ class _ChatViewState extends State<ChatView> {
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
+    var now = DateTime.now().toLocal();
+    var ts = message.ts.toLocal();
+    String dateStr;
+    if (now.year == ts.year && now.month == ts.month && now.day == ts.day)
+      dateStr = DateFormat('kk:mm:ss').format(ts);
+    else
+      dateStr = DateFormat('yyyy-MM-dd kk:mm:ss').format(ts);
     return GestureDetector (
       onTap: () { pickReaction(message); },
       child:
       Column(children: <Widget>[
+      Container(alignment: Alignment.centerLeft,
+        child: Text(dateStr, style: TextStyle(fontSize: 10, color: Colors.blue),)),
       Container(
         width: MediaQuery.of(context).size.width,
-        child:Text(
+        child: Text(
         newMessage,
         style: TextStyle(fontSize: 14, color: Colors.blueAccent),
       )),
@@ -387,15 +406,29 @@ class _ChatViewState extends State<ChatView> {
   }
 
   scrollToBottom(BuildContext context) {
-    if (this.mounted && _scrollController.hasClients && needScrollToBottom) {
+    if (_scrollController.hasClients && needScrollToBottom) {
       needScrollToBottom = false;
       print('scroll to bottom!!!');
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+        _scrollController.position.maxScrollExtent + 100,
         duration: Duration(milliseconds: 200),
         curve: Curves.fastOutSlowIn,
       );
     }
+  }
+
+  Queue<String> taskQ = Queue<String>();
+  markAsReadScheduler() {
+    Future.delayed(const Duration(milliseconds: 300), () => scrollToBottom(context));
+    if (taskQ.isNotEmpty)
+      return;
+    taskQ.add('job');
+    Future.delayed(const Duration(milliseconds: 3000), () async {
+      if (taskQ.isNotEmpty) {
+        await markAsRead();
+        taskQ.removeFirst();
+      }
+    });
   }
 
   Future<void> markAsRead() async {
@@ -403,7 +436,6 @@ class _ChatViewState extends State<ChatView> {
     ChannelService channelService = ChannelService(rocketHttpService);
     await channelService.markAsRead(widget.room.id, widget.authRC);
     debugPrint("----------- mark channel(${widget.room.id}) as read");
-    Future.delayed(const Duration(milliseconds: 100), () => scrollToBottom(context));
   }
 
   _buildReactions(Map<String, Reaction> reactions) {

@@ -39,6 +39,7 @@ dependencies:
   path_provider:
   path:
   get_it:
+  intl: ^0.17.0
   flutter_emoji_keyboard:
     path: ../flutter_emoji_keyboard
 
