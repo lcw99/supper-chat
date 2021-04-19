@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FBA;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
@@ -22,6 +23,9 @@ import 'package:rocket_chat_connector_flutter/models/new/token_new.dart';
 import 'chathome.dart';
 import 'database/chatdb.dart';
 
+import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
+import 'package:flutter_emoji_keyboard/src/all_emojis.dart';
+
 final String serverUrl = "https://chat.smallet.co";
 final String username = "support@semaphore.kr";
 //final String username = "changlee99@gmail.com";
@@ -34,7 +38,30 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterL
 final navGlobalKey = new GlobalKey<NavigatorState>();
 String notificationPayload;
 
+emojiConvert() {
+  Map<String, String> unicodeToName = Map<String, String>();
+  for (var e in emojis.entries) {
+    unicodeToName[e.value] = e.key;
+  }
+
+  int count = 0;
+  var emojiList1 = <Emoji>[];
+  for (var e in emojiList) {
+    if (unicodeToName.containsKey(e.text)) {
+      print(unicodeToName[e.text]);
+      e.name = unicodeToName[e.text];
+      emojiList1.add(e);
+      count++;
+    } else {
+      print('@@@ not found = ${e.text}');
+    }
+  }
+  print('unicodeToName item count=${unicodeToName.length}, $count');
+  emojiList = emojiList1;
+}
+
 void main() async {
+  emojiConvert();
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
   _initNotification();
@@ -355,4 +382,5 @@ class _LoginHomeState extends State<LoginHome> {
   }
 
 }
+
 
