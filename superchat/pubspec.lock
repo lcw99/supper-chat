@@ -176,6 +176,20 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.0"
+  device_info:
+    dependency: transitive
+    description:
+      name: device_info
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.0.0"
+  device_info_platform_interface:
+    dependency: transitive
+    description:
+      name: device_info_platform_interface
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.0.1"
   dio:
     dependency: transitive
     description:
@@ -279,6 +293,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_emoji_keyboard:
+    dependency: "direct main"
+    description:
+      path: "../flutter_emoji_keyboard"
+      relative: true
+    source: path
+    version: "0.1.3"
   flutter_keyboard_visibility:
     dependency: "direct main"
     description:

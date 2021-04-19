@@ -18,6 +18,7 @@ import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'constants/constants.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
+import 'package:rocket_chat_connector_flutter/models/notify_user_arg.dart';
 import 'wigets/unread_counter.dart';
 
 import 'chatview.dart';
@@ -57,12 +58,12 @@ class _ChatHomeState extends State<ChatHome> {
 
     notificationStream = notificationController.stream;
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
-    webSocketService.streamNotifyUserSubscribe(webSocketChannel, widget.user);
-    webSocketService.streamRoomNotifyAll(webSocketChannel);
+    webSocketService.subscribeNotifyUser(webSocketChannel, widget.user);
     webSocketChannel.stream.listen((event) {
       var e = jsonDecode(event);
       print('event=${event}');
       rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
+      print('collection=${notification.collection}');
       String data = jsonEncode(notification.toMap());
       if (notification.msg == 'ping')
         webSocketService.streamChannelMessagesPong(webSocketChannel);
@@ -72,12 +73,14 @@ class _ChatHomeState extends State<ChatHome> {
           notificationController.add(notification);
           setState(() {});
 
-          if (notification.notificationFields != null && notification.notificationFields.notificationArgs != null &&
+          if (notification.collection == 'stream-notify-user' &&
+              notification.notificationFields != null &&
+              notification.notificationFields.notificationArgs != null &&
               notification.notificationFields.notificationArgs.length > 0) {
             var arg = notification.notificationFields.notificationArgs[0];
-            var ejson = arg.notificationPayload != null ? jsonEncode(arg.notificationPayload.toMap()) : null;
-            if (ejson != null) {
-              RemoteMessage message = RemoteMessage(data: {'title': arg.title, 'message': arg.text, 'ejson': ejson});
+            var payload = arg['payload'] != null ? jsonEncode(arg['payload']) : null;
+            if (payload != null) {
+              RemoteMessage message = RemoteMessage(data: {'title': arg['title'], 'message': arg['text'], 'ejson': payload});
               androidNotification(message);
             }
           }
@@ -215,7 +218,7 @@ class _ChatHomeState extends State<ChatHome> {
   _setChannel(model.Room room) async {
     print('**** setChannel=${room.id}');
     selectedRoom = room;
-    webSocketService.streamRoomMessagesSubscribe(webSocketChannel, selectedRoom.id);
+    webSocketService.subscribeRoomMessages(webSocketChannel, selectedRoom.id);
     bool refresh = false;
     if (room.subscription != null && room.subscription.unread > 0) {
       clearUnreadOnDB(room);
