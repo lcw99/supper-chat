@@ -402,8 +402,6 @@ class _ChatViewState extends State<ChatView> {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     ChannelService channelService = ChannelService(rocketHttpService);
     await channelService.markAsRead(widget.room.id, widget.authRC);
-    if (!this.mounted)
-      return;
     debugPrint("----------- mark channel(${widget.room.id}) as read");
     Future.delayed(const Duration(milliseconds: 100), () => scrollToBottom(context));
   }
