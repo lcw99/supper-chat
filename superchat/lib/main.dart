@@ -74,7 +74,8 @@ androidNotification(RemoteMessage message) async {
 
 Future<void> _onSelectNotification(String payload) async {
   print("onSelectNotification payload=$payload");
-  navGlobalKey.currentState.push(MaterialPageRoute(builder: (context) => LoginHome()));
+  //navGlobalKey.currentState.push(MaterialPageRoute(builder: (context) => LoginHome()));
+  navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
   notificationPayload = payload;
 }
 
@@ -106,7 +107,6 @@ class SuperChat extends StatelessWidget {
 
     return MaterialApp(
       title: title,
-      navigatorKey: navGlobalKey,
       home: MainHome(),
     );
   }
@@ -126,6 +126,7 @@ class _MainHome extends State<MainHome> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Super Chat',
+      navigatorKey: navGlobalKey,
       theme: ThemeData(
           primarySwatch: Colors.blue,
           buttonColor: Colors.pink,
