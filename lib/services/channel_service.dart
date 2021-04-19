@@ -92,7 +92,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    log("channels.history resp=$resp");
+    //log("channels.history resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));

@@ -38,7 +38,7 @@ class MessageService {
 
   Future<MessageNewResponse> postReaction(ReactionNew reaction, Authentication authentication) async {
     http.Response response = await _httpService.post(
-      '/api/v1/chat.postMessage',
+      '/api/v1/chat.react',
       jsonEncode(reaction.toMap()),
       authentication,
     );

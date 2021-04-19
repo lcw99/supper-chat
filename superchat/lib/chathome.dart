@@ -52,6 +52,8 @@ class _ChatHomeState extends State<ChatHome> {
   final StreamController<rocket_notification.Notification> notificationController = StreamController<rocket_notification.Notification>.broadcast();
   Stream<rocket_notification.Notification> notificationStream;
 
+  static bool bChatScreenOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -61,14 +63,14 @@ class _ChatHomeState extends State<ChatHome> {
     webSocketService.subscribeNotifyUser(webSocketChannel, widget.user);
     webSocketChannel.stream.listen((event) {
       var e = jsonDecode(event);
-      print('event=${event}');
+      print('****************event=${event}');
       rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
       print('collection=${notification.collection}');
       String data = jsonEncode(notification.toMap());
       if (notification.msg == 'ping')
         webSocketService.streamChannelMessagesPong(webSocketChannel);
       else {
-        print("***got noti= " + data);
+        //print("***got noti= " + data);
         if (notification.msg == 'changed') {
           notificationController.add(notification);
           setState(() {});
@@ -79,7 +81,7 @@ class _ChatHomeState extends State<ChatHome> {
               notification.notificationFields.notificationArgs.length > 0) {
             var arg = notification.notificationFields.notificationArgs[0];
             var payload = arg['payload'] != null ? jsonEncode(arg['payload']) : null;
-            if (payload != null) {
+            if (payload != null && !(bChatScreenOpen && selectedRoom != null && selectedRoom.id == arg['payload']['rid'])) {
               RemoteMessage message = RemoteMessage(data: {'title': arg['title'], 'message': arg['text'], 'ejson': payload});
               androidNotification(message);
             }
@@ -224,9 +226,11 @@ class _ChatHomeState extends State<ChatHome> {
       clearUnreadOnDB(room);
       refresh = true;
     }
+    bChatScreenOpen = true;
     final result = await Navigator.push(context, MaterialPageRoute(
         builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user,)),
     );
+    bChatScreenOpen = false;
     if (refresh)
       setState(() {});
   }

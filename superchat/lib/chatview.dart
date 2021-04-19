@@ -13,6 +13,7 @@ import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/new/message_new.dart';
+import 'package:rocket_chat_connector_flutter/models/new/reaction_new.dart';
 import 'package:rocket_chat_connector_flutter/models/reaction.dart';
 import 'package:rocket_chat_connector_flutter/models/response/message_new_response.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
@@ -52,38 +53,47 @@ class _ChatViewState extends State<ChatView> {
 
   final _scrollController = ScrollController();
 
-  bool needScrollToBottom = true;
-  bool bUpdate = false;
+  bool needScrollToBottom = false;
+  bool bUpdateAll = false;
   bool showEmojiKeyboard = false;
   FocusNode myFocusNode;
 
   @override
   void initState() {
+    bUpdateAll = true;
+    needScrollToBottom = true;
     myFocusNode = FocusNode();
     widget.notificationStream.listen((event) {
-      if (event.msg == 'changed') {
+      if (event.msg == 'changed' && this.mounted) {
         if (event.collection == 'stream-room-messages') {
           if (event.notificationFields.notificationArgs.length > 0) {
             var arg = event.notificationFields.notificationArgs[0];
-            print('stream-room-messages:' + jsonEncode(arg));
+            print('+++++stream-room-messages:' + jsonEncode(arg));
             Message roomMessage = Message.fromMap(arg);
             //print(jsonEncode(roomMessage));
             int i = chatData.indexWhere((element) => element.id == roomMessage.id);
             if (i >= 0) {
               setState(() {
-                bUpdate = true;
                 chatData[i] = roomMessage;
+              });
+            } else {  // new message
+              setState(() {
+                print('!!!new message');
+                needScrollToBottom = true;
+                chatData.add(roomMessage);
               });
             }
           }
         } else if (event.collection == 'stream-notify-user')
           if (event.notificationFields.notificationArgs.length > 0) {
             var arg = event.notificationFields.notificationArgs[0];
-            print('stream-notify-user:' + jsonEncode(arg));
+            print('+++++stream-notify-user:' + jsonEncode(arg));
+/*
             setState(() {
               chatItemOffset = 0;
               needScrollToBottom = true;
             });
+*/
           }
       }
     });
@@ -111,7 +121,8 @@ class _ChatViewState extends State<ChatView> {
       extendBody: false,
       bottomNavigationBar: showEmojiKeyboard ?Container(child:
       EmojiKeyboard(
-        height: 200,
+        height: 250,
+        categoryTitles: null,
         onEmojiSelected: (Emoji emoji){
           _teController.text += emoji.text;
           _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
@@ -119,14 +130,15 @@ class _ChatViewState extends State<ChatView> {
       )) : SizedBox(),
       body:
         FutureBuilder(
-        future: _getChannelMessages(chatItemCount, chatItemOffset, bUpdate),
+        future: _getChannelMessages(chatItemCount, chatItemOffset, bUpdateAll),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
           if (snapshot.hasData) {
             List<Message> channelMessages = snapshot.data.messages;
             if (snapshot.data.count == -1) {  // updated
-              bUpdate = false;
-              print('!!!!update case');
+              print('!!!!partial update case');
+              markAsRead();
             } else {
+              bUpdateAll = false;
               if (channelMessages.length > 0) {
                 for (Message m in channelMessages)
                   if (!chatData.contains(m))
@@ -148,6 +160,7 @@ class _ChatViewState extends State<ChatView> {
                   print("listview Scrollend" + notification.metrics.pixels.toString());
                   if (!historyEnd && notification.metrics.pixels == 0.0) { // bottom
                     setState(() {
+                      bUpdateAll = true;
                       chatItemOffset += chatItemCount;
                     });
                   }
@@ -188,7 +201,6 @@ class _ChatViewState extends State<ChatView> {
                         InkWell(
                           onTap: () {
                             setState(() {
-                              bUpdate = true;
                               showEmojiKeyboard = !showEmojiKeyboard;
                             });
                             if (showEmojiKeyboard)
@@ -283,7 +295,10 @@ class _ChatViewState extends State<ChatView> {
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
-    return Column(children: <Widget>[
+    return GestureDetector (
+      onTap: () { pickReaction(message); },
+      child:
+      Column(children: <Widget>[
       Container(
         width: MediaQuery.of(context).size.width,
         child:Text(
@@ -309,7 +324,7 @@ class _ChatViewState extends State<ChatView> {
           }
         )
       ) : Container(height: 1, width: 1,)
-    ]);
+    ]));
   }
 
   Widget getImage(String imagePath) {
@@ -327,10 +342,12 @@ class _ChatViewState extends State<ChatView> {
       MessageNew msg = MessageNew(roomId: widget.room.id, text: _teController.text);
       MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
       _teController.text = '';
+/*
       setState(() {
         needScrollToBottom = true;
         chatData.add(respMsg.message);
       });
+*/
     }
   }
 
@@ -352,22 +369,25 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
-  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool update) {
-    print('!!!!!! get room history bUpdate=$bUpdate');
-    if (bUpdate) {
-      Future<ChannelMessages> messages = (() async { return ChannelMessages(success: true, count: -1); }());
-      return messages;
-    } else {
+  static int historyCallCount = 0;
+  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _updatAll) {
+    print('!!!!!! get room history bUpdateAll=$_updatAll');
+    if (_updatAll) {
+      historyCallCount++;
+      print('full history call=$historyCallCount');
       final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
       ChannelService channelService = ChannelService(rocketHttpService);
       ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
       Future<ChannelMessages> messages = channelService.roomHistory(filter, widget.authRC, widget.room.t);
       return messages;
+    } else {
+      Future<ChannelMessages> messages = (() async { return ChannelMessages(success: true, count: -1); }());
+      return messages;
     }
   }
 
   scrollToBottom(BuildContext context) {
-    if (_scrollController.hasClients && needScrollToBottom) {
+    if (this.mounted && _scrollController.hasClients && needScrollToBottom) {
       needScrollToBottom = false;
       print('scroll to bottom!!!');
       _scrollController.animateTo(
@@ -382,6 +402,8 @@ class _ChatViewState extends State<ChatView> {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     ChannelService channelService = ChannelService(rocketHttpService);
     await channelService.markAsRead(widget.room.id, widget.authRC);
+    if (!this.mounted)
+      return;
     debugPrint("----------- mark channel(${widget.room.id}) as read");
     Future.delayed(const Duration(milliseconds: 100), () => scrollToBottom(context));
   }
@@ -395,6 +417,32 @@ class _ChatViewState extends State<ChatView> {
       width: MediaQuery.of(context).size.width,
       child: Text(emojiReactions, style: TextStyle(fontSize: 12))
     );
+  }
+
+  pickReaction(Message message) async {
+    String emoji = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Center(child:
+          Container(
+            child: EmojiKeyboard(
+              categoryTitles: null,
+              height: 300,
+              onEmojiSelected: (Emoji emoji){
+                Navigator.pop(context, emoji.name);
+              },
+            )
+          )
+        );
+      }
+    );
+
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+    MessageService messageService = MessageService(rocketHttpService);
+    String em = ':$emoji:';
+    print('!!!!!emoji=$em');
+    ReactionNew reaction = ReactionNew(emoji: em, messageId: message.id, shouldReact: true);
+    messageService.postReaction(reaction, widget.authRC);
   }
 }
 
