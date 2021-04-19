@@ -83,6 +83,8 @@ class ChannelService {
     String path = '/api/v1/channels.history';
     if (roomType == 'd')
       path = '/api/v1/im.history';
+    else if (roomType == 'p')
+      path = '/api/v1/groups.history';
     http.Response response = await _httpService.getWithFilter(
       path,
       filter,
@@ -90,7 +92,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    //log("channels.history resp=$resp");
+    log("channels.history resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));

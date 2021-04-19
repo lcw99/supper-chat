@@ -9,6 +9,7 @@ import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/new/message_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/message_new_response.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
+import 'package:rocket_chat_connector_flutter/models/new/reaction_new.dart';
 
 import 'package:path/path.dart' as path;
 import 'package:mime/mime.dart';
@@ -22,6 +23,23 @@ class MessageService {
     http.Response response = await _httpService.post(
       '/api/v1/chat.postMessage',
       jsonEncode(message.toMap()),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return MessageNewResponse.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        return MessageNewResponse();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<MessageNewResponse> postReaction(ReactionNew reaction, Authentication authentication) async {
+    http.Response response = await _httpService.post(
+      '/api/v1/chat.postMessage',
+      jsonEncode(reaction.toMap()),
       authentication,
     );
 
