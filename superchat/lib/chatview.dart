@@ -1,14 +1,15 @@
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:full_screen_image/full_screen_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:pinch_zoom/pinch_zoom.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
@@ -127,7 +128,6 @@ class _ChatViewState extends State<ChatView> {
         showEmojiKeyboard ? Container(child:
         EmojiKeyboard(
           height: 250,
-          categoryTitles: null,
           onEmojiSelected: (Emoji emoji){
             _teController.text += emoji.text;
             _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
@@ -312,38 +312,44 @@ class _ChatViewState extends State<ChatView> {
       dateStr = DateFormat('kk:mm:ss').format(ts);
     else
       dateStr = DateFormat('yyyy-MM-dd kk:mm:ss').format(ts);
-    return GestureDetector (
-      onTap: () { pickReaction(message); },
-      child:
+
+    return
       Column(children: <Widget>[
-      Container(alignment: Alignment.centerLeft,
-        child: Text(dateStr, style: TextStyle(fontSize: 10, color: Colors.blue),)),
-      Container(
-        width: MediaQuery.of(context).size.width,
-        child: Text(
-        newMessage,
-        style: TextStyle(fontSize: 14, color: Colors.blueAccent),
-      )),
-      bReactions ? Container(
-        width: MediaQuery.of(context).size.width,
-        child: _buildReactions(reactions),
-      ) : Container(height: 1, width: 1,),
-      bAttachments ? Container(
-      height: 150,
-      child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          itemCount: attachments.length,
-          itemExtent: 200,
-          itemBuilder: (context, index) {
-            var attachment = attachments[index];
-            return Column(children: <Widget>[
-              getImage(attachment.imageUrl),
-              attachment.description != null ? Text(attachment.description) : Container(),
-            ]);
-          }
-        )
-      ) : Container(height: 1, width: 1,)
-    ]));
+        Container(alignment: Alignment.centerLeft,
+          child: Text(dateStr, style: TextStyle(fontSize: 10, color: Colors.blue),)
+        ),
+        GestureDetector (
+          onTap: () { pickReaction(message); },
+          child:
+          Container(
+            width: MediaQuery.of(context).size.width,
+            child: Text(
+            newMessage,
+            style: TextStyle(fontSize: 14, color: Colors.blueAccent),
+          ))
+        ),
+        bReactions ?
+          Container(
+            height: 20,
+            width: MediaQuery.of(context).size.width,
+            child: _buildReactions(message, reactions),
+          ) : Container(height: 1, width: 1,),
+        bAttachments ? Container(
+        height: 150,
+        child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: attachments.length,
+            itemExtent: 200,
+            itemBuilder: (context, index) {
+              var attachment = attachments[index];
+              return Column(children: <Widget>[
+                getImage(attachment.imageUrl),
+                attachment.description != null ? Text(attachment.description) : Container(),
+              ]);
+            }
+          )
+        ) : Container(height: 1, width: 1,)
+      ]);
   }
 
   Widget getImage(String imagePath) {
@@ -351,7 +357,18 @@ class _ChatViewState extends State<ChatView> {
       'X-Auth-Token': widget.authRC.data.authToken,
       'X-User-Id': widget.authRC.data.userId
     };
-    return Image.network(serverUri.replace(path: imagePath).toString(), headers: header, fit: BoxFit.fitHeight, height: 130,);
+
+    var image = Image.network(serverUri.replace(path: imagePath).toString(), headers: header, fit: BoxFit.fitHeight, height: 130,);
+
+    return FullScreenWidget(
+      child: Hero(
+        tag: imagePath,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: image,
+        ),
+      ),
+    );
   }
 
   Future<void> _postMessage() async {
@@ -378,11 +395,11 @@ class _ChatViewState extends State<ChatView> {
 
     if (pickedFile != null) {
       File file = File(pickedFile.path);
-      String desc= await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
+      String desc = await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
       Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
-      setState(() {
-        chatData.add(newMessage);
-      });
+      // setState(() {
+      //   chatData.add(newMessage);
+      // });
     } else {
       print('No image selected.');
     }
@@ -438,15 +455,30 @@ class _ChatViewState extends State<ChatView> {
     debugPrint("----------- mark channel(${widget.room.id}) as read");
   }
 
-  _buildReactions(Map<String, Reaction> reactions) {
-    String emojiReactions = '';
-    for (String key in reactions.keys) {
-      emojiReactions += emojis[key];
-    }
-    return Container(
-      width: MediaQuery.of(context).size.width,
-      child: Text(emojiReactions, style: TextStyle(fontSize: 12))
+  _buildReactions(message, Map<String, Reaction> reactions) {
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: reactions.keys.length,
+      itemBuilder: (context, index) {
+        var emoji = reactions.keys.elementAt(index);
+        Reaction r = reactions[emoji];
+        return GestureDetector (
+          onTap: () { onReactionTouch(message, emoji, r); },
+          child:Container(
+            child: Row(children: <Widget>[
+              Text(emojis[emoji], style: TextStyle(fontSize: 12)),
+              Text(r.usernames.length.toString(), style: TextStyle(fontSize: 10)),
+            ])
+          ));
+      },
     );
+  }
+
+  void onReactionTouch(message, emoji, Reaction reaction) {
+    if (reaction.usernames.contains(widget.me.username))
+      _sendReaction(message, emoji, false);
+    else
+      _sendReaction(message, emoji, true);
   }
 
   pickReaction(Message message) async {
@@ -456,7 +488,6 @@ class _ChatViewState extends State<ChatView> {
         return Center(child:
           Container(
             child: EmojiKeyboard(
-              categoryTitles: null,
               height: 300,
               onEmojiSelected: (Emoji emoji){
                 Navigator.pop(context, emoji.name);
@@ -467,11 +498,18 @@ class _ChatViewState extends State<ChatView> {
       }
     );
 
+    if (emoji == null)
+      return;
+
+    _sendReaction(message, emoji, true);
+  }
+
+  _sendReaction(message, emoji, bool shouldReact) {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     MessageService messageService = MessageService(rocketHttpService);
     String em = ':$emoji:';
     print('!!!!!emoji=$em');
-    ReactionNew reaction = ReactionNew(emoji: em, messageId: message.id, shouldReact: true);
+    ReactionNew reaction = ReactionNew(emoji: em, messageId: message.id, shouldReact: shouldReact);
     messageService.postReaction(reaction, widget.authRC);
   }
 }

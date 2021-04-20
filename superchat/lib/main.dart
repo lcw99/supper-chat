@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -39,29 +40,62 @@ final navGlobalKey = new GlobalKey<NavigatorState>();
 String notificationPayload;
 
 emojiConvert() {
+/*
   Map<String, String> unicodeToName = Map<String, String>();
   for (var e in emojis.entries) {
     unicodeToName[e.value] = e.key;
   }
 
   int count = 0;
-  var emojiList1 = <Emoji>[];
-  for (var e in emojiList) {
+  var emojiList2 = <Emoji>[];
+  for (var e in emojiListOrg) {
     if (unicodeToName.containsKey(e.text)) {
-      print(unicodeToName[e.text]);
+      //print(unicodeToName[e.text]);
       e.name = unicodeToName[e.text];
-      emojiList1.add(e);
+      emojiList2.add(e);
       count++;
     } else {
-      print('@@@ not found = ${e.text}');
+      //print('@@@ not found = ${e.text}');
     }
   }
   print('unicodeToName item count=${unicodeToName.length}, $count');
-  emojiList = emojiList1;
+  emojiList = emojiList2;
+
+  StringBuffer sb = StringBuffer();
+  for (var em in emojiList2) {
+    var nn = em.name;
+    var tt = em.text;
+    var and = '[';
+    for (var aa in em.limitRangeAndroid) {
+      and += "MapEntry('${aa.key}', '${aa.value}'),";
+    }
+    and += ']';
+    var ios = '[';
+    for (var aa in em.limitRangeIOS) {
+      ios += "MapEntry('${aa.key}', '${aa.value}'),";
+    }
+    ios += ']';
+    var ee = "Emoji('$nn', '$tt', ${em.category}, limitRangeAndroid: $and, limitRangeIOS: $ios),\n";
+    sb.write(ee);
+  }
+  log(sb.toString());
+
+  count = 0;
+  for (var cat in emojisByCategory.entries) {
+    String catagory = cat.key;
+    var names = cat.value;
+    for (var name in names) {
+      var nn = ':$name:';
+      print("Emoji('$nn', '${emojis[nn]}', EmojiCategory.$catagory,null, null),");
+      count++;
+    }
+  }
+  print('count=$count');
+*/
 }
 
 void main() async {
-  emojiConvert();
+  //emojiConvert();
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
   _initNotification();

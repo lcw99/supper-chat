@@ -34,9 +34,10 @@ class InputFileDescription extends StatelessWidget {
             )),
             InkWell(
               onTap: () {
-                if (_teController.text.isNotEmpty) {
-                  Navigator.pop(context, _teController.text);
-                }
+                String ret;
+                if (_teController.text.isNotEmpty)
+                  ret = _teController.text;
+                Navigator.pop(context, ret);
               },
               child: Icon(Icons.check, color: Colors.blueAccent,),
             ),
