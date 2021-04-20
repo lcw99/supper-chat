@@ -28,7 +28,7 @@ class Message {
   List<MessageAttachment>? attachments;
   User? editedBy;
   DateTime? editedAt;
-  List<String>? urls;
+  List<UrlInMessage>? urls;
 
   Message({
     this.alias,
@@ -111,7 +111,17 @@ class Message {
           json['editedBy'] != null ? User.fromMap(json['editedBy']) : null;
       editedAt =
           json['editedAt'] != null ? DateTime.parse(json['editedAt']) : null;
-      urls = json['urls'] != null ? List<String>.from(json['urls']) : null;
+
+      if (json['urls'] != null) {
+        List<dynamic> jsonList = json['urls'].runtimeType == String //
+            ? jsonDecode(json['urls'])
+            : json['urls'];
+        urls = jsonList
+            .where((json) => json != null)
+            .map((json) => UrlInMessage.fromMap(json))
+            .toList();
+      }
+
     }
   }
 
@@ -193,6 +203,7 @@ class Message {
     return map;
   }
 
+
   @override
   String toString() {
     return 'Message{"_id": "$id", "alias": "$alias", "msg": "$msg", "parseUrls": "$parseUrls", "bot": "$bot", "groupable": "$groupable", "t": "$t", "ts": "$ts", '
@@ -229,4 +240,130 @@ class Message {
       editedBy.hashCode ^
       editedAt.hashCode ^
       urls.hashCode;
+}
+
+class UrlInMessage {
+  UrlInMessage({
+    this.url,
+    this.meta,
+    this.headers,
+    this.parsedUrl,
+  });
+
+  String? url;
+  Meta? meta;
+  Headers? headers;
+  ParsedUrl? parsedUrl;
+
+  factory UrlInMessage.fromMap(Map<String, dynamic> json) => UrlInMessage(
+    url: json["url"] == null ? null : json["url"],
+    meta: json["meta"] == null ? null : Meta.fromMap(json["meta"]),
+    headers: json["headers"] == null ? null : Headers.fromMap(json["headers"]),
+    parsedUrl: json["parsedUrl"] == null ? null : ParsedUrl.fromMap(json["parsedUrl"]),
+  );
+
+  Map<String, dynamic> toMap() => {
+    "url": url == null ? null : url,
+    "meta": meta == null ? null : meta!.toMap(),
+    "headers": headers == null ? null : headers!.toMap(),
+    "parsedUrl": parsedUrl == null ? null : parsedUrl!.toMap(),
+  };
+}
+
+class Headers {
+  Headers({
+    this.contentType,
+  });
+
+  String? contentType;
+
+  factory Headers.fromMap(Map<String, dynamic> json) => Headers(
+    contentType: json["contentType"] == null ? null : json["contentType"],
+  );
+
+  Map<String, dynamic> toMap() => {
+    "contentType": contentType == null ? null : contentType,
+  };
+}
+
+class Meta {
+  Meta({
+    this.pageTitle,
+    this.msapplicationTileImage,
+    this.msapplicationConfig,
+    this.ogImage,
+    this.twitterImage,
+    this.appleMobileWebAppTitle,
+  });
+
+  String? pageTitle;
+  String? msapplicationTileImage;
+  String? msapplicationConfig;
+  String? ogImage;
+  String? twitterImage;
+  String? appleMobileWebAppTitle;
+
+  factory Meta.fromMap(Map<String, dynamic> json) => Meta(
+    pageTitle: json["pageTitle"] == null ? null : json["pageTitle"],
+    msapplicationTileImage: json["msapplicationTileImage"] == null ? null : json["msapplicationTileImage"],
+    msapplicationConfig: json["msapplicationConfig"] == null ? null : json["msapplicationConfig"],
+    ogImage: json["ogImage"] == null ? null : json["ogImage"],
+    twitterImage: json["twitterImage"] == null ? null : json["twitterImage"],
+    appleMobileWebAppTitle: json["appleMobileWebAppTitle"] == null ? null : json["appleMobileWebAppTitle"],
+  );
+
+  Map<String, dynamic> toMap() => {
+    "pageTitle": pageTitle == null ? null : pageTitle,
+    "msapplicationTileImage": msapplicationTileImage == null ? null : msapplicationTileImage,
+    "msapplicationConfig": msapplicationConfig == null ? null : msapplicationConfig,
+    "ogImage": ogImage == null ? null : ogImage,
+    "twitterImage": twitterImage == null ? null : twitterImage,
+    "appleMobileWebAppTitle": appleMobileWebAppTitle == null ? null : appleMobileWebAppTitle,
+  };
+}
+
+class ParsedUrl {
+  ParsedUrl({
+    this.host,
+    this.hash,
+    this.pathname,
+    this.protocol,
+    this.port,
+    this.query,
+    this.search,
+    this.hostname,
+  });
+
+  String? host;
+  dynamic? hash;
+  String? pathname;
+  String? protocol;
+  dynamic? port;
+  String? query;
+  String? search;
+  String? hostname;
+
+  factory ParsedUrl.fromMap(Map<String, dynamic> json) =>
+      ParsedUrl(
+        host: json["host"] == null ? null : json["host"],
+        hash: json["hash"],
+        pathname: json["pathname"] == null ? null : json["pathname"],
+        protocol: json["protocol"] == null ? null : json["protocol"],
+        port: json["port"],
+        query: json["query"] == null ? null : json["query"],
+        search: json["search"] == null ? null : json["search"],
+        hostname: json["hostname"] == null ? null : json["hostname"],
+      );
+
+  Map<String, dynamic> toMap() =>
+      {
+        "host": host == null ? null : host,
+        "hash": hash,
+        "pathname": pathname == null ? null : pathname,
+        "protocol": protocol == null ? null : protocol,
+        "port": port,
+        "query": query == null ? null : query,
+        "search": search == null ? null : search,
+        "hostname": hostname == null ? null : hostname,
+      };
 }

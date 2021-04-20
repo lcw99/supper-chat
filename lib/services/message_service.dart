@@ -69,7 +69,7 @@ class MessageService {
           'file', file.path,
           contentType: MediaType.parse(lookupMimeType(file.path)!)));
 
-    if (desc != null)
+    if (desc != null && desc != '')
       request.fields["description"] = desc;
 
     var response = await request.send();
