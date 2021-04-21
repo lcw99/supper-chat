@@ -25,6 +25,7 @@ class MessageAttachment {
   DateTime? ts;
   String? videoUrl;
   ImageDimensions? imageDimensions;
+  String? type;
 
   MessageAttachment({
     this.audioUrl,
@@ -45,7 +46,8 @@ class MessageAttachment {
     this.titleLinkDownload,
     this.ts,
     this.videoUrl,
-    this.imageDimensions
+    this.imageDimensions,
+    this.type,
   });
 
   MessageAttachment.fromMap(Map<String, dynamic> json) {
@@ -85,6 +87,7 @@ class MessageAttachment {
           ? ImageDimensions.fromMap(json['image_dimensions'])
           : null;
     }
+    type = json['type'];
   }
 
   Map<String, dynamic> toMap() => {
@@ -111,6 +114,7 @@ class MessageAttachment {
         'ts': ts != null ? ts!.toIso8601String() : null,
         'video_url': videoUrl,
         'image_dimensions': imageDimensions != null ? imageDimensions!.toMap(): null,
+        'type': type,
       };
 
   @override
@@ -118,7 +122,8 @@ class MessageAttachment {
     return '{"audioUrl": "$audioUrl", "authorIcon": "$authorIcon", "authorLink": "$authorLink", "authorName": "$authorName", "collapsed": "$collapsed", '
         '"color": "$color", "fields": "$fields", "imageUrl": "$imageUrl", "messageLink": "$messageLink", "text": "$text", "description": "$description", '
         '"image_preview": "$imagePreview", "thumbUrl": "$thumbUrl", "title": "$title", '
-        '"titleLink": "$titleLink", "titleLinkDownload": "$titleLinkDownload", "ts": "$ts", "videoUrl": "$videoUrl", "imageDimensions": $imageDimensions}';
+        '"titleLink": "$titleLink", "titleLinkDownload": "$titleLinkDownload", "ts": "$ts", "videoUrl": "$videoUrl", "imageDimensions": $imageDimensions'
+        '"type": $type}';
   }
 
   @override
@@ -144,7 +149,8 @@ class MessageAttachment {
           titleLinkDownload == other.titleLinkDownload &&
           ts == other.ts &&
           imageDimensions == other.imageDimensions &&
-          videoUrl == other.videoUrl;
+          videoUrl == other.videoUrl &&
+          type == other.type;
 
   @override
   int get hashCode =>
@@ -166,5 +172,6 @@ class MessageAttachment {
       titleLinkDownload.hashCode ^
       ts.hashCode ^
       imageDimensions.hashCode ^
-      videoUrl.hashCode;
+      videoUrl.hashCode ^
+      type.hashCode;
 }

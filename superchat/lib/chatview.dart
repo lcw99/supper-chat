@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_link_previewer/flutter_link_previewer.dart';
 import 'package:full_screen_image/full_screen_image.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,6 +17,7 @@ import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
+import 'package:rocket_chat_connector_flutter/models/message_attachment.dart';
 import 'package:rocket_chat_connector_flutter/models/new/message_new.dart';
 import 'package:rocket_chat_connector_flutter/models/new/reaction_new.dart';
 import 'package:rocket_chat_connector_flutter/models/reaction.dart';
@@ -99,6 +101,7 @@ class _ChatViewState extends State<ChatView> {
           }
       }
     });
+
     super.initState();
   }
 
@@ -349,11 +352,37 @@ class _ChatViewState extends State<ChatView> {
             itemCount: attachments.length,
             itemExtent: 200,
             itemBuilder: (context, index) {
-              var attachment = attachments[index];
-              return Column(children: <Widget>[
-                getImage(attachment.imageUrl),
-                attachment.description != null ? Text(attachment.description) : Container(),
-              ]);
+              MessageAttachment attachment = attachments[index];
+              if (attachment.type == 'file') {
+                return Row(children: <Widget>[
+                  attachment.description != null ? Text(attachment.description) : Text(attachment.title),
+                  InkWell(
+                    child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 20),
+                    onTap: () async {
+                      Map<String, String> header = {
+                        'X-Auth-Token': widget.authRC.data.authToken,
+                        'X-User-Id': widget.authRC.data.userId
+                      };
+                      WidgetsFlutterBinding.ensureInitialized();
+                      await FlutterDownloader.initialize(
+                          debug: true // optional: set false to disable printing logs to console
+                      );
+                      final taskId = await FlutterDownloader.enqueue(
+                        url: serverUri.replace(path: attachment.titleLink).toString(),
+                        headers: header,
+                        savedDir: "/download",
+                        showNotification: true, // show download progress in status bar (for Android)
+                        openFileFromNotification: true, // click on notification to open downloaded file (for Android)
+                      );
+                    },
+                  )
+                ]);
+              } else {
+                return Column(children: <Widget>[
+                  getImage(attachment.imageUrl),
+                  attachment.description != null ? Text(attachment.description) : Container(),
+                ]);
+              }
             }
           )
         ) : Container(height: 1, width: 1,)
@@ -381,7 +410,7 @@ class _ChatViewState extends State<ChatView> {
       onTap: () async { await canLaunch(urlInMessage.url) ? launch(urlInMessage.url) : print('url launch failed${urlInMessage.url}'); },
       child: Container(
       width: MediaQuery.of(context).size.width * 0.7,
-      child: urlInMessage.meta['ogImage'] != null
+      child: urlInMessage.meta != null && urlInMessage.meta['ogImage'] != null
         ? Column (
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget> [
@@ -389,7 +418,7 @@ class _ChatViewState extends State<ChatView> {
           urlInMessage.meta['ogTitle'] != null ? Text(urlInMessage.meta['ogTitle'], style: TextStyle(fontWeight: FontWeight.bold)) : SizedBox(),
           urlInMessage.meta['ogDescription'] != null ? Text(urlInMessage.meta['ogDescription'], style: TextStyle(fontSize: 11, color: Colors.blue)) : SizedBox(),
         ])
-        : urlInMessage.meta['oembedThumbnailUrl'] != null
+        : urlInMessage.meta != null && urlInMessage.meta['oembedThumbnailUrl'] != null
           ? Column (children: <Widget> [
             urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl']) : SizedBox(),
             urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
@@ -442,7 +471,8 @@ class _ChatViewState extends State<ChatView> {
     if (pickedFile != null) {
       File file = File(pickedFile.path);
       String desc = await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
-      Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
+      if (desc != null)
+        Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
       // setState(() {
       //   chatData.add(newMessage);
       // });
