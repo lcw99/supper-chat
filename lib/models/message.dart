@@ -251,74 +251,23 @@ class UrlInMessage {
   });
 
   String? url;
-  Meta? meta;
-  Headers? headers;
+  Map<String, String>? meta;
+  Map<String, String>? headers;
   ParsedUrl? parsedUrl;
 
   factory UrlInMessage.fromMap(Map<String, dynamic> json) => UrlInMessage(
     url: json["url"] == null ? null : json["url"],
-    meta: json["meta"] == null ? null : Meta.fromMap(json["meta"]),
-    headers: json["headers"] == null ? null : Headers.fromMap(json["headers"]),
+    meta: json['meta'] == null ? null : Map<String, String>.from(json['meta']),
+
+    headers: json["headers"] == null ? null : Map<String, String>.from(json["headers"]),
     parsedUrl: json["parsedUrl"] == null ? null : ParsedUrl.fromMap(json["parsedUrl"]),
   );
 
   Map<String, dynamic> toMap() => {
     "url": url == null ? null : url,
-    "meta": meta == null ? null : meta!.toMap(),
-    "headers": headers == null ? null : headers!.toMap(),
+    "meta": meta == null ? null : meta,
+    "headers": headers == null ? null : headers,
     "parsedUrl": parsedUrl == null ? null : parsedUrl!.toMap(),
-  };
-}
-
-class Headers {
-  Headers({
-    this.contentType,
-  });
-
-  String? contentType;
-
-  factory Headers.fromMap(Map<String, dynamic> json) => Headers(
-    contentType: json["contentType"] == null ? null : json["contentType"],
-  );
-
-  Map<String, dynamic> toMap() => {
-    "contentType": contentType == null ? null : contentType,
-  };
-}
-
-class Meta {
-  Meta({
-    this.pageTitle,
-    this.msapplicationTileImage,
-    this.msapplicationConfig,
-    this.ogImage,
-    this.twitterImage,
-    this.appleMobileWebAppTitle,
-  });
-
-  String? pageTitle;
-  String? msapplicationTileImage;
-  String? msapplicationConfig;
-  String? ogImage;
-  String? twitterImage;
-  String? appleMobileWebAppTitle;
-
-  factory Meta.fromMap(Map<String, dynamic> json) => Meta(
-    pageTitle: json["pageTitle"] == null ? null : json["pageTitle"],
-    msapplicationTileImage: json["msapplicationTileImage"] == null ? null : json["msapplicationTileImage"],
-    msapplicationConfig: json["msapplicationConfig"] == null ? null : json["msapplicationConfig"],
-    ogImage: json["ogImage"] == null ? null : json["ogImage"],
-    twitterImage: json["twitterImage"] == null ? null : json["twitterImage"],
-    appleMobileWebAppTitle: json["appleMobileWebAppTitle"] == null ? null : json["appleMobileWebAppTitle"],
-  );
-
-  Map<String, dynamic> toMap() => {
-    "pageTitle": pageTitle == null ? null : pageTitle,
-    "msapplicationTileImage": msapplicationTileImage == null ? null : msapplicationTileImage,
-    "msapplicationConfig": msapplicationConfig == null ? null : msapplicationConfig,
-    "ogImage": ogImage == null ? null : ogImage,
-    "twitterImage": twitterImage == null ? null : twitterImage,
-    "appleMobileWebAppTitle": appleMobileWebAppTitle == null ? null : appleMobileWebAppTitle,
   };
 }
 
@@ -339,7 +288,7 @@ class ParsedUrl {
   String? pathname;
   String? protocol;
   dynamic? port;
-  String? query;
+  dynamic? query;
   String? search;
   String? hostname;
 

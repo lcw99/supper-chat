@@ -171,15 +171,7 @@ class _ChatHomeState extends State<ChatHome> {
                           _setChannel(room);
                         },
                         title: Text(roomName, style: TextStyle(color: Colors.black)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(room.id, style: TextStyle(color: Colors.grey)),
-                            room.description != null ? Text(room.description, style: TextStyle(color: Colors.blue)) : Container(),
-                            room.topic != null ? Text(room.topic, style: TextStyle(color: Colors.blue)) : Container(),
-                            room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : Container(),
-                          ]
-                        ),
+                        subtitle: buildSubTitle(room),
                         leading: Container(
                           width: 80,
                           height: 80,
@@ -303,5 +295,18 @@ class _ChatHomeState extends State<ChatHome> {
       String info = jsonEncode(mr.toMap());
       await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, info: info));
     }
+  }
+
+  buildSubTitle(model.Room room) {
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          //Text(room.id, style: TextStyle(color: Colors.grey)),
+          room.description != null ? Text(room.description, style: TextStyle(color: Colors.blue)) : Container(),
+          room.topic != null ? Text(room.topic, style: TextStyle(color: Colors.blue)) : Container(),
+          room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : Container(),
+          room.lastMessage != null ? Text(room.lastMessage.msg, style: TextStyle(color: Colors.orange)) : Container(),
+        ]
+    );
   }
 }
