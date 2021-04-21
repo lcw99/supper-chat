@@ -42,6 +42,9 @@ dependencies:
   intl: ^0.17.0
   full_screen_image: ^1.0.2
   pinch_zoom: ^0.1.0
+  linkable: ^1.0.9
+  flutter_link_previewer: ^1.0.4
+  url_launcher: ^6.0.3
   flutter_emoji_keyboard:
     path: ../flutter_emoji_keyboard
 

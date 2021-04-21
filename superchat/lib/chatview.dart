@@ -6,9 +6,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_link_previewer/flutter_link_previewer.dart';
 import 'package:full_screen_image/full_screen_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:linkable/linkable.dart';
 import 'package:pinch_zoom/pinch_zoom.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
@@ -25,6 +27,7 @@ import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:superchat/input_file_desc.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'constants/constants.dart';
 
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
@@ -55,7 +58,6 @@ class _ChatViewState extends State<ChatView> {
 
   final _scrollController = ScrollController();
 
-  bool needScrollToBottom = false;
   bool bUpdateAll = false;
   bool showEmojiKeyboard = false;
   FocusNode myFocusNode;
@@ -63,7 +65,6 @@ class _ChatViewState extends State<ChatView> {
   @override
   void initState() {
     bUpdateAll = true;
-    needScrollToBottom = true;
     myFocusNode = FocusNode();
     widget.notificationStream.listen((event) {
       if (event.msg == 'changed' && this.mounted) {
@@ -76,14 +77,12 @@ class _ChatViewState extends State<ChatView> {
             int i = chatData.indexWhere((element) => element.id == roomMessage.id);
             if (i >= 0) {
               setState(() {
-                needScrollToBottom = true;
                 chatData[i] = roomMessage;
               });
             } else {  // new message
               setState(() {
                 print('!!!new message');
-                needScrollToBottom = true;
-                chatData.add(roomMessage);
+                chatData.insert(0, roomMessage);
               });
             }
           }
@@ -122,9 +121,14 @@ class _ChatViewState extends State<ChatView> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       extendBody: false,
-      bottomNavigationBar: Column(
+      bottomNavigationBar:
+      Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
+        Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(height: 50, child: _buildInputBox())
+        ),
         showEmojiKeyboard ? Container(child:
         EmojiKeyboard(
           height: 250,
@@ -143,19 +147,26 @@ class _ChatViewState extends State<ChatView> {
             if (snapshot.data.count == -1) {  // updated
               print('!!!!partial update case');
               markAsReadScheduler();
+              Future.delayed(const Duration(milliseconds: 300), () {
+                scrollToBottom();
+              });
             } else {
               bUpdateAll = false;
               if (channelMessages.length > 0) {
                 for (Message m in channelMessages)
                   if (!chatData.contains(m))
                     chatData.add(m);
-                chatData.sort((a, b) {
+                chatData.sort((b, a) {
                   return a.ts.compareTo(b.ts);
                 });
                 debugPrint("msg count=" + channelMessages.length.toString());
                 debugPrint("total msg count=" + chatData.length.toString());
 
                 markAsReadScheduler();
+                if (chatItemOffset == 0)
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    scrollToBottom();
+                  });
               } else {
                 historyEnd = true;
               }
@@ -164,7 +175,7 @@ class _ChatViewState extends State<ChatView> {
               onNotification: (notification) {
                 if (notification.metrics.atEdge) {
                   print("listview Scrollend" + notification.metrics.pixels.toString());
-                  if (!historyEnd && notification.metrics.pixels == 0.0) { // bottom
+                  if (!historyEnd && notification.metrics.pixels != 0.0) { // bottom
                     setState(() {
                       bUpdateAll = true;
                       chatItemOffset += chatItemCount;
@@ -175,19 +186,9 @@ class _ChatViewState extends State<ChatView> {
               },
               child: CustomScrollView(
                 controller: _scrollController,
+                reverse: true,
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: <Widget>[
-                SliverAppBar(
-                  title: Text(title),
-                  expandedHeight: 100.0,
-                  floating: false,
-                  pinned: true,
-                  flexibleSpace: FlexibleSpaceBar(
-                    centerTitle: true,
-                    background: Image.network(serverUri.replace(path: '/avatar/room/${widget.room.id}', query: 'format=png').toString(),
-                      fit: BoxFit.cover,
-                    )),
-                ),
                 SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                       Message message = chatData[index];
@@ -199,9 +200,22 @@ class _ChatViewState extends State<ChatView> {
                     childCount: chatData.length,
                   )
                 ),
+                SliverAppBar(
+                  title: Text(title),
+                  expandedHeight: 200,
+                  floating: false,
+                  pinned: true,
+                  flexibleSpace: FlexibleSpaceBar(
+                      centerTitle: true,
+                      background: Image.network(serverUri.replace(path: '/avatar/room/${widget.room.id}', query: 'format=png').toString(),
+                        fit: BoxFit.cover,
+                      )),
+                ),
+/*
                 SliverToBoxAdapter(
                   child: _buildInputBox()
                 )
+*/
             ]));
           } else
             return Container();
@@ -288,7 +302,7 @@ class _ChatViewState extends State<ChatView> {
         style: TextStyle(fontSize: 10, color: userNameColor),
         textAlign: TextAlign.left,
       ),
-      subtitle: _buildMessage(message, userName, newMessage),
+      subtitle: _buildMessage(message, userName),
     );
   }
   _getUserName(Message message) {
@@ -300,7 +314,7 @@ class _ChatViewState extends State<ChatView> {
     return userName;
   }
 
-  _buildMessage(Message message, String userName, String newMessage) {
+  _buildMessage(Message message, String userName) {
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
@@ -320,13 +334,7 @@ class _ChatViewState extends State<ChatView> {
         ),
         GestureDetector (
           onTap: () { pickReaction(message); },
-          child:
-          Container(
-            width: MediaQuery.of(context).size.width,
-            child: Text(
-            newMessage,
-            style: TextStyle(fontSize: 14, color: Colors.blueAccent),
-          ))
+          child: buildMessageBody(message),
         ),
         bReactions ?
           Container(
@@ -350,6 +358,44 @@ class _ChatViewState extends State<ChatView> {
           )
         ) : Container(height: 1, width: 1,)
       ]);
+  }
+
+  Widget buildMessageBody(Message message) {
+    return Column(children: <Widget>[
+      Container(
+        width: MediaQuery.of(context).size.width,
+        child: Linkable(
+          text: message.msg,
+          style: TextStyle(fontSize: 14, color: Colors.black54),
+        )
+      ),
+      message.urls != null && message.urls.length > 0
+          ? buildUrls(message)
+          : SizedBox(),
+    ]);
+  }
+
+  Widget buildUrls(Message message) {
+    UrlInMessage urlInMessage = message.urls.first;
+    return GestureDetector(
+      onTap: () async { await canLaunch(urlInMessage.url) ? launch(urlInMessage.url) : print('url launch failed${urlInMessage.url}'); },
+      child: Container(
+      width: MediaQuery.of(context).size.width * 0.7,
+      child: urlInMessage.meta['ogImage'] != null
+        ? Column (
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget> [
+          urlInMessage.meta['ogImage'] != null ? Image.network(urlInMessage.meta['ogImage']) : SizedBox(),
+          urlInMessage.meta['ogTitle'] != null ? Text(urlInMessage.meta['ogTitle'], style: TextStyle(fontWeight: FontWeight.bold)) : SizedBox(),
+          urlInMessage.meta['ogDescription'] != null ? Text(urlInMessage.meta['ogDescription'], style: TextStyle(fontSize: 11, color: Colors.blue)) : SizedBox(),
+        ])
+        : urlInMessage.meta['oembedThumbnailUrl'] != null
+          ? Column (children: <Widget> [
+            urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl']) : SizedBox(),
+            urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
+          ])
+          : SizedBox()
+    ));
   }
 
   Widget getImage(String imagePath) {
@@ -422,21 +468,26 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
-  scrollToBottom(BuildContext context) {
-    if (_scrollController.hasClients && needScrollToBottom) {
-      needScrollToBottom = false;
+  scrollToBottom() {
+    if (_scrollController.hasClients) {
       print('scroll to bottom!!!');
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent + 100,
+        0.0,
         duration: Duration(milliseconds: 200),
         curve: Curves.fastOutSlowIn,
       );
+/*
+      Future.delayed(const Duration(milliseconds: 300), () {
+        print('scroll not enough!!!');
+        if(_scrollController.offset != _scrollController.position.maxScrollExtent)
+          scrollToBottom();
+      });
+*/
     }
   }
 
   Queue<String> taskQ = Queue<String>();
   markAsReadScheduler() {
-    Future.delayed(const Duration(milliseconds: 300), () => scrollToBottom(context));
     if (taskQ.isNotEmpty)
       return;
     taskQ.add('job');
@@ -512,5 +563,6 @@ class _ChatViewState extends State<ChatView> {
     ReactionNew reaction = ReactionNew(emoji: em, messageId: message.id, shouldReact: shouldReact);
     messageService.postReaction(reaction, widget.authRC);
   }
+
 }
 
