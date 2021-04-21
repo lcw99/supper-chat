@@ -13,7 +13,12 @@ class InputFileDescription extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, null);
+        return false;
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: Text('Description'),
       ),
@@ -43,9 +48,8 @@ class InputFileDescription extends StatelessWidget {
             ),
           ])
       )
-    ]));
+    ])));
   }
-
 
 }
 
