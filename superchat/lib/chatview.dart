@@ -370,7 +370,7 @@ class _ChatViewState extends State<ChatView> {
                       final taskId = await FlutterDownloader.enqueue(
                         url: serverUri.replace(path: attachment.titleLink).toString(),
                         headers: header,
-                        savedDir: "/download",
+                        savedDir: "/storage/emulated/0/Download/",
                         showNotification: true, // show download progress in status bar (for Android)
                         openFileFromNotification: true, // click on notification to open downloaded file (for Android)
                       );
