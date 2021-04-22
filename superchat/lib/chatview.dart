@@ -6,7 +6,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_link_previewer/flutter_link_previewer.dart';
 import 'package:full_screen_image/full_screen_image.dart';
 import 'package:image_picker/image_picker.dart';
@@ -281,14 +280,6 @@ class _ChatViewState extends State<ChatView> {
                     serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
                     message.user.avatarUrl;
     String userName = _getUserName(message);
-    String newMessage = message.msg;
-    switch (message.t) {
-      case 'au': newMessage = '$userName added ${message.msg}'; break;
-      case 'uj': newMessage = '$userName joined'; break;
-      case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
-      case 'room_changed_description': newMessage = '$userName change room description'; break;
-      default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
-    }
     Color userNameColor = Colors.brown;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
@@ -346,34 +337,26 @@ class _ChatViewState extends State<ChatView> {
             child: _buildReactions(message, reactions),
           ) : Container(height: 1, width: 1,),
         bAttachments ? Container(
-        height: 150,
+        height: 20,
         child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: attachments.length,
-            itemExtent: 200,
             itemBuilder: (context, index) {
               MessageAttachment attachment = attachments[index];
               if (attachment.type == 'file') {
                 return Row(children: <Widget>[
-                  attachment.description != null ? Text(attachment.description) : Text(attachment.title),
+                  attachment.description != null
+                      ? Text(attachment.description, style: TextStyle(fontSize: 10),)
+                      : Text(attachment.title, style: TextStyle(fontSize: 10),),
                   InkWell(
                     child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 20),
                     onTap: () async {
-                      Map<String, String> header = {
-                        'X-Auth-Token': widget.authRC.data.authToken,
-                        'X-User-Id': widget.authRC.data.userId
+                      Map<String, String> query = {
+                        'rc_token': widget.authRC.data.authToken,
+                        'rc_uid': widget.authRC.data.userId
                       };
-                      WidgetsFlutterBinding.ensureInitialized();
-                      await FlutterDownloader.initialize(
-                          debug: true // optional: set false to disable printing logs to console
-                      );
-                      final taskId = await FlutterDownloader.enqueue(
-                        url: serverUri.replace(path: attachment.titleLink).toString(),
-                        headers: header,
-                        savedDir: "/storage/emulated/0/Download/",
-                        showNotification: true, // show download progress in status bar (for Android)
-                        openFileFromNotification: true, // click on notification to open downloaded file (for Android)
-                      );
+                      var uri = serverUri.replace(path: attachment.titleLink, queryParameters: query);
+                      launch(Uri.encodeFull(uri.toString()));
                     },
                   )
                 ]);
@@ -390,11 +373,21 @@ class _ChatViewState extends State<ChatView> {
   }
 
   Widget buildMessageBody(Message message) {
+    String userName = _getUserName(message);
+    String newMessage = message.msg;
+    switch (message.t) {
+      case 'au': newMessage = '$userName added ${message.msg}'; break;
+      case 'ru': newMessage = '$userName removed ${message.msg}'; break;
+      case 'uj': newMessage = '$userName joined'; break;
+      case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
+      case 'room_changed_description': newMessage = '$userName change room description'; break;
+      default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
+    }
     return Column(children: <Widget>[
-      Container(
+      newMessage == '' ? SizedBox() : Container(
         width: MediaQuery.of(context).size.width,
         child: Linkable(
-          text: message.msg,
+          text: newMessage,
           style: TextStyle(fontSize: 14, color: Colors.black54),
         )
       ),

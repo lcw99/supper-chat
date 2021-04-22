@@ -47,8 +47,8 @@ class WebSocketService {
     //subscribeNotifyUserEvent(webSocketChannel, user, 'otr');
     //subscribeNotifyUserEvent(webSocketChannel, user, 'webrtc');
     subscribeNotifyUserEvent(webSocketChannel, user, 'notification');
-    //subscribeNotifyUserEvent(webSocketChannel, user, 'rooms-changed');
-    //subscribeNotifyUserEvent(webSocketChannel, user, 'subscriptions-changed');
+    subscribeNotifyUserEvent(webSocketChannel, user, 'rooms-changed');
+    subscribeNotifyUserEvent(webSocketChannel, user, 'subscriptions-changed');
     //subscribeNotifyUserEvent(webSocketChannel, user, 'uiInteraction');
     //subscribeNotifyUserEvent(webSocketChannel, user, 'e2ekeyRequest');
     //subscribeNotifyUserEvent(webSocketChannel, user, 'userData');

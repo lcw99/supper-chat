@@ -45,7 +45,6 @@ dependencies:
   linkable: ^1.0.9
   flutter_link_previewer: ^1.0.4
   url_launcher: ^6.0.3
-  flutter_downloader: ^1.6.0
   flutter_emoji_keyboard:
     path: ../flutter_emoji_keyboard
 

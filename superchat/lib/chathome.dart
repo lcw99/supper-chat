@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
+import 'package:rocket_chat_connector_flutter/models/subscription.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
+import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
@@ -75,15 +77,26 @@ class _ChatHomeState extends State<ChatHome> {
           notificationController.add(notification);
           setState(() {});
 
-          if (notification.collection == 'stream-notify-user' &&
-              notification.notificationFields != null &&
-              notification.notificationFields.notificationArgs != null &&
-              notification.notificationFields.notificationArgs.length > 0) {
-            var arg = notification.notificationFields.notificationArgs[0];
-            var payload = arg['payload'] != null ? jsonEncode(arg['payload']) : null;
-            if (payload != null && !(bChatScreenOpen && selectedRoom != null && selectedRoom.id == arg['payload']['rid'])) {
-              RemoteMessage message = RemoteMessage(data: {'title': arg['title'], 'message': arg['text'], 'ejson': payload});
-              androidNotification(message);
+          if (notification.collection == 'stream-notify-user' &&notification.notificationFields != null) {
+            String eventName = notification.notificationFields.eventName;
+            if (eventName.endsWith('notification')) {
+              if (notification.notificationFields.notificationArgs != null &&
+                  notification.notificationFields.notificationArgs.length > 0) {
+                var arg = notification.notificationFields.notificationArgs[0];
+                var payload = arg['payload'] != null ? jsonEncode(arg['payload']) : null;
+                if (payload != null && !(bChatScreenOpen && selectedRoom != null && selectedRoom.id == arg['payload']['rid'])) {
+                  RemoteMessage message = RemoteMessage(data: {'title': arg['title'], 'message': arg['text'], 'ejson': payload});
+                  androidNotification(message);
+                }
+              }
+            } else if (eventName.endsWith('rooms-changed')) {
+              print('!!!!! rooms-changed');
+              setState(() {});
+            } else if (eventName.endsWith('subscriptions-changed')) {
+              print('!!!!! subscriptions-changed');
+              setState(() {});
+            } else {
+              print('**************** unknown eventName=$eventName');
             }
           }
         }
@@ -239,16 +252,41 @@ class _ChatHomeState extends State<ChatHome> {
     ChannelService channelService = ChannelService(rocketHttpService);
     UpdatedSinceFilter filter = UpdatedSinceFilter(updateSince);
     RoomUpdate roomUpdate = await channelService.getRooms(widget.authRC, filter);
-    SubscriptionUpdate subsUpdate = await channelService.getSubscriptions(widget.authRC, filter);
     List<model.Room> updatedRoom = roomUpdate.update;
     print('updatedRoom.length = ${updatedRoom.length}');
+
+    SubscriptionUpdate subsUpdate = await channelService.getSubscriptions(widget.authRC, filter);
+    print('updatedSubs.update.length=${subsUpdate.update.length}');
+    print('updatedSubs.remove.length=${subsUpdate.remove.length}');
+
+    if (subsUpdate.update.isNotEmpty) {
+      print('subs updated');
+      for (model.Subscription ms in subsUpdate.update) {
+        if (ms.blocked != null && ms.blocked)
+          print('blocked!!! = ${ms.rid}');
+        String info = jsonEncode(ms.toMap());
+        await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: ms.id, info: info));
+      }
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
+    }
+
+    if (subsUpdate.remove.isNotEmpty) {
+      print('subs removed');
+      for (model.Subscription ms in subsUpdate.remove) {
+        db.Subscription dbSub = await locator<db.ChatDatabase>().getSubscription(ms.id);
+        model.Subscription sub = model.Subscription.fromMap(jsonDecode(dbSub.info));
+        await locator<db.ChatDatabase>().deleteSubscription(ms.id);
+        await locator<db.ChatDatabase>().deleteRoom(sub.rid);
+      }
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
+    }
 
     if (updatedRoom.isNotEmpty) {
       print('room updated');
       for (model.Room mr in updatedRoom) {
-        mr.subscription = subsUpdate.update.firstWhere((e) => e.rid == mr.id, orElse: () => null);
+        model.Subscription subscription = subsUpdate.update.firstWhere((e) => e.rid == mr.id, orElse: () => null);
         String info = jsonEncode(mr.toMap());
-        await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, info: info));
+        await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, sid: subscription.id, info: info));
       }
       await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
     }
@@ -259,7 +297,6 @@ class _ChatHomeState extends State<ChatHome> {
     if (removedRoom.isNotEmpty) {
       print('room removed');
       for (model.Room mr in removedRoom) {
-        String info = jsonEncode(mr.toMap());
         await locator<db.ChatDatabase>().deleteRoom(mr.id);
       }
       await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
@@ -271,8 +308,11 @@ class _ChatHomeState extends State<ChatHome> {
     totalUnread = 0;
     for (db.Room dr in dbRooms) {
       model.Room room = model.Room.fromMap(jsonDecode(dr.info));
-      if (room.subscription != null) {
+      if (dr.sid != null) {
+        var dbSubscription = await locator<db.ChatDatabase>().getSubscription(dr.sid);
+        room.subscription = model.Subscription.fromMap(jsonDecode(dbSubscription.info));
         print('room unread=${room.subscription.unread}');
+        print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
         totalUnread += room.subscription.unread;
       }
       roomList.add(room);
@@ -301,11 +341,12 @@ class _ChatHomeState extends State<ChatHome> {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          //Text(room.id, style: TextStyle(color: Colors.grey)),
-          room.description != null ? Text(room.description, style: TextStyle(color: Colors.blue)) : Container(),
-          room.topic != null ? Text(room.topic, style: TextStyle(color: Colors.blue)) : Container(),
-          room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : Container(),
-          room.lastMessage != null ? Text(room.lastMessage.msg, style: TextStyle(color: Colors.orange)) : Container(),
+          Text(room.id, style: TextStyle(color: Colors.grey)),
+          room.description != null ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          room.topic != null ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          room.lastMessage != null ? Text(room.lastMessage.msg, style: TextStyle(color: Colors.orange)) : SizedBox(),
+          room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
     );
   }
