@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/subscription.dart' as model;
@@ -20,12 +22,11 @@ import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'constants/constants.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
-import 'package:rocket_chat_connector_flutter/models/notify_user_arg.dart';
+import 'my_profile.dart';
 import 'wigets/unread_counter.dart';
 
 import 'chatview.dart';
 import 'database/chatdb.dart' as db;
-import 'database/chatdb.dart';
 import 'main.dart';
 
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
@@ -121,6 +122,26 @@ class _ChatHomeState extends State<ChatHome> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _buildPage(),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              child: Text('Super Chat'),
+              decoration: BoxDecoration(
+                color: Colors.blue,
+              ),
+            ),
+            ListTile(
+              title: Text('My Profile'),
+              onTap: () async {
+                Navigator.pop(context);
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => MyProfile(widget.user, widget.authRC)));
+              },
+            ),
+          ],
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(

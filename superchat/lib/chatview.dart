@@ -331,7 +331,7 @@ class _ChatViewState extends State<ChatView> {
             width: MediaQuery.of(context).size.width,
             child: _buildReactions(message, reactions),
           ) : Container(height: 1, width: 1,),
-        bAttachments ? Container( child: buildAttachments(attachments)) : SizedBox()
+        bAttachments ? Container(child: buildAttachments(attachments)) : SizedBox()
       ]);
   }
 
