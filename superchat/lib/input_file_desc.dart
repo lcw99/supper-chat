@@ -39,7 +39,7 @@ class InputFileDescription extends StatelessWidget {
             )),
             InkWell(
               onTap: () {
-                String ret;
+                String ret = '';
                 if (_teController.text.isNotEmpty)
                   ret = _teController.text;
                 Navigator.pop(context, ret);

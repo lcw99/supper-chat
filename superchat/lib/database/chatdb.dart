@@ -13,7 +13,7 @@ const String lastUpdate = 'lastUpdate';
 
 class Rooms extends Table {
   TextColumn get rid => text()();
-  TextColumn get sid => text()();
+  TextColumn get sid => text().nullable()();
   TextColumn get info => text()();
 
   @override
@@ -57,7 +57,7 @@ class ChatDatabase extends _$ChatDatabase {
   // you should bump this number whenever you change or add a table definition. Migrations
   // are covered later in this readme.
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -68,7 +68,7 @@ class ChatDatabase extends _$ChatDatabase {
         print('migration from=$from, to=$to');
         if (from == 1) {
           await m.alterTable(TableMigration(rooms));
-        } else if (from == 6) {
+        } else if (from == 7) {
           for (final table in allTables) {
             await m.deleteTable(table.actualTableName);
             await m.createTable(table);
