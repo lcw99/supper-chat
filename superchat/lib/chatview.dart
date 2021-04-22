@@ -213,11 +213,6 @@ class _ChatViewState extends State<ChatView> {
                         fit: BoxFit.cover,
                       )),
                 ),
-/*
-                SliverToBoxAdapter(
-                  child: _buildInputBox()
-                )
-*/
             ]));
           } else
             return Container();
@@ -336,40 +331,38 @@ class _ChatViewState extends State<ChatView> {
             width: MediaQuery.of(context).size.width,
             child: _buildReactions(message, reactions),
           ) : Container(height: 1, width: 1,),
-        bAttachments ? Container(
-        height: 20,
-        child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: attachments.length,
-            itemBuilder: (context, index) {
-              MessageAttachment attachment = attachments[index];
-              if (attachment.type == 'file') {
-                return Row(children: <Widget>[
-                  attachment.description != null
-                      ? Text(attachment.description, style: TextStyle(fontSize: 10),)
-                      : Text(attachment.title, style: TextStyle(fontSize: 10),),
-                  InkWell(
-                    child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 20),
-                    onTap: () async {
-                      Map<String, String> query = {
-                        'rc_token': widget.authRC.data.authToken,
-                        'rc_uid': widget.authRC.data.userId
-                      };
-                      var uri = serverUri.replace(path: attachment.titleLink, queryParameters: query);
-                      launch(Uri.encodeFull(uri.toString()));
-                    },
-                  )
-                ]);
-              } else {
-                return Column(children: <Widget>[
-                  getImage(attachment.imageUrl),
-                  attachment.description != null ? Text(attachment.description) : Container(),
-                ]);
-              }
-            }
-          )
-        ) : Container(height: 1, width: 1,)
+        bAttachments ? Container( child: buildAttachments(attachments)) : SizedBox()
       ]);
+  }
+
+  buildAttachments(attachments) {
+    List<Widget> widgets = [];
+    for (MessageAttachment attachment in attachments) {
+      if (attachment.type == 'file' && attachment.imageUrl == null) {
+        widgets.add(Row(children: <Widget>[
+          attachment.description != null
+              ? Text(attachment.description, style: TextStyle(fontSize: 10),)
+              : Text(attachment.title, style: TextStyle(fontSize: 10),),
+          InkWell(
+            child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 20),
+            onTap: () async {
+              Map<String, String> query = {
+                'rc_token': widget.authRC.data.authToken,
+                'rc_uid': widget.authRC.data.userId
+              };
+              var uri = serverUri.replace(path: attachment.titleLink, queryParameters: query);
+              launch(Uri.encodeFull(uri.toString()));
+            },
+          )
+        ]));
+      } else {
+        widgets.add(Column(children: <Widget>[
+          getImage(attachment.imageUrl),
+          attachment.description != null ? Text(attachment.description) : Container(),
+        ]));
+      }
+    }
+    return Column(children: widgets);
   }
 
   Widget buildMessageBody(Message message) {
@@ -464,11 +457,11 @@ class _ChatViewState extends State<ChatView> {
     if (pickedFile != null) {
       File file = File(pickedFile.path);
       String desc = await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
-      if (desc != null)
+      if (desc != null) {
+        if (desc == '')
+          desc = null;
         Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
-      // setState(() {
-      //   chatData.add(newMessage);
-      // });
+      }
     } else {
       print('No image selected.');
     }

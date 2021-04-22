@@ -141,16 +141,18 @@ class _ChatHomeState extends State<ChatHome> {
     );
   }
 
+
+  List<model.Room> lastRoomList;
   _buildPage() {
     debugPrint("_buildPage=" + selectedPage.toString());
     switch(selectedPage) {
       case 0:
         return FutureBuilder<List<model.Room>>(
-            //future: _getChannelList(),
             future: _getMyRoomList(),
             builder: (context, AsyncSnapshot<List<model.Room>> snapshot) {
               if (snapshot.hasData) {
                 List<model.Room> roomList = snapshot.data;
+                lastRoomList = roomList;
                 return CustomScrollView(slivers: <Widget>[
                   SliverAppBar(
                     expandedHeight: 200.0,
@@ -241,6 +243,7 @@ class _ChatHomeState extends State<ChatHome> {
   }
 
   Future<List<model.Room>> _getMyRoomList() async {
+    bool bUpdated = false;
     var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdate);
     DateTime updateSince;
     if (lastUpdate != null)
@@ -267,7 +270,7 @@ class _ChatHomeState extends State<ChatHome> {
         String info = jsonEncode(ms.toMap());
         await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: ms.id, info: info));
       }
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
+      bUpdated = true;
     }
 
     if (subsUpdate.remove.isNotEmpty) {
@@ -278,7 +281,7 @@ class _ChatHomeState extends State<ChatHome> {
         await locator<db.ChatDatabase>().deleteSubscription(ms.id);
         await locator<db.ChatDatabase>().deleteRoom(sub.rid);
       }
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
+      bUpdated = true;
     }
 
     if (updatedRoom.isNotEmpty) {
@@ -286,9 +289,10 @@ class _ChatHomeState extends State<ChatHome> {
       for (model.Room mr in updatedRoom) {
         model.Subscription subscription = subsUpdate.update.firstWhere((e) => e.rid == mr.id, orElse: () => null);
         String info = jsonEncode(mr.toMap());
-        await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, sid: subscription.id, info: info));
+        String sid = subscription == null ? null : subscription.id;
+        await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, sid: sid, info: info));
       }
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
+      bUpdated = true;
     }
 
     List<model.Room> removedRoom = roomUpdate.remove;
@@ -299,26 +303,30 @@ class _ChatHomeState extends State<ChatHome> {
       for (model.Room mr in removedRoom) {
         await locator<db.ChatDatabase>().deleteRoom(mr.id);
       }
+      bUpdated = true;
+    }
+
+    if (bUpdated || lastRoomList == null) {
       await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
-    }
-
-    var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
-    print('dbRooms = ${dbRooms.length}');
-    List<model.Room> roomList = [];
-    totalUnread = 0;
-    for (db.Room dr in dbRooms) {
-      model.Room room = model.Room.fromMap(jsonDecode(dr.info));
-      if (dr.sid != null) {
-        var dbSubscription = await locator<db.ChatDatabase>().getSubscription(dr.sid);
-        room.subscription = model.Subscription.fromMap(jsonDecode(dbSubscription.info));
-        print('room unread=${room.subscription.unread}');
-        print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
-        totalUnread += room.subscription.unread;
+      var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
+      print('dbRooms = ${dbRooms.length}');
+      List<model.Room> roomList = [];
+      totalUnread = 0;
+      for (db.Room dr in dbRooms) {
+        model.Room room = model.Room.fromMap(jsonDecode(dr.info));
+        if (dr.sid != null) {
+          var dbSubscription = await locator<db.ChatDatabase>().getSubscription(dr.sid);
+          room.subscription = model.Subscription.fromMap(jsonDecode(dbSubscription.info));
+          print('room unread=${room.subscription.unread}');
+          print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
+          totalUnread += room.subscription.unread;
+        }
+        roomList.add(room);
       }
-      roomList.add(room);
+      return roomList;
+    } else {
+      return lastRoomList;
     }
-
-    return roomList;
   }
 
   @override
