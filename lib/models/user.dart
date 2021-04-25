@@ -18,6 +18,7 @@ class User {
   String? avatarUrl;
   Map<String, String>? customFields;
   bool? success;
+  dynamic? services;
 
   User({
     this.id,
@@ -33,10 +34,12 @@ class User {
     this.avatarUrl,
     this.customFields,
     this.success = false,
+    this.services,
   });
 
   User.fromMap(Map<String, dynamic>? json) {
     if (json != null) {
+      services = json['services'];
       id = json['_id'];
       name = json['name'];
 

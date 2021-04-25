@@ -56,15 +56,17 @@ class _ChatHomeState extends State<ChatHome> {
   Stream<rocket_notification.Notification> notificationStream;
 
   static bool bChatScreenOpen = false;
+  bool bDBUpdated = false;
 
   @override
   void initState() {
     super.initState();
+    bDBUpdated = false;
 
     notificationStream = notificationController.stream;
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
     webSocketService.subscribeNotifyUser(webSocketChannel, widget.user);
-    webSocketChannel.stream.listen((event) {
+    webSocketChannel.stream.listen((event) async {
       var e = jsonDecode(event);
       print('****************event=${event}');
       rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
@@ -76,7 +78,6 @@ class _ChatHomeState extends State<ChatHome> {
         //print("***got noti= " + data);
         if (notification.msg == 'changed') {
           notificationController.add(notification);
-          setState(() {});
 
           if (notification.collection == 'stream-notify-user' &&notification.notificationFields != null) {
             String eventName = notification.notificationFields.eventName;
@@ -95,7 +96,13 @@ class _ChatHomeState extends State<ChatHome> {
               setState(() {});
             } else if (eventName.endsWith('subscriptions-changed')) {
               print('!!!!! subscriptions-changed');
-              setState(() {});
+              if (notification.notificationFields.notificationArgs[0] == 'updated') {
+                model.Subscription sub = model.Subscription.fromMap(notification.notificationFields.notificationArgs[1]);
+                String info = jsonEncode(sub.toMap());
+                await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: sub.id, info: info));
+                bDBUpdated = true;
+                setState(() {});
+              }
             } else {
               print('**************** unknown eventName=$eventName');
             }
@@ -264,7 +271,6 @@ class _ChatHomeState extends State<ChatHome> {
   }
 
   Future<List<model.Room>> _getMyRoomList() async {
-    bool bUpdated = false;
     var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdate);
     DateTime updateSince;
     if (lastUpdate != null)
@@ -291,7 +297,7 @@ class _ChatHomeState extends State<ChatHome> {
         String info = jsonEncode(ms.toMap());
         await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: ms.id, info: info));
       }
-      bUpdated = true;
+      bDBUpdated = true;
     }
 
     if (subsUpdate.remove.isNotEmpty) {
@@ -302,7 +308,7 @@ class _ChatHomeState extends State<ChatHome> {
         await locator<db.ChatDatabase>().deleteSubscription(ms.id);
         await locator<db.ChatDatabase>().deleteRoom(sub.rid);
       }
-      bUpdated = true;
+      bDBUpdated = true;
     }
 
     if (updatedRoom.isNotEmpty) {
@@ -313,7 +319,7 @@ class _ChatHomeState extends State<ChatHome> {
         String sid = subscription == null ? null : subscription.id;
         await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, sid: sid, info: info));
       }
-      bUpdated = true;
+      bDBUpdated = true;
     }
 
     List<model.Room> removedRoom = roomUpdate.remove;
@@ -324,10 +330,10 @@ class _ChatHomeState extends State<ChatHome> {
       for (model.Room mr in removedRoom) {
         await locator<db.ChatDatabase>().deleteRoom(mr.id);
       }
-      bUpdated = true;
+      bDBUpdated = true;
     }
 
-    if (bUpdated || lastRoomList == null) {
+    if (bDBUpdated || lastRoomList == null) {
       await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
       var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
       print('dbRooms = ${dbRooms.length}');
@@ -344,6 +350,7 @@ class _ChatHomeState extends State<ChatHome> {
         }
         roomList.add(room);
       }
+      bDBUpdated = false;
       return roomList;
     } else {
       return lastRoomList;
