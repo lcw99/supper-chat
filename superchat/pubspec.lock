@@ -845,7 +845,7 @@ packages:
   rocket_chat_connector_flutter:
     dependency: "direct main"
     description:
-      path: ".."
+      path: "../rocket-chat-connector-flutter"
       relative: true
     source: path
     version: "0.1.0"
