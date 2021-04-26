@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="701605b9-a165-4dfa-971c-039054f30f2b" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[]" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="1rhlrJQspIO6P3gdyj4YkFmjA78" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="dart.analysis.tool.window.visible" value="false" />
+    <property name="io.flutter.reload.alreadyRun" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="flutter.settings" />
+    <property name="show.migrate.to.gradle.popup" value="false" />
+  </component>
+  <component name="RunManager">
+    <configuration name="superchat" type="FlutterRunConfigurationType" factoryName="Flutter">
+      <option name="filePath" value="$PROJECT_DIR$/superchat/lib/main.dart" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="701605b9-a165-4dfa-971c-039054f30f2b" name="Default Changelist" comment="" />
+      <created>1619436399664</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1619436399664</updated>
+    </task>
+    <task id="LOCAL-00001" summary="folder restructured">
+      <created>1619437000839</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1619437000839</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="folder restructured" />
+    <option name="LAST_COMMIT_MESSAGE" value="folder restructured" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="2299" y="137" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1619436517676">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state x="2299" y="137" key="#com.intellij.execution.impl.EditConfigurationsDialog/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436517676" />
+    <state x="2512" y="231" key="#com.intellij.ide.util.TreeFileChooserDialog" timestamp="1619436437854">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state x="2512" y="231" key="#com.intellij.ide.util.TreeFileChooserDialog/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436437854" />
+    <state x="2275" y="-18" key="CommitChangelistDialog2" timestamp="1619436999715">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state x="2275" y="-18" key="CommitChangelistDialog2/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436999715" />
+    <state x="2575" y="187" key="FileChooserDialogImpl" timestamp="1619436500864">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state x="2575" y="187" key="FileChooserDialogImpl/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436500864" />
+    <state width="1800" height="303" key="GridCell.Tab.0.bottom" timestamp="1619436817122">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state width="1800" height="303" key="GridCell.Tab.0.bottom/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436817122" />
+    <state width="1800" height="303" key="GridCell.Tab.0.center" timestamp="1619436817122">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state width="1800" height="303" key="GridCell.Tab.0.center/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436817122" />
+    <state width="1800" height="303" key="GridCell.Tab.0.left" timestamp="1619436817122">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state width="1800" height="303" key="GridCell.Tab.0.left/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436817122" />
+    <state width="1800" height="303" key="GridCell.Tab.0.right" timestamp="1619436817122">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state width="1800" height="303" key="GridCell.Tab.0.right/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436817122" />
+    <state x="2240" y="50" key="SettingsEditor" timestamp="1619436512184">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state x="2240" y="50" key="SettingsEditor/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436512184" />
+    <state x="2341" y="159" key="Vcs.Push.Dialog.v2" timestamp="1619437002441">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state x="2341" y="159" key="Vcs.Push.Dialog.v2/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619437002441" />
+    <state x="2267" y="370" key="git4idea.remote.GitConfigureRemotesDialog" timestamp="1619436561978">
+      <screen x="1920" y="-109" width="1920" height="1160" />
+    </state>
+    <state x="2267" y="370" key="git4idea.remote.GitConfigureRemotesDialog/1920.-109.1920.1160/0.0.1920.1040@1920.-109.1920.1160" timestamp="1619436561978" />
+  </component>
+</project>
