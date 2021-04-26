@@ -54,19 +54,12 @@ class MessageService {
   }
 
   Future<Message> roomImageUpload(String? roomId, Authentication? authentication, File? file, {String? desc}) async {
-    String filename = path.basename(file!.path);
-
-    Map<String, String> headers = {
-      'X-Auth-Token': authentication!.data!.authToken!,
-      'X-User-Id': authentication.data!.userId!,
-    };
-
     var uri = _httpService.getUri()!.replace(path: '/api/v1/rooms.upload/$roomId');
     var request = http.MultipartRequest('POST', uri)
-      ..headers['X-Auth-Token'] = authentication.data!.authToken!
+      ..headers['X-Auth-Token'] = authentication!.data!.authToken!
       ..headers['X-User-Id'] = authentication.data!.userId!
       ..files.add(await http.MultipartFile.fromPath(
-          'file', file.path,
+          'file', file!.path,
           contentType: MediaType.parse(lookupMimeType(file.path)!)));
 
     if (desc != null && desc != '')

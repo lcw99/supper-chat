@@ -1,14 +1,20 @@
 import 'dart:io';
 
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 
-class InputFileDescription extends StatelessWidget {
+class InputFileDescription extends StatefulWidget {
   InputFileDescription({Key key, this.file}) : super(key: key);
   final File file;
 
+  @override
+  _InputFileDescriptionState createState() => _InputFileDescriptionState();
+}
+
+class _InputFileDescriptionState extends State<InputFileDescription> {
   final TextEditingController _teController = TextEditingController();
 
   @override
@@ -24,7 +30,7 @@ class InputFileDescription extends StatelessWidget {
       ),
       body:
       Column(children: <Widget>[
-      FileViewer(file: file),
+      FileViewer(file: widget.file),
       Container(
           child:
           Row(children: <Widget>[
@@ -39,6 +45,12 @@ class InputFileDescription extends StatelessWidget {
             )),
             InkWell(
               onTap: () {
+
+              },
+              child: Icon(Icons.edit, color: Colors.blueAccent,),
+            ),
+            InkWell(
+              onTap: () {
                 String ret = '';
                 if (_teController.text.isNotEmpty)
                   ret = _teController.text;
@@ -50,7 +62,6 @@ class InputFileDescription extends StatelessWidget {
       )
     ])));
   }
-
 }
 
 class FileViewer extends StatelessWidget {
@@ -62,7 +73,7 @@ class FileViewer extends StatelessWidget {
     MediaType mt = MediaType.parse(lookupMimeType(file.path));
     switch (mt.type) {
       case 'image':
-        return Image.file(file);
+        return ExtendedImage.file(file);
         break;
       case 'audio':
       case 'text':
