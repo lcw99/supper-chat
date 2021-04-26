@@ -297,7 +297,7 @@ class _ChatViewState extends State<ChatView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
         Text(
-          userName + '(' + index.toString() +')',
+          userName /* + '(${index.toString()})' */,
           style: TextStyle(fontSize: 10, color: userNameColor),
           textAlign: TextAlign.left,
         ),
@@ -381,7 +381,9 @@ class _ChatViewState extends State<ChatView> {
       } else {
         widgets.add(Column(children: <Widget>[
           getImage(attachment.imageUrl),
-          attachment.description != null ? Text(attachment.description) : SizedBox(),
+          attachment.description != null
+              ? Text(attachment.description, style: TextStyle(fontSize: 11),)
+              : SizedBox(),
         ]));
       }
     }
