@@ -28,9 +28,9 @@ class SSImageEditor extends StatefulWidget {
 
 class _SSImageEditorState extends State<SSImageEditor> {
   final GlobalKey<ExtendedImageEditorState> editorKey =
-  GlobalKey<ExtendedImageEditorState>();
+    GlobalKey<ExtendedImageEditorState>();
   final GlobalKey<PopupMenuButtonState<EditorCropLayerPainter>> popupMenuKey =
-  GlobalKey<PopupMenuButtonState<EditorCropLayerPainter>>();
+    GlobalKey<PopupMenuButtonState<EditorCropLayerPainter>>();
   final List<AspectRatioItem> _aspectRatios = <AspectRatioItem>[
     AspectRatioItem(text: 'custom', value: CropAspectRatios.custom),
     AspectRatioItem(text: 'original', value: CropAspectRatios.original),
@@ -66,7 +66,10 @@ class _SSImageEditorState extends State<SSImageEditor> {
           IconButton(
             icon: const Icon(Icons.done),
             onPressed: () {
-              var imageData = _cropImage(true);
+              var imageData;
+              var editAct = editorKey.currentState!.editAction;
+              if (editAct!.needCrop || editAct.needFlip || editAct.hasRotateAngle)
+                imageData = _cropImage(true);
               Navigator.pop(context, imageData);
             },
           ),
@@ -127,7 +130,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
                 icon: const Icon(Icons.crop),
                 label: const Text(
                   'Crop',
-                  style: TextStyle(fontSize: 10.0),
+                  style: TextStyle(fontSize: 5.0),
                 ),
                 textColor: Colors.white,
                 onPressed: () {
@@ -140,7 +143,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
                               child: SizedBox(),
                             ),
                             SizedBox(
-                              height: 100,
+                              height: 200,
                               child: ListView.builder(
                                 shrinkWrap: true,
                                 scrollDirection: Axis.horizontal,
@@ -174,7 +177,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
                     icon: const Icon(Icons.flip),
                     label: const Text(
                       'Flip',
-                      style: TextStyle(fontSize: 10.0),
+                      style: TextStyle(fontSize: 5.0),
                     ),
                     textColor: Colors.white,
                     onPressed: () {
@@ -185,7 +188,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
                     icon: const Icon(Icons.rotate_left),
                     label: const Text(
                       'Rotate Left',
-                      style: TextStyle(fontSize: 8.0),
+                      style: TextStyle(fontSize: 5.0),
                     ),
                     textColor: Colors.white,
                     onPressed: () {
@@ -196,7 +199,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
                     icon: const Icon(Icons.rotate_right),
                     label: const Text(
                       'Rotate Right',
-                      style: TextStyle(fontSize: 8.0),
+                      style: TextStyle(fontSize: 5.0),
                     ),
                     textColor: Colors.white,
                     onPressed: () {
@@ -211,7 +214,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
                       offset: const Offset(100, -300),
                       child: const Text(
                         'Painter',
-                        style: TextStyle(fontSize: 8.0),
+                        style: TextStyle(fontSize: 5.0),
                       ),
                       initialValue: _cropLayerPainter,
                       itemBuilder: (BuildContext context) {
@@ -285,7 +288,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
                     icon: const Icon(Icons.restore),
                     label: const Text(
                       'Reset',
-                      style: TextStyle(fontSize: 10.0),
+                      style: TextStyle(fontSize: 5.0),
                     ),
                     textColor: Colors.white,
                     onPressed: () {
@@ -413,7 +416,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
   }
 */
 
-  Future<String?> _cropImage(bool useNative) async {
+  Future<Uint8List?> _cropImage(bool useNative) async {
     if (_cropping) {
       return null;
     }
@@ -427,8 +430,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
 
       /// native library
       if (useNative) {
-        fileData = await cropImageDataWithNativeLibrary(
-            state: editorKey.currentState!);
+        fileData = await cropImageDataWithNativeLibrary(state: editorKey.currentState!);
       } else {
         ///delay due to cropImageDataWithDartLibrary is time consuming on main thread
         ///it will block showBusyingDialog
@@ -436,14 +438,13 @@ class _SSImageEditorState extends State<SSImageEditor> {
         //await Future.delayed(Duration(milliseconds: 200));
 
         ///if you don't want to block ui, use compute/isolate,but it costs more time.
-        fileData =
-        await cropImageDataWithDartLibrary(state: editorKey.currentState!);
+        fileData = await cropImageDataWithDartLibrary(state: editorKey.currentState!);
       }
-      final String? filePath = await ImageSaver.save(tempImageFileName, fileData!);
+      //final String? filePath = await ImageSaver.save(tempImageFileName, fileData!);
 
       //msg = 'save image : $filePath';
       _cropping = false;
-      return filePath;
+      return fileData;
     } catch (e, stack) {
       msg = 'save failed: $e\n $stack';
       print(msg);

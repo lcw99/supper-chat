@@ -7,7 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
-Future<Uint8List?> pickImage(BuildContext context) async {
+Future<dynamic?> pickImage(BuildContext context, {bool fileResult = false}) async {
   List<AssetEntity> assets = <AssetEntity>[];
   final List<AssetEntity>? result = await AssetPicker.pickAssets(
     context,
@@ -21,7 +21,10 @@ Future<Uint8List?> pickImage(BuildContext context) async {
   );
   if (result != null) {
     assets = List<AssetEntity>.from(result);
-    return assets.first.originBytes;
+    if (fileResult)
+      return assets.first.file;
+    else
+      return assets.first.originBytes;
   }
   return null;
   // final File file =

@@ -60,7 +60,6 @@ void _isolateEncodeImage(SendPort port) {
 Future<Uint8List?> cropImageDataWithDartLibrary(
     {required ExtendedImageEditorState state}) async {
   print('dart library start cropping');
-
   ///crop rect base on raw image
   final Rect? cropRect = state.getCropRect();
 
