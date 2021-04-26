@@ -2,16 +2,14 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_link_previewer/flutter_link_previewer.dart';
-import 'package:full_screen_image/full_screen_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:linkable/linkable.dart';
-import 'package:pinch_zoom/pinch_zoom.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
@@ -26,6 +24,7 @@ import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
+import 'package:ss_image_editor/common/image_picker/image_picker.dart';
 import 'package:superchat/input_file_desc.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -34,7 +33,8 @@ import 'constants/constants.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
-
+import 'wigets/full_screen_image.dart';
+import 'package:ss_image_editor/ss_image_editor.dart';
 
 class ChatView extends StatefulWidget {
   final Stream<rocket_notification.Notification> notificationStream;
@@ -209,7 +209,7 @@ class _ChatViewState extends State<ChatView> {
                   pinned: true,
                   flexibleSpace: FlexibleSpaceBar(
                       centerTitle: true,
-                      background: Image.network(serverUri.replace(path: '/avatar/room/${widget.room.id}', query: 'format=png').toString(),
+                      background: ExtendedImage.network(serverUri.replace(path: '/avatar/room/${widget.room.id}', query: 'format=png').toString(),
                         fit: BoxFit.cover,
                       )),
                 ),
@@ -254,7 +254,7 @@ class _ChatViewState extends State<ChatView> {
             ),
           )),
           InkWell(
-            onTap: _pickImage,
+            onTap: _pickImage2,
             child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
           ),
           Container(
@@ -284,7 +284,7 @@ class _ChatViewState extends State<ChatView> {
           alignment: Alignment.centerLeft,
           width: specialMessage ? 20 : 40,
           height: specialMessage ? 20 : 40,
-          child: Image.network(url)
+          child: ExtendedImage.network(url)
       ),
       title: Text(
         userName + '(' + index.toString() +')',
@@ -317,7 +317,9 @@ class _ChatViewState extends State<ChatView> {
       dateStr = DateFormat('yyyy-MM-dd kk:mm:ss').format(ts);
 
     return
-      Column(children: <Widget>[
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
         Container(alignment: Alignment.centerLeft,
           child: Text(dateStr, style: TextStyle(fontSize: 10, color: Colors.blue),)
         ),
@@ -330,7 +332,7 @@ class _ChatViewState extends State<ChatView> {
             height: 20,
             width: MediaQuery.of(context).size.width,
             child: _buildReactions(message, reactions),
-          ) : Container(height: 1, width: 1,),
+          ) : SizedBox(),
         bAttachments ? Container(child: buildAttachments(attachments)) : SizedBox()
       ]);
   }
@@ -358,7 +360,7 @@ class _ChatViewState extends State<ChatView> {
       } else {
         widgets.add(Column(children: <Widget>[
           getImage(attachment.imageUrl),
-          attachment.description != null ? Text(attachment.description) : Container(),
+          attachment.description != null ? Text(attachment.description) : SizedBox(),
         ]));
       }
     }
@@ -400,13 +402,13 @@ class _ChatViewState extends State<ChatView> {
         ? Column (
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget> [
-          urlInMessage.meta['ogImage'] != null ? Image.network(urlInMessage.meta['ogImage']) : SizedBox(),
+          urlInMessage.meta['ogImage'] != null ? ExtendedImage.network(urlInMessage.meta['ogImage']) : SizedBox(),
           urlInMessage.meta['ogTitle'] != null ? Text(urlInMessage.meta['ogTitle'], style: TextStyle(fontWeight: FontWeight.bold)) : SizedBox(),
           urlInMessage.meta['ogDescription'] != null ? Text(urlInMessage.meta['ogDescription'], style: TextStyle(fontSize: 11, color: Colors.blue)) : SizedBox(),
         ])
         : urlInMessage.meta != null && urlInMessage.meta['oembedThumbnailUrl'] != null
           ? Column (children: <Widget> [
-            urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl']) : SizedBox(),
+            urlInMessage.meta['oembedThumbnailUrl'] != null ? ExtendedImage.network(urlInMessage.meta['oembedThumbnailUrl']) : SizedBox(),
             urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
           ])
           : SizedBox()
@@ -419,7 +421,23 @@ class _ChatViewState extends State<ChatView> {
       'X-User-Id': widget.authRC.data.userId
     };
 
-    var image = Image.network(serverUri.replace(path: imagePath).toString(), headers: header, fit: BoxFit.fitHeight, height: 130,);
+    var image = ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
+      headers: header, fit: BoxFit.fitWidth, height: 130,
+      mode: ExtendedImageMode.gesture,
+      initGestureConfigHandler: (state) {
+        return GestureConfig(
+          minScale: 0.9,
+          animationMinScale: 0.7,
+          maxScale: 3.0,
+          animationMaxScale: 3.5,
+          speed: 1.0,
+          inertialSpeed: 100.0,
+          initialScale: 1.0,
+          inPageView: false,
+          initialAlignment: InitialAlignment.center,
+        );
+      },
+    );
 
     return FullScreenWidget(
       child: Hero(
@@ -461,6 +479,27 @@ class _ChatViewState extends State<ChatView> {
         if (desc == '')
           desc = null;
         Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
+      }
+    } else {
+      print('No image selected.');
+    }
+  }
+
+  Future<void> _pickImage2() async {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+    MessageService messageService = MessageService(rocketHttpService);
+
+    //final pickedFile = await picker.getImage(source: ImageSource.gallery);
+
+    var _memoryImage = await pickImage(context);
+
+    if (_memoryImage != null) {
+      //File file = File(pickedFile.path);
+      var imageFilePath = await Navigator.push(context, MaterialPageRoute(builder: (context) => SSImageEditor(memoryImage: _memoryImage)));
+      if (imageFilePath != null) {
+        File file = File(imageFilePath);
+        Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: '');
+        //file.delete();
       }
     } else {
       print('No image selected.');
