@@ -28,7 +28,7 @@ class FlatButtonWithIcon extends TextButton with MaterialButtonWithIconMixin {
             children: <Widget>[
               icon,
               const SizedBox(height: 5.0),
-              //label,
+              label,
             ],
           ),
         );

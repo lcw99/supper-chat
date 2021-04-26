@@ -25,7 +25,7 @@ import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:ss_image_editor/common/image_picker/image_picker.dart';
-import 'package:superchat/input_file_desc.dart';
+import 'package:superchat/image_file_desc.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'constants/constants.dart';
@@ -255,7 +255,7 @@ class _ChatViewState extends State<ChatView> {
             ),
           )),
           InkWell(
-            onTap: _pickImage2,
+            onTap: _pickImage,
             child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
           ),
           Container(
@@ -336,6 +336,7 @@ class _ChatViewState extends State<ChatView> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+        bAttachments ? Container(child: buildAttachments(attachments)) : SizedBox(),
         GestureDetector (
           onTap: () { pickReaction(message); },
           child: buildMessageBody(message),
@@ -354,7 +355,6 @@ class _ChatViewState extends State<ChatView> {
             child: Text(dateStr, style: TextStyle(fontSize: 8, color: Colors.black54),)
           )),
         ]),
-        bAttachments ? Container(child: buildAttachments(attachments)) : SizedBox(),
       ]);
   }
 
@@ -500,15 +500,17 @@ class _ChatViewState extends State<ChatView> {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     MessageService messageService = MessageService(rocketHttpService);
 
-    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+    //final pickedFile = await picker.getImage(source: ImageSource.gallery);
+    final pickedFile = await pickImage(context, fileResult: true);
 
     if (pickedFile != null) {
       File file = File(pickedFile.path);
-      String desc = await Navigator.push(context, MaterialPageRoute(builder: (context) => InputFileDescription(file: file)));
-      if (desc != null) {
-        if (desc == '')
-          desc = null;
-        Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
+      ImageFileData data = await Navigator.push(context, MaterialPageRoute(builder: (context) => ImageFileDescription(file: file)));
+      if (data != null) {
+        if (data.description != null && data.description == '')
+          data.description = null;
+        file = File(data.filePath);
+        Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: data.description);
       }
     } else {
       print('No image selected.');
@@ -518,8 +520,6 @@ class _ChatViewState extends State<ChatView> {
   Future<void> _pickImage2() async {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     MessageService messageService = MessageService(rocketHttpService);
-
-    //final pickedFile = await picker.getImage(source: ImageSource.gallery);
 
     var _memoryImage = await pickImage(context);
 
