@@ -186,7 +186,8 @@ class _ChatViewState extends State<ChatView> {
                 }
                 return true;
               },
-              child: CustomScrollView(
+              child: Container(color: Colors.blue.shade100,
+                child: CustomScrollView(
                 controller: _scrollController,
                 reverse: true,
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -213,7 +214,7 @@ class _ChatViewState extends State<ChatView> {
                         fit: BoxFit.cover,
                       )),
                 ),
-            ]));
+            ])));
           } else
             return Container();
         }
@@ -275,24 +276,36 @@ class _ChatViewState extends State<ChatView> {
                     serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
                     message.user.avatarUrl;
     String userName = _getUserName(message);
-    Color userNameColor = Colors.brown;
+    Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
-    return ListTile(
-      dense: true,
-      leading: Container(
-          alignment: Alignment.centerLeft,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+      SizedBox(width: 9,),
+      Container(
+          padding: EdgeInsets.all(2),
+          alignment: Alignment.topLeft,
           width: specialMessage ? 20 : 40,
           height: specialMessage ? 20 : 40,
-          child: ExtendedImage.network(url)
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8.0),
+            child: ExtendedImage.network(url))
       ),
-      title: Text(
-        userName + '(' + index.toString() +')',
-        style: TextStyle(fontSize: 10, color: userNameColor),
-        textAlign: TextAlign.left,
-      ),
-      subtitle: _buildMessage(message, userName),
-    );
+      SizedBox(width: 5,),
+      Expanded(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+        Text(
+          userName + '(' + index.toString() +')',
+          style: TextStyle(fontSize: 10, color: userNameColor),
+          textAlign: TextAlign.left,
+        ),
+        _buildMessage(message, userName),
+        SizedBox(height: 8,),
+      ],)),
+      SizedBox(width: 60,),
+    ],);
   }
   _getUserName(Message message) {
     String userName = '';
@@ -310,30 +323,38 @@ class _ChatViewState extends State<ChatView> {
     bool bReactions = reactions != null && reactions.length > 0;
     var now = DateTime.now().toLocal();
     var ts = message.ts.toLocal();
-    String dateStr;
-    if (now.year == ts.year && now.month == ts.month && now.day == ts.day)
-      dateStr = DateFormat('kk:mm:ss').format(ts);
-    else
-      dateStr = DateFormat('yyyy-MM-dd kk:mm:ss').format(ts);
+    String dateStr = '';
+    if (now.year != ts.year)
+      dateStr += DateFormat('yyyy-').format(ts);
+    if (now.month != ts.month)
+      dateStr += DateFormat('MM-').format(ts);
+    if (now.day != ts.day)
+      dateStr += DateFormat('dd ').format(ts);
+    dateStr += DateFormat('kk:mm:ss').format(ts);
 
     return
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-        Container(alignment: Alignment.centerLeft,
-          child: Text(dateStr, style: TextStyle(fontSize: 10, color: Colors.blue),)
-        ),
         GestureDetector (
           onTap: () { pickReaction(message); },
           child: buildMessageBody(message),
         ),
-        bReactions ?
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          Expanded(flex: 1, child: bReactions ?
           Container(
             height: 20,
             width: MediaQuery.of(context).size.width,
             child: _buildReactions(message, reactions),
-          ) : SizedBox(),
-        bAttachments ? Container(child: buildAttachments(attachments)) : SizedBox()
+          ) : SizedBox()),
+          Expanded(flex: 1, child: Container(
+            alignment: Alignment.topRight,
+            child: Text(dateStr, style: TextStyle(fontSize: 8, color: Colors.black54),)
+          )),
+        ]),
+        bAttachments ? Container(child: buildAttachments(attachments)) : SizedBox(),
       ]);
   }
 
@@ -378,18 +399,27 @@ class _ChatViewState extends State<ChatView> {
       case 'room_changed_description': newMessage = '$userName change room description'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
     }
-    return Column(children: <Widget>[
+    return Container(
+    child: Column(children: <Widget>[
       newMessage == '' ? SizedBox() : Container(
+          padding: EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.blueAccent, width: 0),
+            borderRadius: BorderRadius.all(
+                Radius.circular(2.0) //                 <--- border radius here
+            ),
+          ),
         width: MediaQuery.of(context).size.width,
         child: Linkable(
           text: newMessage,
-          style: TextStyle(fontSize: 14, color: Colors.black54),
+          style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.normal),
         )
       ),
       message.urls != null && message.urls.length > 0
           ? buildUrls(message)
           : SizedBox(),
-    ]);
+    ]));
   }
 
   Widget buildUrls(Message message) {
