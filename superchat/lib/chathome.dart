@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/subscription.dart' as model;
@@ -58,10 +59,50 @@ class _ChatHomeState extends State<ChatHome> {
   static bool bChatScreenOpen = false;
   bool bDBUpdated = false;
 
+  StreamSubscription _intentDataStreamSubscription;
+  List<SharedMediaFile> _sharedFiles;
+  String _sharedText;
+
   @override
   void initState() {
     super.initState();
     bDBUpdated = false;
+    _sharedText = null;
+
+    // For sharing images coming from outside the app while the app is in the memory
+    _intentDataStreamSubscription =
+        ReceiveSharingIntent.getMediaStream().listen((List<SharedMediaFile> value) {
+          _sharedFiles = value;
+          print("Shared(1)!!!:" + (_sharedFiles?.map((f)=> f.path)?.join(",") ?? ""));
+          notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+        }, onError: (err) {
+          print("getIntentDataStream error: $err");
+        });
+
+    // For sharing images coming from outside the app while the app is closed
+    ReceiveSharingIntent.getInitialMedia().then((List<SharedMediaFile> value) {
+      _sharedFiles = value;
+      notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+      print("Shared(2)!!!!:" + (_sharedFiles?.map((f)=> f.path)?.join(",") ?? ""));
+    });
+
+    // For sharing or opening urls/text coming from outside the app while the app is in the memory
+    _intentDataStreamSubscription =
+        ReceiveSharingIntent.getTextStream().listen((String value) {
+          print('shared text!!!(1) = $value');
+          _sharedText = value;
+          notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+        }, onError: (err) {
+          print("getLinkStream error: $err");
+        });
+
+    // For sharing or opening urls/text coming from outside the app while the app is closed
+    ReceiveSharingIntent.getInitialText().then((String value) {
+      print('shared text!!!(2) = $value');
+      _sharedText = value;
+      notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+    });
+
 
     notificationStream = notificationController.stream;
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
@@ -262,8 +303,16 @@ class _ChatHomeState extends State<ChatHome> {
       refresh = true;
     }
     bChatScreenOpen = true;
+    var sharedObj;
+    if (_sharedText != null) {
+      sharedObj = _sharedText;
+      _sharedText = null;
+    } else if (_sharedFiles != null) {
+      sharedObj = _sharedFiles;
+      _sharedFiles = null;
+    }
     final result = await Navigator.push(context, MaterialPageRoute(
-        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user,)),
+        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user, sharedObject: sharedObj,)),
     );
     bChatScreenOpen = false;
     if (refresh)
@@ -360,6 +409,7 @@ class _ChatHomeState extends State<ChatHome> {
   @override
   void dispose() {
     webSocketChannel.sink.close();
+    _intentDataStreamSubscription.cancel();
     super.dispose();
   }
 

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:linkable/linkable.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
@@ -41,8 +42,9 @@ class ChatView extends StatefulWidget {
   final Authentication authRC;
   final model.Room room;
   final User me;
+  final dynamic sharedObject;
 
-  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room, @required this.me}) : super(key: key);
+  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room, @required this.me, this.sharedObject}) : super(key: key);
 
   @override
   _ChatViewState createState() => _ChatViewState();
@@ -71,6 +73,10 @@ class _ChatViewState extends State<ChatView> {
     updateAll = true;
     myFocusNode = FocusNode();
     widget.notificationStream.listen((event) {
+      if (event.msg == 'request_close') {
+        Navigator.pop(context, null);
+        return;
+      }
       if (event.msg == 'changed' && this.mounted) {
         if (event.collection == 'stream-room-messages') {
           if (event.notificationFields.notificationArgs.length > 0) {
@@ -107,8 +113,19 @@ class _ChatViewState extends State<ChatView> {
     });
 
     super.initState();
-  }
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.sharedObject != null) {
+        if (widget.sharedObject is String)
+          _postMessage(widget.sharedObject);
+        else if (widget.sharedObject is List<SharedMediaFile>) {
+          List<SharedMediaFile> mediaFiles = widget.sharedObject;
+          File f = File(mediaFiles.first.path);
+          postImage(f, null);
+        }
+      }
+    });
+  }
   @override
   void dispose() {
     _teController.dispose();
@@ -280,7 +297,7 @@ class _ChatViewState extends State<ChatView> {
               margin: EdgeInsets.only(left: 10),
               child:
               InkWell(
-                onTap: _postMessage,
+                onTap: () {_postMessage(_teController.text);},
                 child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
               )),
         ])
@@ -511,11 +528,11 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  Future<void> _postMessage() async {
-    if (_teController.text.isNotEmpty) {
+  Future<void> _postMessage(String message) async {
+    if (message != null && message.isNotEmpty) {
       final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
       MessageService messageService = MessageService(rocketHttpService);
-      MessageNew msg = MessageNew(roomId: widget.room.id, text: _teController.text);
+      MessageNew msg = MessageNew(roomId: widget.room.id, text: message);
       MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
       _teController.text = '';
 /*
@@ -528,9 +545,6 @@ class _ChatViewState extends State<ChatView> {
   }
 
   Future<void> _pickImage({imageSource}) async {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    MessageService messageService = MessageService(rocketHttpService);
-
     var pickedFile;
     if (imageSource != null)
       pickedFile = await picker.getImage(source: imageSource);
@@ -544,11 +558,17 @@ class _ChatViewState extends State<ChatView> {
         if (data.description != null && data.description == '')
           data.description = null;
         file = File(data.filePath);
-        Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: data.description);
+        Message newMessage = await postImage(file, data.description);
       }
     } else {
       print('No image selected.');
     }
+  }
+
+  Future<Message> postImage(File file, String desc) {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+    MessageService messageService = MessageService(rocketHttpService);
+    return messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
   }
 
   Future<void> _takePhoto() async {
