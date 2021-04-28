@@ -29,6 +29,7 @@ import 'package:ss_image_editor/common/image_picker/image_picker.dart';
 import 'package:superchat/image_file_desc.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'chathome.dart';
 import 'constants/constants.dart';
 
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
@@ -43,8 +44,9 @@ class ChatView extends StatefulWidget {
   final model.Room room;
   final User me;
   final dynamic sharedObject;
+  final Function(String messageId) onDeleteMessage;
 
-  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room, @required this.me, this.sharedObject}) : super(key: key);
+  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room, @required this.me, this.sharedObject, this.onDeleteMessage}) : super(key: key);
 
   @override
   _ChatViewState createState() => _ChatViewState();
@@ -102,12 +104,14 @@ class _ChatViewState extends State<ChatView> {
           if (event.notificationFields.notificationArgs.length > 0) {
             var arg = event.notificationFields.notificationArgs[0];
             print('+++++stream-notify-user:' + jsonEncode(arg));
+            if (event.notificationFields.eventName.endsWith('rooms-changed')) {
 /*
-            setState(() {
-              chatItemOffset = 0;
-              needScrollToBottom = true;
-            });
+              setState(() {
+                chatData.clear();
+                updateAll = true;
+              });
 */
+            }
           }
       }
     });
@@ -120,8 +124,10 @@ class _ChatViewState extends State<ChatView> {
           _postMessage(widget.sharedObject);
         else if (widget.sharedObject is List<SharedMediaFile>) {
           List<SharedMediaFile> mediaFiles = widget.sharedObject;
-          File f = File(mediaFiles.first.path);
-          postImage(f, null);
+          if (mediaFiles.isNotEmpty) {
+            File f = File(mediaFiles.first.path);
+            postImage(f, null);
+          }
         }
       }
     });
@@ -318,6 +324,7 @@ class _ChatViewState extends State<ChatView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
       SizedBox(width: 9,),
+      // avatar
       Container(
           padding: EdgeInsets.all(2),
           alignment: Alignment.topLeft,
@@ -328,6 +335,7 @@ class _ChatViewState extends State<ChatView> {
             child: ExtendedImage.network(url))
       ),
       SizedBox(width: 5,),
+      // user name
       Expanded(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -339,7 +347,7 @@ class _ChatViewState extends State<ChatView> {
         _buildMessage(message, userName),
         SizedBox(height: 8,),
       ],)),
-      SizedBox(width: 60,),
+      SizedBox(width: 40,),
     ],);
   }
   _getUserName(Message message) {
@@ -352,6 +360,7 @@ class _ChatViewState extends State<ChatView> {
   }
 
   _buildMessage(Message message, String userName) {
+    Offset tabPosition;
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
@@ -371,9 +380,11 @@ class _ChatViewState extends State<ChatView> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-        bAttachments ? Container(child: buildAttachments(attachments)) : SizedBox(),
+        bAttachments ? Container(child: buildAttachments(attachments, message)) : SizedBox(),
         GestureDetector (
           onTap: () { pickReaction(message); },
+          onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
+          onLongPress: () { messagePopupMenu(context, tabPosition, message); },
           child: buildMessageBody(message),
         ),
         Row(
@@ -393,7 +404,7 @@ class _ChatViewState extends State<ChatView> {
       ]);
   }
 
-  buildAttachments(attachments) {
+  buildAttachments(attachments, message) {
     List<Widget> widgets = [];
     for (MessageAttachment attachment in attachments) {
       var attachmentBody;
@@ -406,7 +417,7 @@ class _ChatViewState extends State<ChatView> {
       } else {
         downloadLink = attachment.imageUrl;
         attachmentBody = Column(children: <Widget>[
-          getImage(attachment.imageUrl),
+          getImage(message, attachment.imageUrl),
           attachment.description != null
               ? Text(attachment.description, style: TextStyle(fontSize: 11),)
               : SizedBox(),
@@ -417,17 +428,24 @@ class _ChatViewState extends State<ChatView> {
         children: <Widget>[
         attachmentBody,
         SizedBox(width: 5,),
-        InkWell(
-          child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
-          onTap: () async {
-            Map<String, String> query = {
-              'rc_token': widget.authRC.data.authToken,
-              'rc_uid': widget.authRC.data.userId
-            };
-            var uri = serverUri.replace(path: downloadLink, queryParameters: query);
-            launch(Uri.encodeFull(uri.toString()));
-          },
-        )
+        Column(children: [
+          InkWell(
+            child: Icon(Icons.thumb_up_alt_outlined, color: Colors.blueAccent, size: 30),
+            onTap: () { pickReaction(message); },
+          ),
+          SizedBox(height: 5,),
+          InkWell(
+            child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
+            onTap: () async {
+              Map<String, String> query = {
+                'rc_token': widget.authRC.data.authToken,
+                'rc_uid': widget.authRC.data.userId
+              };
+              var uri = serverUri.replace(path: downloadLink, queryParameters: query);
+              launch(Uri.encodeFull(uri.toString()));
+            },
+          ),
+        ])
       ]));
     }
     return Column(children: widgets);
@@ -493,13 +511,15 @@ class _ChatViewState extends State<ChatView> {
     ));
   }
 
-  Widget getImage(String imagePath) {
+  Widget getImage(Message message, String imagePath) {
     Map<String, String> header = {
       'X-Auth-Token': widget.authRC.data.authToken,
       'X-User-Id': widget.authRC.data.userId
     };
 
     var image = ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
+      width: MediaQuery.of(context).size.width - 150,
+      fit: BoxFit.contain,
       headers: header,
       mode: ExtendedImageMode.gesture,
       initGestureConfigHandler: (state) {
@@ -522,7 +542,7 @@ class _ChatViewState extends State<ChatView> {
         tag: imagePath,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
-          child: Container(child: FittedBox(child: image, fit: BoxFit.fill, ), width: MediaQuery.of(context).size.width - 150,),
+          child: image,
         ),
       ),
     );
@@ -691,7 +711,18 @@ class _ChatViewState extends State<ChatView> {
     messageService.postReaction(reaction, widget.authRC);
   }
 
-
+  Future<void> messagePopupMenu(context, Offset tabPosition, Message message) async {
+    String value = await showMenu(context: context,
+      position: RelativeRect.fromLTRB(tabPosition.dx + 50, tabPosition.dy - 100, tabPosition.dx + 100, tabPosition.dy + 100),
+      items: [
+        PopupMenuItem(child: Text('Share...'), value: 'share',),
+        PopupMenuItem(child: Text('Delete...'), value: 'delete'),
+      ],
+    );
+    if (value == 'delete') {
+      widget.onDeleteMessage(message.id);
+    }
+  }
 
 }
 
