@@ -59,13 +59,16 @@ class _ChatViewState extends State<ChatView> {
 
   final _scrollController = ScrollController();
 
-  bool bUpdateAll = false;
+  bool updateAll = false;
+  bool needScrollToBottom = false;
   bool showEmojiKeyboard = false;
   FocusNode myFocusNode;
 
+  static const SCROLL_TO_BOTTOM = 1;
+
   @override
   void initState() {
-    bUpdateAll = true;
+    updateAll = true;
     myFocusNode = FocusNode();
     widget.notificationStream.listen((event) {
       if (event.msg == 'changed' && this.mounted) {
@@ -78,11 +81,13 @@ class _ChatViewState extends State<ChatView> {
             int i = chatData.indexWhere((element) => element.id == roomMessage.id);
             if (i >= 0) {
               setState(() {
+                needScrollToBottom = false;
                 chatData[i] = roomMessage;
               });
             } else {  // new message
               setState(() {
                 print('!!!new message');
+                needScrollToBottom = true;
                 chatData.insert(0, roomMessage);
               });
             }
@@ -142,18 +147,19 @@ class _ChatViewState extends State<ChatView> {
       ]),
       body:
         FutureBuilder(
-        future: _getChannelMessages(chatItemCount, chatItemOffset, bUpdateAll),
+        future: _getChannelMessages(chatItemCount, chatItemOffset, updateAll, needScrollToBottom),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
           if (snapshot.hasData) {
             List<Message> channelMessages = snapshot.data.messages;
-            if (snapshot.data.count == -1) {  // updated
-              print('!!!!partial update case');
+            if (snapshot.data.count != null && snapshot.data.count < 0) {  // updated
+              print('!!!!partial update case=${snapshot.data.offset}');
               markAsReadScheduler();
-              Future.delayed(const Duration(milliseconds: 300), () {
-                scrollToBottom();
-              });
+              if (snapshot.data.offset == SCROLL_TO_BOTTOM)
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  scrollToBottom();
+                });
             } else {
-              bUpdateAll = false;
+              updateAll = false;
               if (channelMessages.length > 0) {
                 for (Message m in channelMessages)
                   if (!chatData.contains(m))
@@ -163,6 +169,7 @@ class _ChatViewState extends State<ChatView> {
                 });
                 debugPrint("msg count=" + channelMessages.length.toString());
                 debugPrint("total msg count=" + chatData.length.toString());
+                debugPrint("chatItemOffset=$chatItemOffset");
 
                 markAsReadScheduler();
                 if (chatItemOffset == 0)
@@ -179,7 +186,7 @@ class _ChatViewState extends State<ChatView> {
                   print("listview Scrollend" + notification.metrics.pixels.toString());
                   if (!historyEnd && notification.metrics.pixels != 0.0) { // bottom
                     setState(() {
-                      bUpdateAll = true;
+                      updateAll = true;
                       chatItemOffset += chatItemCount;
                     });
                   }
@@ -254,10 +261,21 @@ class _ChatViewState extends State<ChatView> {
               decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
             ),
           )),
-          InkWell(
-            onTap: _pickImage,
-            child: Icon(Icons.image, color: Colors.blueAccent, size: 40,),
-          ),
+          PopupMenuButton(
+            offset: const Offset(0, -160),
+            child: Icon(Icons.add, color: Colors.blueAccent, size: 40),
+            onSelected: (value) {
+              if (value == 'pick_image')
+                _pickImage();
+              else if (value == 'take_photo')
+                _takePhoto();
+            },
+            itemBuilder: (context){
+              return [
+                PopupMenuItem(child: Text("Pick Image..."), value: 'pick_image',),
+                PopupMenuItem(child: Text("Take Photo..."), value: 'take_photo',),
+              ];
+          }),
           Container(
               margin: EdgeInsets.only(left: 10),
               child:
@@ -361,31 +379,39 @@ class _ChatViewState extends State<ChatView> {
   buildAttachments(attachments) {
     List<Widget> widgets = [];
     for (MessageAttachment attachment in attachments) {
+      var attachmentBody;
+      var downloadLink;
       if (attachment.type == 'file' && attachment.imageUrl == null) {
-        widgets.add(Row(children: <Widget>[
-          attachment.description != null
-              ? Text(attachment.description, style: TextStyle(fontSize: 10),)
-              : Text(attachment.title, style: TextStyle(fontSize: 10),),
-          InkWell(
-            child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 20),
-            onTap: () async {
-              Map<String, String> query = {
-                'rc_token': widget.authRC.data.authToken,
-                'rc_uid': widget.authRC.data.userId
-              };
-              var uri = serverUri.replace(path: attachment.titleLink, queryParameters: query);
-              launch(Uri.encodeFull(uri.toString()));
-            },
-          )
-        ]));
+        downloadLink = attachment.titleLink;
+        attachmentBody = attachment.description != null
+            ? Text(attachment.description, style: TextStyle(fontSize: 10),)
+            : Text(attachment.title, style: TextStyle(fontSize: 10),);
       } else {
-        widgets.add(Column(children: <Widget>[
+        downloadLink = attachment.imageUrl;
+        attachmentBody = Column(children: <Widget>[
           getImage(attachment.imageUrl),
           attachment.description != null
               ? Text(attachment.description, style: TextStyle(fontSize: 11),)
               : SizedBox(),
-        ]));
+        ]);
       }
+      widgets.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+        attachmentBody,
+        SizedBox(width: 5,),
+        InkWell(
+          child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
+          onTap: () async {
+            Map<String, String> query = {
+              'rc_token': widget.authRC.data.authToken,
+              'rc_uid': widget.authRC.data.userId
+            };
+            var uri = serverUri.replace(path: downloadLink, queryParameters: query);
+            launch(Uri.encodeFull(uri.toString()));
+          },
+        )
+      ]));
     }
     return Column(children: widgets);
   }
@@ -401,12 +427,15 @@ class _ChatViewState extends State<ChatView> {
       case 'room_changed_description': newMessage = '$userName change room description'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
     }
+    var messageBackgroundColor = Colors.white;
+    if (message.user.id == widget.me.id)
+      messageBackgroundColor = Colors.amber.shade100;
     return Container(
     child: Column(children: <Widget>[
       newMessage == '' ? SizedBox() : Container(
           padding: EdgeInsets.all(5),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: messageBackgroundColor,
             border: Border.all(color: Colors.blueAccent, width: 0),
             borderRadius: BorderRadius.all(
                 Radius.circular(2.0) //                 <--- border radius here
@@ -454,7 +483,7 @@ class _ChatViewState extends State<ChatView> {
     };
 
     var image = ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
-      headers: header, fit: BoxFit.fitWidth, height: 130,
+      headers: header,
       mode: ExtendedImageMode.gesture,
       initGestureConfigHandler: (state) {
         return GestureConfig(
@@ -476,7 +505,7 @@ class _ChatViewState extends State<ChatView> {
         tag: imagePath,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
-          child: image,
+          child: Container(child: FittedBox(child: image, fit: BoxFit.fill, ), width: MediaQuery.of(context).size.width - 150,),
         ),
       ),
     );
@@ -498,12 +527,15 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage({imageSource}) async {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     MessageService messageService = MessageService(rocketHttpService);
 
-    //final pickedFile = await picker.getImage(source: ImageSource.gallery);
-    final pickedFile = await pickImage(context, fileResult: true);
+    var pickedFile;
+    if (imageSource != null)
+      pickedFile = await picker.getImage(source: imageSource);
+    else
+      pickedFile = await pickImage(context, fileResult: true);
 
     if (pickedFile != null) {
       File file = File(pickedFile.path);
@@ -519,29 +551,14 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
-  Future<void> _pickImage2() async {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    MessageService messageService = MessageService(rocketHttpService);
-
-    var _memoryImage = await pickImage(context);
-
-    if (_memoryImage != null) {
-      //File file = File(pickedFile.path);
-      var imageFilePath = await Navigator.push(context, MaterialPageRoute(builder: (context) => SSImageEditor(memoryImage: _memoryImage)));
-      if (imageFilePath != null) {
-        File file = File(imageFilePath);
-        Message newMessage = await messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: '');
-        //file.delete();
-      }
-    } else {
-      print('No image selected.');
-    }
+  Future<void> _takePhoto() async {
+    _pickImage(imageSource: ImageSource.camera);
   }
 
   static int historyCallCount = 0;
-  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _updatAll) {
-    print('!!!!!! get room history bUpdateAll=$_updatAll');
-    if (_updatAll) {
+  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _updateAll, bool _scrollToBottom) {
+    print('!!!!!! get room history bUpdateAll=$_updateAll');
+    if (_updateAll) {
       historyCallCount++;
       print('full history call=$historyCallCount');
       final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
@@ -550,7 +567,10 @@ class _ChatViewState extends State<ChatView> {
       Future<ChannelMessages> messages = channelService.roomHistory(filter, widget.authRC, widget.room.t);
       return messages;
     } else {
-      Future<ChannelMessages> messages = (() async { return ChannelMessages(success: true, count: -1); }());
+      int offset = 0;
+      if (_scrollToBottom)
+        offset = SCROLL_TO_BOTTOM;
+      Future<ChannelMessages> messages = (() async { return ChannelMessages(success: true, count: -1, offset: offset); }());
       return messages;
     }
   }
@@ -650,6 +670,8 @@ class _ChatViewState extends State<ChatView> {
     ReactionNew reaction = ReactionNew(emoji: em, messageId: message.id, shouldReact: shouldReact);
     messageService.postReaction(reaction, widget.authRC);
   }
+
+
 
 }
 
