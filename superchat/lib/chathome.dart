@@ -312,7 +312,7 @@ class _ChatHomeState extends State<ChatHome> {
       _sharedFiles = null;
     }
     final result = await Navigator.push(context, MaterialPageRoute(
-        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user, sharedObject: sharedObj,)),
+        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user, sharedObject: sharedObj, onDeleteMessage: deleteMessage,)),
     );
     bChatScreenOpen = false;
     if (refresh)
@@ -436,4 +436,9 @@ class _ChatHomeState extends State<ChatHome> {
         ]
     );
   }
+
+  deleteMessage(messageId) {
+    webSocketService.deleteMessage(webSocketChannel, messageId);
+  }
+
 }

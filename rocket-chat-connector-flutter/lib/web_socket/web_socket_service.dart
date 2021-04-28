@@ -42,8 +42,21 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
+  void deleteMessage(WebSocketChannel webSocketChannel, String messageId) {
+    Map msg = {
+      "msg": "method",
+      "method": "deleteMessage",
+      "id": "42",
+      "params": [
+        { "_id": messageId }
+      ]
+    };
+
+    webSocketChannel.sink.add(jsonEncode(msg));
+  }
+
   void subscribeNotifyUser(WebSocketChannel webSocketChannel, User user) {
-    //subscribeNotifyUserEvent(webSocketChannel, user, 'message');
+    subscribeNotifyUserEvent(webSocketChannel, user, 'message');
     //subscribeNotifyUserEvent(webSocketChannel, user, 'otr');
     //subscribeNotifyUserEvent(webSocketChannel, user, 'webrtc');
     subscribeNotifyUserEvent(webSocketChannel, user, 'notification');
