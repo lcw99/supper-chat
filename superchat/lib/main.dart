@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -96,10 +97,11 @@ emojiConvert() {
 
 void main() async {
   //emojiConvert();
+  print('***** main start');
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
   _initNotification();
-  runApp(SuperChat());
+  runApp(Phoenix(child: SuperChat()));
 }
 
 GetIt locator = GetIt.instance;
@@ -136,8 +138,10 @@ androidNotification(RemoteMessage message) async {
 Future<void> _onSelectNotification(String payload) async {
   print("onSelectNotification payload=$payload");
   //navGlobalKey.currentState.push(MaterialPageRoute(builder: (context) => LoginHome()));
-  navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
   notificationPayload = payload;
+
+  //navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => MainHome()), (route) => false);
+  Phoenix.rebirth(navGlobalKey.currentState.context);
 }
 
 Future<void> onDidReceiveLocalNotification(int id, String title, String body, String payload) async {
@@ -152,7 +156,7 @@ _initNotification() async {
       iOS: initializationSettingsIOS,
       macOS: initializationSettingsMacOS);
   await flutterLocalNotificationsPlugin.initialize(initializationSettings, onSelectNotification: _onSelectNotification);
-  notificationPayload = null;
+  //notificationPayload = null;
 
   final notificationAppLaunchDetails = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
   if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
@@ -165,6 +169,7 @@ class SuperChat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = 'Super Chat';
+    print('***** SuperChat start');
 
     return MaterialApp(
       title: title,
@@ -178,6 +183,7 @@ class MainHome extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() {
+    print('***** MainHome start');
     return _MainHome();
   }
 }
@@ -249,7 +255,8 @@ class _LoginHomeState extends State<LoginHome> {
     GoogleSignInAccount user = googleSignIn.currentUser;
 
     print('!!!!_silent login1=${user==null}');
-    user = await googleSignIn.signInSilently();
+    if (user == null)
+      user = await googleSignIn.signInSilently();
     print('!!!!_silent login2=${user==null}, ${authFirebase.currentUser==null}');
 
     /*
@@ -309,7 +316,7 @@ class _LoginHomeState extends State<LoginHome> {
   Future<Authentication> getAuthentication() async {
     final AuthenticationService authenticationService = AuthenticationService(rocketHttpService);
     print('getAuthentication1');
-    final GoogleSignInAccount googleSignInAccount = await googleSignIn.signIn();
+    final GoogleSignInAccount googleSignInAccount = await googleSignIn.signInSilently();
     print('getAuthentication2');
     GoogleSignInAuthentication acc = await googleSignInAccount.authentication;
     print('getAuthentication3');
