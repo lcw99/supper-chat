@@ -249,11 +249,8 @@ class _LoginHomeState extends State<LoginHome> {
     GoogleSignInAccount user = googleSignIn.currentUser;
 
     print('!!!!_silent login1=${user==null}');
-    if (user == null) {
-      user = await googleSignIn.signInSilently();
-      print('!!!!_silent login2=${user==null}, ${authFirebase.currentUser==null}');
-    }
-    print('!!!!_silent login3=${user==null}, ${authFirebase.currentUser==null}');
+    user = await googleSignIn.signInSilently();
+    print('!!!!_silent login2=${user==null}, ${authFirebase.currentUser==null}');
 
     /*
     if (authFirebase.currentUser == null && user != null) {

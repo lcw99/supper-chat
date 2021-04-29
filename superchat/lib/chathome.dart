@@ -73,8 +73,10 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       connectWebSocket();
       webSocketService.sendUserPresence(webSocketChannel, "online");
     } else {
-      webSocketService.sendUserPresence(webSocketChannel, "offline");
-      webSocketChannel.sink.close();
+      if (state == AppLifecycleState.paused) {
+        webSocketService.sendUserPresence(webSocketChannel, "offline");
+        webSocketChannel.sink.close();
+      }
     }
   }
 
@@ -436,6 +438,7 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    webSocketService.sendUserPresence(webSocketChannel, "offline");
     webSocketChannel.sink.close();
     _intentDataStreamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
