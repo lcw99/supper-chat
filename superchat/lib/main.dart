@@ -253,6 +253,7 @@ class _LoginHomeState extends State<LoginHome> {
     }
 
     if (authFirebase.currentUser == null && user != null) {
+      print('!!!!try silent login');
       final GoogleSignInAccount googleUser = await googleSignIn.signIn();
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       FBA.GoogleAuthCredential credential = FBA.GoogleAuthProvider.credential(
