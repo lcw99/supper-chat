@@ -60,7 +60,7 @@ class ChatView extends StatefulWidget {
   _ChatViewState createState() => _ChatViewState();
 }
 
-class _ChatViewState extends State<ChatView> {
+class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   TextEditingController _teController = TextEditingController();
   int chatItemOffset = 0;
   final int chatItemCount = 20;
@@ -77,6 +77,11 @@ class _ChatViewState extends State<ChatView> {
   FocusNode myFocusNode;
 
   static const SCROLL_TO_BOTTOM = 1;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print('+++++==== ChatView state=$state');
+  }
 
   @override
   void initState() {
@@ -125,7 +130,7 @@ class _ChatViewState extends State<ChatView> {
     });
 
     super.initState();
-
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.sharedObject != null) {
         if (widget.sharedObject is String)
@@ -145,6 +150,7 @@ class _ChatViewState extends State<ChatView> {
     _teController.dispose();
     _scrollController.dispose();
     myFocusNode.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
