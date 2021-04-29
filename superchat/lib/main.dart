@@ -248,10 +248,14 @@ class _LoginHomeState extends State<LoginHome> {
   Future<Null> _silentLogin(BuildContext context) async {
     GoogleSignInAccount user = googleSignIn.currentUser;
 
+    print('!!!!_silent login1=${user==null}');
     if (user == null) {
       user = await googleSignIn.signInSilently();
+      print('!!!!_silent login2=${user==null}, ${authFirebase.currentUser==null}');
     }
+    print('!!!!_silent login3=${user==null}, ${authFirebase.currentUser==null}');
 
+    /*
     if (authFirebase.currentUser == null && user != null) {
       print('!!!!try silent login');
       final GoogleSignInAccount googleUser = await googleSignIn.signIn();
@@ -262,8 +266,10 @@ class _LoginHomeState extends State<LoginHome> {
       );
 
       await authFirebase.signInWithCredential(credential);
-
+    } else {
+      print('!!!!_silent login4=${user==null}, ${authFirebase.currentUser==null}');
     }
+    */
   }
 
   Future<FirebaseApp> initializeFlutterFire() async {
@@ -305,7 +311,9 @@ class _LoginHomeState extends State<LoginHome> {
 
   Future<Authentication> getAuthentication() async {
     final AuthenticationService authenticationService = AuthenticationService(rocketHttpService);
+    print('getAuthentication1');
     GoogleSignInAuthentication acc = await googleSignIn.currentUser.authentication;
+    print('getAuthentication2');
     return await authenticationService.loginGoogle(acc.accessToken, acc.idToken);
     //return await authenticationService.login(username, password);
   }
@@ -327,6 +335,7 @@ class _LoginHomeState extends State<LoginHome> {
   }
 
   void silentLogin(BuildContext context) async {
+    print('!!!!!silentLogin1');
     await _silentLogin(context);
     setState(() {
       print("!!!!!!!!!!!!!!! silentLogin setstate");
@@ -338,17 +347,18 @@ class _LoginHomeState extends State<LoginHome> {
   Widget build(BuildContext context) {
     rocket_user.User user;
 
-    if (triedSilentLogin == false) {
-      silentLogin(context);
+    if (!firebaseInitialized) {
+      print('!firebaseInitialized----------------------');
+      return CircularProgressIndicator(strokeWidth: 5,);
     }
 
-    if (!firebaseInitialized) return CircularProgressIndicator();
-
+    /*
     authFirebase.authStateChanges().listen((event) {
       if (event == null) {
         //silentLogin(context);
       }
     });
+     */
 
     if (triedSilentLogin && firebaseInitialized && googleSignIn.currentUser != null) {
       print("******************googleid=" + googleSignIn.currentUser.id);
@@ -368,7 +378,7 @@ class _LoginHomeState extends State<LoginHome> {
               return ChatHome(title: 'Super Chat', user: user, authRC: auth, payload: _np,);
               //return Container();
             } else {
-              return Center(child: CircularProgressIndicator());
+              return Center(child: CircularProgressIndicator(strokeWidth: 1,));
             }
           });
     } else
@@ -408,14 +418,14 @@ class _LoginHomeState extends State<LoginHome> {
   void initState() {
     super.initState();
     initializeFlutterFire().then((_) {
-      setState(() {
-        print("!!!!!!!!!!!!!!! initializeFlutterFire setstate");
-        firebaseInitialized = true;
-      });
-      debugPrint("inited flutter fire...");
+      firebaseInitialized = true;
+      print("!!!!!!!!!!!!!!! initializeFlutterFire done");
+
+      if (triedSilentLogin == false) {
+        silentLogin(context);
+      }
     });
   }
-
 }
 
 

@@ -34,7 +34,7 @@ class AuthenticationService {
       null,
     );
 
-    print("google login resp=" + response.body);
+    print("google login resp=${response.statusCode}");
 
     if (response.statusCode == 200 && response.body.isNotEmpty == true) {
       return Authentication.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
