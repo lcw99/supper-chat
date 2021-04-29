@@ -47,6 +47,9 @@ dependencies:
   extended_image: ^4.0.1
   oktoast: any
   receive_sharing_intent: ^1.4.5
+  share: ^2.0.1
+  http_parser: ^4.0.0
+  mime: ^1.0.0
   flutter_emoji_keyboard:
     path: ../flutter_emoji_keyboard
   ss_image_editor:

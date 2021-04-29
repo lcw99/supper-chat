@@ -1,15 +1,22 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui';
 
+import 'package:http/http.dart' as http;
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:linkable/linkable.dart';
+import 'package:mime/mime.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
@@ -25,6 +32,7 @@ import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
+import 'package:share/share.dart';
 import 'package:ss_image_editor/common/image_picker/image_picker.dart';
 import 'package:superchat/image_file_desc.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
@@ -359,8 +367,8 @@ class _ChatViewState extends State<ChatView> {
     return userName;
   }
 
+  Offset tabPosition;
   _buildMessage(Message message, String userName) {
-    Offset tabPosition;
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
@@ -377,13 +385,15 @@ class _ChatViewState extends State<ChatView> {
     dateStr += DateFormat('kk:mm:ss').format(ts);
 
     return
+      GestureDetector (
+      onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
+      child:
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
         bAttachments ? Container(child: buildAttachments(attachments, message)) : SizedBox(),
         GestureDetector (
           onTap: () { pickReaction(message); },
-          onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
           onLongPress: () { messagePopupMenu(context, tabPosition, message); },
           child: buildMessageBody(message),
         ),
@@ -401,7 +411,7 @@ class _ChatViewState extends State<ChatView> {
             child: Text(dateStr, style: TextStyle(fontSize: 8, color: Colors.black54),)
           )),
         ]),
-      ]);
+      ]));
   }
 
   buildAttachments(attachments, message) {
@@ -417,7 +427,7 @@ class _ChatViewState extends State<ChatView> {
       } else {
         downloadLink = attachment.imageUrl;
         attachmentBody = Column(children: <Widget>[
-          getImage(message, attachment.imageUrl),
+          getImage(message, downloadLink),
           attachment.description != null
               ? Text(attachment.description, style: TextStyle(fontSize: 11),)
               : SizedBox(),
@@ -435,21 +445,24 @@ class _ChatViewState extends State<ChatView> {
           ),
           SizedBox(height: 5,),
           InkWell(
-            child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
-            onTap: () async {
-              Map<String, String> query = {
-                'rc_token': widget.authRC.data.authToken,
-                'rc_uid': widget.authRC.data.userId
-              };
-              var uri = serverUri.replace(path: downloadLink, queryParameters: query);
-              launch(Uri.encodeFull(uri.toString()));
-            },
+            child: Icon(Icons.menu, color: Colors.blueAccent, size: 30),
+            onTap: () async { messagePopupMenu(context, null, message, downloadLink: downloadLink); },
           ),
         ])
       ]));
     }
     return Column(children: widgets);
   }
+
+  void downloadByUrlLaunch(String downloadLink) {
+    Map<String, String> query = {
+      'rc_token': widget.authRC.data.authToken,
+      'rc_uid': widget.authRC.data.userId
+    };
+    var uri = serverUri.replace(path: downloadLink, queryParameters: query);
+    launch(Uri.encodeFull(uri.toString()));
+  }
+
 
   Widget buildMessageBody(Message message) {
     String userName = _getUserName(message);
@@ -509,6 +522,15 @@ class _ChatViewState extends State<ChatView> {
           ])
           : SizedBox()
     ));
+  }
+
+  Future<http.Response> getNetworkImageData(String imagePath) async {
+    Map<String, String> header = {
+      'X-Auth-Token': widget.authRC.data.authToken,
+      'X-User-Id': widget.authRC.data.userId
+    };
+    var resp = await http.get(serverUri.replace(path: imagePath), headers: header);
+    return resp;
   }
 
   Widget getImage(Message message, String imagePath) {
@@ -711,16 +733,40 @@ class _ChatViewState extends State<ChatView> {
     messageService.postReaction(reaction, widget.authRC);
   }
 
-  Future<void> messagePopupMenu(context, Offset tabPosition, Message message) async {
+  Future<void> messagePopupMenu(context, Offset tabPosition, Message message, {String downloadLink}) async {
+    List<PopupMenuEntry<String>> items = [];
+    items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
+    if (downloadLink != null)
+      items.add(PopupMenuItem(child: Text('Download...'), value: 'download'));
+    items.add(PopupMenuItem(child: Text('Delete...'), value: 'delete'));
+    var pos = RelativeRect.fromLTRB(0,0,0,0);
+    if (tabPosition != null)
+      pos = RelativeRect.fromLTRB(0, tabPosition.dy - 100, 0, tabPosition.dy + 100);
     String value = await showMenu(context: context,
-      position: RelativeRect.fromLTRB(tabPosition.dx + 50, tabPosition.dy - 100, tabPosition.dx + 100, tabPosition.dy + 100),
-      items: [
-        PopupMenuItem(child: Text('Share...'), value: 'share',),
-        PopupMenuItem(child: Text('Delete...'), value: 'delete'),
-      ],
+      position: pos,
+      items: items,
     );
     if (value == 'delete') {
       widget.onDeleteMessage(message.id);
+    } else if (value == 'download') {
+      downloadByUrlLaunch(downloadLink);
+    } else if (value == 'share') {
+      if (downloadLink != null) {
+        http.Response r = await getNetworkImageData(downloadLink);
+        if (r.statusCode == 200) {
+          Uint8List data = r.bodyBytes;
+          String contentType = r.headers['content-type'];
+          MediaType mt = MediaType.parse(contentType);
+          print('---content type=$contentType');
+          Directory tempDir = await getTemporaryDirectory();
+          tempDir = await tempDir.createTemp();
+          File f = File(tempDir.path + '/temp_shared_file.' + mt.subtype);
+          print('---shared file=${f.path}');
+          f.writeAsBytes(data);
+          Share.shareFiles([f.path]);
+        }
+      } else
+        Share.share(message.msg);
     }
   }
 
