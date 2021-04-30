@@ -80,16 +80,23 @@ class WebSocketService {
   }
 
   void subscribeRoomMessages(WebSocketChannel webSocketChannel, String rid) {
-    callcount++;
     Map msg = {
       "msg": "sub",
-      "id": "stream-room-messages-$callcount",
+      "id": "stream-room-messages-$rid",
       "name": "stream-room-messages",
       "params": ["$rid", false]
     };
     var data = jsonEncode(msg);
     print('socket=$data');
     webSocketChannel.sink.add(data);
+  }
+
+  void unsubscribeRoomMessages(WebSocketChannel webSocketChannel, String rid) {
+    Map msg = {
+      "msg": "unsub",
+      "id": "stream-room-messages-$rid",
+    };
+    webSocketChannel.sink.add(jsonEncode(msg));
   }
 
   void streamChannelMessagesPong(WebSocketChannel webSocketChannel) {
@@ -109,18 +116,37 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
-/*
+  void subscribeStreamNotifyRoom(WebSocketChannel webSocketChannel, String rid) {
+    subscribeStreamNotifyRoomEvent(webSocketChannel, rid, 'typing');
+    subscribeStreamNotifyRoomEvent(webSocketChannel, rid, 'deleteMessage');
+  }
 
-  void streamNotifyUserSubscribe(WebSocketChannel webSocketChannel, User user) {
+  void subscribeStreamNotifyRoomEvent(WebSocketChannel webSocketChannel, String rid, String event) {
+    callcount++;
     Map msg = {
       "msg": "sub",
-      "id": user.id! + "subscription-id",
-      "name": "stream-notify-user",
-      "params": [user.id! + "/notification", false]
+      "id": "stream-notify-room-$rid-$event",
+      "name": "stream-notify-room",
+      "params": ["$rid/$event", false]
     };
 
     webSocketChannel.sink.add(jsonEncode(msg));
   }
+
+  void unsubscribeStreamNotifyRoom(WebSocketChannel webSocketChannel, String rid) {
+    unsubscribeStreamNotifyRoomEvent(webSocketChannel, rid, 'typing');
+    unsubscribeStreamNotifyRoomEvent(webSocketChannel, rid, 'deleteMessage');
+  }
+
+  void unsubscribeStreamNotifyRoomEvent(WebSocketChannel webSocketChannel, String rid, String event) {
+    Map msg = {
+      "msg": "unsub",
+      "id": "stream-notify-room-$rid-$event",
+    };
+    webSocketChannel.sink.add(jsonEncode(msg));
+  }
+
+/*
 
   void streamNotifyLoggedSubscribe(WebSocketChannel webSocketChannel, String uid, String userName, int status) {
     Map msg = {
@@ -194,16 +220,6 @@ class WebSocketService {
   }
 
 
-  void streamNotifyRoomSubscribe(WebSocketChannel webSocketChannel, String rid) {
-    Map msg = {
-      "msg": "sub",
-      "id": "${rid}subscription-id",
-      "name": "stream-notify-room",
-      "params": ["${rid}/event", false]
-    };
-
-    webSocketChannel.sink.add(jsonEncode(msg));
-  }
 */
 }
 
