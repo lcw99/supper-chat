@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 import 'package:extended_image/extended_image.dart';
@@ -47,14 +48,14 @@ import 'wigets/full_screen_image.dart';
 import 'package:ss_image_editor/ss_image_editor.dart';
 
 class ChatView extends StatefulWidget {
-  final Stream<rocket_notification.Notification> notificationStream;
+  final StreamController<rocket_notification.Notification> notificationController;
   final Authentication authRC;
   final model.Room room;
   final User me;
   final dynamic sharedObject;
   final Function(String messageId) onDeleteMessage;
 
-  ChatView({Key key, @required this.notificationStream, @required this.authRC, @required this.room, @required this.me, this.sharedObject, this.onDeleteMessage}) : super(key: key);
+  ChatView({Key key, @required this.notificationController, @required this.authRC, @required this.room, @required this.me, this.sharedObject, this.onDeleteMessage}) : super(key: key);
 
   @override
   _ChatViewState createState() => _ChatViewState();
@@ -76,8 +77,6 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   bool showEmojiKeyboard = false;
   FocusNode myFocusNode;
 
-  static const SCROLL_TO_BOTTOM = 1;
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     print('+++++==== ChatView state=$state');
@@ -89,7 +88,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
     updateAll = true;
     myFocusNode = FocusNode();
-    widget.notificationStream.listen((event) {
+    widget.notificationController.stream.listen((event) {
       if (event.msg == 'request_close') {
         Navigator.pop(context, null);
         return;
@@ -113,6 +112,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                 needScrollToBottom = true;
                 chatData.insert(0, roomMessage);
               });
+              widget.notificationController.sink.add(rocket_notification.Notification(msg: 'typing', id: ''));
             }
           }
         } else if (event.collection == 'stream-notify-room') {
@@ -134,7 +134,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
           } else if (event.notificationFields != null && event.notificationFields.eventName.endsWith('typing')) {
             if (event.notificationFields.notificationArgs.length > 0) {
               var arg = event.notificationFields.notificationArgs[0];
-              print('---typing user=$arg');
+              widget.notificationController.sink.add(rocket_notification.Notification(msg: 'typing', id: arg));
             }
           }
         } else if (event.collection == 'stream-notify-user') {
@@ -188,22 +188,23 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       resizeToAvoidBottomInset: true,
       extendBody: false,
       bottomNavigationBar:
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-        Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: Container(height: 50, child: _buildInputBox())
-        ),
-        showEmojiKeyboard ? Container(child:
-        EmojiKeyboard(
-          height: 250,
-          onEmojiSelected: (Emoji emoji){
-            _teController.text += emoji.text;
-            _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
-          },
-        )) : SizedBox(height: 0,),
-      ]),
+        Container(color: Colors.blue.shade100, child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+          UserTyping(notificationController: widget.notificationController),
+          Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Container(height: 50, color: Colors.white, child: _buildInputBox())
+          ),
+          showEmojiKeyboard ? Container(child:
+          EmojiKeyboard(
+            height: 250,
+            onEmojiSelected: (Emoji emoji){
+              _teController.text += emoji.text;
+              _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
+            },
+          )) : SizedBox(height: 0,),
+        ])),
       body:
         FutureBuilder(
         future: () {
@@ -650,13 +651,10 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
           return a.ts.compareTo(b.ts);
         });
       }
-      return ChannelMessages(success: true, count: -1, offset: 2);
+      return ChannelMessages(success: true);
     } else {
-      int offset = 0;
-      if (_scrollToBottom)
-        offset = SCROLL_TO_BOTTOM;
       print('_getChannelMessages return2 _updateAll=$_updateAll');
-      return ChannelMessages(success: true, count: -1, offset: offset);
+      return ChannelMessages(success: true);
     }
   }
 
@@ -792,6 +790,76 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
         Share.share(message.msg);
     }
   }
-
 }
+
+class UserTyping extends StatefulWidget {
+  final StreamController<rocket_notification.Notification> notificationController;
+
+  UserTyping({Key key, @required this.notificationController}) : super(key: key);
+
+  @override
+  _UserTypingState createState() => _UserTypingState();
+}
+
+class _UserTypingState extends State<UserTyping> {
+  String typing = '';
+  Timer t;
+
+  double _width = 200;
+  Color _color = Colors.white;
+
+  @override
+  void initState() {
+    widget.notificationController.stream.listen((event) {
+      if (event.msg == 'typing') {
+        String userName = event.id;
+        print('---typing user=$userName');
+        setState(() {
+          if (t != null) {
+            t.cancel();
+            t = null;
+          }
+          typing = userName;
+        });
+        if (userName != '') {
+          t = Timer(Duration(seconds: 7), () {
+            setState(() {
+              typing = '';
+            });
+          });
+          Timer(Duration(seconds: 1), () {
+            setState(() {
+              _width = _width == 200 ? 150 : 200;
+            });
+          });
+        }
+      }
+    });
+
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return typing != '' ?
+        AnimatedContainer(
+          alignment: Alignment.center,
+          margin: EdgeInsets.only(bottom: 5),
+          curve: Curves.fastOutSlowIn,
+          duration: Duration(seconds: 1),
+          padding: EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: _color,
+            border: Border.all(color: Colors.blueAccent, width: 0),
+            borderRadius: BorderRadius.all(
+                Radius.circular(2.0) //                 <--- border radius here
+            ),
+          ),
+          width: _width,
+          child:Text('$typing typing...', style: TextStyle(fontSize: 10),)
+        )
+        : SizedBox();
+  }
+}
+
 
