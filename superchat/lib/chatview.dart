@@ -85,6 +85,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
   @override
   void initState() {
+    subscribeRoomEvent(widget.room.id);
+
     updateAll = true;
     myFocusNode = FocusNode();
     widget.notificationStream.listen((event) {
@@ -113,19 +115,36 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
               });
             }
           }
-        } else if (event.collection == 'stream-notify-user')
+        } else if (event.collection == 'stream-notify-room') {
+          if (event.notificationFields != null && event.notificationFields.eventName.endsWith('deleteMessage')) {
+            if (event.notificationFields.notificationArgs.length > 0) {
+              var arg = event.notificationFields.notificationArgs[0];
+              Message roomMessage = Message.fromMap(arg);
+              int i = chatData.indexWhere((element) => element.id == roomMessage.id);
+              if (i >= 0) {
+                print('---deleted message=${roomMessage.id}, index=$i');
+                debugPrint("total msg count before delete=${chatData.length}");
+                chatData.removeAt(i);
+                debugPrint("total msg count after delete=${chatData.length}");
+                setState(() {
+                  needScrollToBottom = false;
+                });
+              }
+            }
+          } else if (event.notificationFields != null && event.notificationFields.eventName.endsWith('typing')) {
+            if (event.notificationFields.notificationArgs.length > 0) {
+              var arg = event.notificationFields.notificationArgs[0];
+              print('---typing user=$arg');
+            }
+          }
+        } else if (event.collection == 'stream-notify-user') {
           if (event.notificationFields.notificationArgs.length > 0) {
             var arg = event.notificationFields.notificationArgs[0];
             print('+++++stream-notify-user:' + jsonEncode(arg));
             if (event.notificationFields.eventName.endsWith('rooms-changed')) {
-/*
-              setState(() {
-                chatData.clear();
-                updateAll = true;
-              });
-*/
             }
           }
+        }
       }
     });
 
@@ -147,6 +166,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   }
   @override
   void dispose() {
+    unsubscribeRoomEvent(widget.room.id);
     _teController.dispose();
     _scrollController.dispose();
     myFocusNode.dispose();
@@ -161,6 +181,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       title = widget.room.name;
     else if (widget.room.usernames != null)
       title = widget.room.usernames.toString();
+
+    print('~~~ chatview building=$title');
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -184,39 +206,23 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       ]),
       body:
         FutureBuilder(
-        future: _getChannelMessages(chatItemCount, chatItemOffset, updateAll, needScrollToBottom),
+        future: () {
+          print('@@@@@@ call future _getChannelMessages @@@@@@');
+          return _getChannelMessages(chatItemCount, chatItemOffset, updateAll, needScrollToBottom);
+        } (),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
-          if (snapshot.hasData) {
-            List<Message> channelMessages = snapshot.data.messages;
-            if (snapshot.data.count != null && snapshot.data.count < 0) {  // updated
-              print('!!!!partial update case=${snapshot.data.offset}');
-              markAsReadScheduler();
-              if (snapshot.data.offset == SCROLL_TO_BOTTOM)
-                Future.delayed(const Duration(milliseconds: 300), () {
-                  scrollToBottom();
-                });
-            } else {
-              updateAll = false;
-              if (channelMessages.length > 0) {
-                for (Message m in channelMessages)
-                  if (!chatData.contains(m))
-                    chatData.add(m);
-                chatData.sort((b, a) {
-                  return a.ts.compareTo(b.ts);
-                });
-                debugPrint("msg count=" + channelMessages.length.toString());
-                debugPrint("total msg count=" + chatData.length.toString());
-                debugPrint("chatItemOffset=$chatItemOffset");
-
-                markAsReadScheduler();
-                if (chatItemOffset == 0)
-                  Future.delayed(const Duration(milliseconds: 300), () {
-                    scrollToBottom();
-                  });
-              } else {
-                historyEnd = true;
-              }
+          print('~~~~~~~~ builder update=${snapshot.hasData}');
+          if (snapshot.connectionState == ConnectionState.done) {
+            print('~~~~~~~~ builder connectionState.done');
+            markAsReadScheduler();
+            if (needScrollToBottom) {
+              Future.delayed(const Duration(milliseconds: 300), () {
+                scrollToBottom();
+              });
             }
+            updateAll = false;
+          }
+          if (snapshot.hasData) {
             return NotificationListener<ScrollEndNotification>(
               onNotification: (notification) {
                 if (notification.metrics.atEdge) {
@@ -260,7 +266,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                 ),
             ])));
           } else
-            return Container();
+            return SizedBox();
         }
       )
     );
@@ -624,7 +630,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   }
 
   static int historyCallCount = 0;
-  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _updateAll, bool _scrollToBottom) {
+  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _updateAll, bool _scrollToBottom) async {
     print('!!!!!! get room history bUpdateAll=$_updateAll');
     if (_updateAll) {
       historyCallCount++;
@@ -632,14 +638,25 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
       ChannelService channelService = ChannelService(rocketHttpService);
       ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
-      Future<ChannelMessages> messages = channelService.roomHistory(filter, widget.authRC, widget.room.t);
-      return messages;
+      ChannelMessages channelMessages = await channelService.roomHistory(filter, widget.authRC, widget.room.t);
+      print('_getChannelMessages return1 _updateAll=$_updateAll');
+      if (channelMessages.messages.length <= 0)
+        historyEnd = true;
+      else {
+        for (Message m in channelMessages.messages)
+          if (!chatData.contains(m))
+            chatData.add(m);
+        chatData.sort((b, a) {
+          return a.ts.compareTo(b.ts);
+        });
+      }
+      return ChannelMessages(success: true, count: -1, offset: 2);
     } else {
       int offset = 0;
       if (_scrollToBottom)
         offset = SCROLL_TO_BOTTOM;
-      Future<ChannelMessages> messages = (() async { return ChannelMessages(success: true, count: -1, offset: offset); }());
-      return messages;
+      print('_getChannelMessages return2 _updateAll=$_updateAll');
+      return ChannelMessages(success: true, count: -1, offset: offset);
     }
   }
 

@@ -100,7 +100,7 @@ void main() async {
   print('***** main start');
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
-  _initNotification();
+  await _initNotification();
   runApp(Phoenix(child: SuperChat()));
 }
 
@@ -358,13 +358,16 @@ class _LoginHomeState extends State<LoginHome> {
       return CircularProgressIndicator(strokeWidth: 5,);
     }
 
-    /*
+    if (triedSilentLogin == false) {
+      silentLogin(context);
+    }
+
     authFirebase.authStateChanges().listen((event) {
       if (event == null) {
+        print('****authFirebase.authStateChanges****');
         //silentLogin(context);
       }
     });
-     */
 
     if (triedSilentLogin && firebaseInitialized && googleSignIn.currentUser != null) {
       print("******************googleid=" + googleSignIn.currentUser.id);
@@ -424,12 +427,10 @@ class _LoginHomeState extends State<LoginHome> {
   void initState() {
     super.initState();
     initializeFlutterFire().then((_) {
-      firebaseInitialized = true;
-      print("!!!!!!!!!!!!!!! initializeFlutterFire done");
-
-      if (triedSilentLogin == false) {
-        silentLogin(context);
-      }
+      setState(() {
+        firebaseInitialized = true;
+        print("!!!!!!!!!!!!!!! initializeFlutterFire done");
+      });
     });
   }
 }

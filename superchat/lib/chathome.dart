@@ -43,15 +43,25 @@ class ChatHome extends StatefulWidget {
   _ChatHomeState createState() => _ChatHomeState();
 }
 
+WebSocketChannel webSocketChannel;
+WebSocketService webSocketService = WebSocketService();
+
+subscribeRoomEvent(String roomId) {
+  webSocketService.subscribeRoomMessages(webSocketChannel, roomId);
+  webSocketService.subscribeStreamNotifyRoom(webSocketChannel, roomId);
+}
+
+unsubscribeRoomEvent(String roomId) {
+  webSocketService.unsubscribeRoomMessages(webSocketChannel, roomId);
+  webSocketService.unsubscribeStreamNotifyRoom(webSocketChannel, roomId);
+}
+
 class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   int selectedPage = 0;
   int totalUnread = 0;
   model.Room selectedRoom;
 
   bool firebaseInitialized = false;
-
-  WebSocketChannel webSocketChannel;
-  WebSocketService webSocketService = WebSocketService();
 
   final StreamController<rocket_notification.Notification> notificationController = StreamController<rocket_notification.Notification>.broadcast();
   Stream<rocket_notification.Notification> notificationStream;
@@ -83,8 +93,6 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   connectWebSocket() {
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
     webSocketService.subscribeNotifyUser(webSocketChannel, widget.user);
-    if (bChatScreenOpen && selectedRoom != null)
-      webSocketService.subscribeRoomMessages(webSocketChannel, selectedRoom.id);
     webSocketChannel.stream.listen((event) async {
       var e = jsonDecode(event);
       print('****************event=${event}');
@@ -326,7 +334,6 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   _setChannel(model.Room room) async {
     print('**** setChannel=${room.id}');
     selectedRoom = room;
-    webSocketService.subscribeRoomMessages(webSocketChannel, selectedRoom.id);
     bool refresh = false;
     if (room.subscription != null && room.subscription.unread > 0) {
       clearUnreadOnDB(room);
