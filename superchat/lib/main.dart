@@ -374,7 +374,7 @@ class _LoginHomeState extends State<LoginHome> {
       return FutureBuilder<Authentication>(
           future: getAuthentication(),
           builder: (context, AsyncSnapshot<Authentication> snapshot) {
-            if (snapshot.hasData) {
+            if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
               String avatarUrl = googleSignIn.currentUser.photoUrl;
               print("avatarUrl=" + avatarUrl);
