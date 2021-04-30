@@ -349,7 +349,7 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
     bChatScreenOpen = true;
     final result = await Navigator.push(context, MaterialPageRoute(
-        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationStream: notificationStream, me: widget.user, sharedObject: sharedObj, onDeleteMessage: deleteMessage,)),
+        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj, onDeleteMessage: deleteMessage,)),
     );
     bChatScreenOpen = false;
     if (refresh)
