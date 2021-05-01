@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
+import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -50,6 +51,17 @@ class WebSocketService {
       "params": [
         { "_id": messageId }
       ]
+    };
+
+    webSocketChannel.sink.add(jsonEncode(msg));
+  }
+
+  void updateMessage(WebSocketChannel webSocketChannel, Message message) {
+    Map msg = {
+      "msg": "method",
+      "method": "updateMessage",
+      "id": "42",
+      "params": [ message.toMap() ]
     };
 
     webSocketChannel.sink.add(jsonEncode(msg));

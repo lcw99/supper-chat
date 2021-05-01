@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
+import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/subscription.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
@@ -40,7 +41,7 @@ class ChatHome extends StatefulWidget {
   final String payload;
 
   @override
-  _ChatHomeState createState() => _ChatHomeState();
+  ChatHomeState createState() => ChatHomeState();
 }
 
 WebSocketChannel webSocketChannel;
@@ -56,7 +57,7 @@ unsubscribeRoomEvent(String roomId) {
   webSocketService.unsubscribeStreamNotifyRoom(webSocketChannel, roomId);
 }
 
-class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
+class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   int selectedPage = 0;
   int totalUnread = 0;
   model.Room selectedRoom;
@@ -349,7 +350,7 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
     bChatScreenOpen = true;
     final result = await Navigator.push(context, MaterialPageRoute(
-        builder: (context) => ChatView(authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj, onDeleteMessage: deleteMessage,)),
+        builder: (context) => ChatView(chatHomeState: this, authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj)),
     );
     bChatScreenOpen = false;
     if (refresh)
@@ -430,8 +431,8 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         if (dr.sid != null) {
           var dbSubscription = await locator<db.ChatDatabase>().getSubscription(dr.sid);
           room.subscription = model.Subscription.fromMap(jsonDecode(dbSubscription.info));
-          print('room unread=${room.subscription.unread}');
-          print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
+          //print('room unread=${room.subscription.unread}');
+          //print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
           totalUnread += room.subscription.unread;
         }
         roomList.add(room);
@@ -478,6 +479,10 @@ class _ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   deleteMessage(messageId) {
     webSocketService.deleteMessage(webSocketChannel, messageId);
+  }
+
+  editMessage(Message message) {
+    webSocketService.updateMessage(webSocketChannel, message);
   }
 
 }
