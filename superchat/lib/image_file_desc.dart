@@ -26,10 +26,12 @@ class _ImageFileDescriptionState extends State<ImageFileDescription> {
   final TextEditingController _teController = TextEditingController();
 
   Uint8List _memoryImage;
+  bool edited;
 
   @override
   void initState() {
     _memoryImage = widget.file.readAsBytesSync();
+    edited = false;
     super.initState();
   }
 
@@ -56,6 +58,7 @@ class _ImageFileDescriptionState extends State<ImageFileDescription> {
               if (_memoryImage != null) {
                 var imageData = await Navigator.push(context, MaterialPageRoute(builder: (context) => SSImageEditor(memoryImage: _memoryImage)));
                 if (imageData != null) {
+                  edited = true;
                   setState(() {
                     _memoryImage = imageData;
                   });
@@ -71,8 +74,13 @@ class _ImageFileDescriptionState extends State<ImageFileDescription> {
               String desc = '';
               if (_teController.text.isNotEmpty)
                 desc = _teController.text;
-              final String imageFilePath = await ImageSaver.save(tempImageFileName, _memoryImage);
-              ImageFileData retData = ImageFileData(imageFilePath, desc);
+              ImageFileData retData;
+              if (edited) {
+                final String imageFilePath = await ImageSaver.save(tempImageFileName, _memoryImage);
+                retData = ImageFileData(imageFilePath, desc);
+              } else {
+                retData = ImageFileData(widget.file.path, desc);
+              }
               Navigator.pop(context, retData);
             },
           ),
