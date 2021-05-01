@@ -367,6 +367,7 @@ class ChatItemViewState extends State<ChatItemView> {
   Future<void> messagePopupMenu(context, Offset tabPosition, Message message, {String downloadLink}) async {
     List<PopupMenuEntry<String>> items = [];
     items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
+    items.add(PopupMenuItem(child: Text('Reaction...'), value: 'reaction'));
     if (downloadLink != null)
       items.add(PopupMenuItem(child: Text('Download...'), value: 'download'));
     if (message.user.id == widget.me.id) {
@@ -383,6 +384,8 @@ class ChatItemViewState extends State<ChatItemView> {
     );
     if (value == 'delete') {
       widget.chatHomeState.deleteMessage(message.id);
+    } else if (value == 'reaction') {
+      pickReaction(message);
     } else if (value == 'edit') {
       handleUpdateMessage(message);
     } else if (value == 'download') {
