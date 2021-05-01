@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:rocket_chat_connector_flutter/models/bot.dart';
 import 'package:rocket_chat_connector_flutter/models/mention.dart';
 import 'package:rocket_chat_connector_flutter/models/message_attachment.dart';
@@ -31,6 +32,7 @@ class Message {
   List<UrlInMessage>? urls;
 
   Message({
+    this.id,
     this.alias,
     this.msg,
     this.parseUrls,
@@ -62,15 +64,15 @@ class Message {
       t = json['t'];
       ts = json['ts'] != null
           ? (json['ts'] is String
-                ? DateTime.parse(json['ts'])
-                : DateTime.fromMillisecondsSinceEpoch(json['ts']['\$date']!))
+                ? DateTime.parse(json['ts']).toUtc()
+                : DateTime.fromMillisecondsSinceEpoch(json['ts']['\$date']!, isUtc: true))
           : null;
       user = json['u'] != null ? User.fromMap(json['u']) : null;
       rid = json['rid'];
       updatedAt = json['_updatedAt'] != null
           ? (json['_updatedAt'] is String
-              ? DateTime.parse(json['_updatedAt'])
-              : DateTime.fromMillisecondsSinceEpoch(json['_updatedAt']['\$date']!))
+              ? DateTime.parse(json['_updatedAt']).toUtc()
+              : DateTime.fromMillisecondsSinceEpoch(json['_updatedAt']['\$date']!, isUtc: true))
           : null;
       id = json['_id'];
 
@@ -109,8 +111,12 @@ class Message {
 
       editedBy =
           json['editedBy'] != null ? User.fromMap(json['editedBy']) : null;
-      editedAt =
-          json['editedAt'] != null ? DateTime.parse(json['editedAt']) : null;
+
+      editedAt = json['editedAt'] != null
+          ? (json['editedAt'] is String
+            ? DateTime.parse(json['editedAt']).toUtc()
+            : DateTime.fromMillisecondsSinceEpoch(json['editedAt']['\$date']!, isUtc: true))
+          : null;
 
       if (json['urls'] != null) {
         List<dynamic> jsonList = json['urls'].runtimeType == String //
@@ -150,7 +156,8 @@ class Message {
       map['t'] = t;
     }
     if (ts != null) {
-      map['ts'] = ts!.toIso8601String();
+      //map['ts'] = ts!.toIso8601String();
+      map['ts'] = { '\$date': ts!.millisecondsSinceEpoch.toString() };
     }
     if (user != null) {
       map['u'] = user != null ? user!.toMap() : null;
@@ -159,7 +166,8 @@ class Message {
       map['rid'] = rid;
     }
     if (updatedAt != null) {
-      map['_updatedAt'] = updatedAt!.toIso8601String();
+      //map['_updatedAt'] = updatedAt!.toIso8601String();
+      map['_updatedAt'] = { '\$date': updatedAt!.millisecondsSinceEpoch.toString() };
     }
     if (reactions != null) {
       map['reactions'] = reactions!.map((a, b) => MapEntry(a, b.toMap()));
@@ -194,7 +202,8 @@ class Message {
       map['editedBy'] = editedBy != null ? editedBy!.toMap() : null;
     }
     if (editedAt != null) {
-      map['editedAt'] = editedAt!.toIso8601String();
+      //map['editedAt'] = editedAt!.toIso8601String();
+      map['editedAt'] = { '\$date': editedAt!.millisecondsSinceEpoch.toString() };
     }
     if (urls != null) {
       map['urls'] = urls;
