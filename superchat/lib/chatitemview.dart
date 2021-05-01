@@ -56,12 +56,12 @@ class ChatItemViewState extends State<ChatItemView> {
 
   setNewMessage(Message newMessage) {
     print('set newMessage=${newMessage.msg}');
-    if (newMessage.editedBy != null) {
+    if (keyReactionVew.currentState != null && newMessage.reactions != null && message.msg == newMessage.msg) {  // reaction case
+       keyReactionVew.currentState.setNewReaction(newMessage.reactions);
+    } else {
       setState(() {
         message = newMessage;
       });
-    } else if (newMessage.reactions != null) {  // reaction case
-       keyReactionVew.currentState.setNewReaction(newMessage.reactions);
     }
   }
 
@@ -149,7 +149,7 @@ class ChatItemViewState extends State<ChatItemView> {
                     children: [
                       Expanded(flex: 1, child: bReactions ?
                       Container(
-                        height: 20,
+                        height: 30,
                         width: MediaQuery.of(context).size.width,
                         child: ReactionView(key: keyReactionVew, chatItemViewState: this, message: message, reactions: reactions),
                       ) : SizedBox()),
@@ -479,7 +479,7 @@ class _ReactionViewState extends State<ReactionView> {
             onTap: () { widget.chatItemViewState.onReactionTouch(widget.message, emoji, r); },
             child:Container(
                 child: Row(children: <Widget>[
-                  Text(emojis[emoji], style: TextStyle(fontSize: 12)),
+                  Text(emojis[emoji], style: TextStyle(fontSize: 17)),
                   Text(r.usernames.length.toString(), style: TextStyle(fontSize: 10)),
                 ])
             ));
