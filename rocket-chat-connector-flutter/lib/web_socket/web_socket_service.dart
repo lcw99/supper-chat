@@ -158,16 +158,16 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
-  /* events
-  Users:NameChanged
-  Users:Deleted
-  updateAvatar
-  updateEmojiCustom
-  deleteEmojiCustom
-  roles-change
-  user-status
-  */
-  void subscribeStreamNotifyLogged(WebSocketChannel webSocketChannel, String event) {
+  void subscribeStreamNotifyLogged(WebSocketChannel webSocketChannel) {
+    subscribeStreamNotifyLoggedEvent(webSocketChannel, 'Users:NameChanged');
+    subscribeStreamNotifyLoggedEvent(webSocketChannel, 'updateAvatar');
+    subscribeStreamNotifyLoggedEvent(webSocketChannel, 'updateEmojiCustom');
+    subscribeStreamNotifyLoggedEvent(webSocketChannel, 'deleteEmojiCustom');
+    subscribeStreamNotifyLoggedEvent(webSocketChannel, 'roles-change');
+    subscribeStreamNotifyLoggedEvent(webSocketChannel, 'user-status');
+  }
+
+  void subscribeStreamNotifyLoggedEvent(WebSocketChannel webSocketChannel, String event) {
     Map msg = {
       "msg": "sub",
       "id": "stream-notify-logged-$event",

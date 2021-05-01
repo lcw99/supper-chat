@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -5,18 +6,21 @@ import 'dart:typed_data';
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:intl/intl.dart';
 import 'package:linkable/linkable.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
+import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/message_attachment.dart';
 import 'package:rocket_chat_connector_flutter/models/new/reaction_new.dart';
 import 'package:rocket_chat_connector_flutter/models/reaction.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/services/message_service.dart';
+import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:share/share.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
@@ -68,9 +72,7 @@ class ChatItemViewState extends State<ChatItemView> {
   _buildChatItem(Message message, int index) {
     //log("msg=" + index.toString() + message.toString());
     bool specialMessage = message.t != null;
-    String url = message.user.avatarUrl == null ?
-      serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString() :
-      message.user.avatarUrl;
+    String url = serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString();
     String userName = _getUserName(message);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
@@ -87,7 +89,7 @@ class ChatItemViewState extends State<ChatItemView> {
             height: specialMessage ? 20 : 40,
             child: ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
-                child: ExtendedImage.network(url))
+                child: Image.network(url, key: UniqueKey()))
         ),
         SizedBox(width: 5,),
         // user name
@@ -264,13 +266,13 @@ class ChatItemViewState extends State<ChatItemView> {
                 ? Column (
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget> [
-                  urlInMessage.meta['ogImage'] != null ? ExtendedImage.network(urlInMessage.meta['ogImage']) : SizedBox(),
+                  urlInMessage.meta['ogImage'] != null ? Image.network(urlInMessage.meta['ogImage']) : SizedBox(),
                   urlInMessage.meta['ogTitle'] != null ? Text(urlInMessage.meta['ogTitle'], style: TextStyle(fontWeight: FontWeight.bold)) : SizedBox(),
                   urlInMessage.meta['ogDescription'] != null ? Text(urlInMessage.meta['ogDescription'], style: TextStyle(fontSize: 11, color: Colors.blue)) : SizedBox(),
                 ])
                 : urlInMessage.meta != null && urlInMessage.meta['oembedThumbnailUrl'] != null
                 ? Column (children: <Widget> [
-              urlInMessage.meta['oembedThumbnailUrl'] != null ? ExtendedImage.network(urlInMessage.meta['oembedThumbnailUrl']) : SizedBox(),
+              urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl']) : SizedBox(),
               urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
             ])
                 : SizedBox()
@@ -387,6 +389,14 @@ class ChatItemViewState extends State<ChatItemView> {
       downloadByUrlLaunch(downloadLink);
     } else if (value == 'share') {
       if (downloadLink != null) {
+        Map<String, String> header = {
+          'X-Auth-Token': widget.authRC.data.authToken,
+          'X-User-Id': widget.authRC.data.userId
+        };
+        DefaultCacheManager manager = new DefaultCacheManager();
+        File f = await manager.getSingleFile(serverUri.replace(path: downloadLink).toString(), headers: header);
+        Share.shareFiles([f.path]);
+/*
         http.Response r = await getNetworkImageData(downloadLink);
         if (r.statusCode == 200) {
           Uint8List data = r.bodyBytes;
@@ -400,6 +410,7 @@ class ChatItemViewState extends State<ChatItemView> {
           f.writeAsBytes(data);
           Share.shareFiles([f.path]);
         }
+*/
       } else
         Share.share(message.msg);
     }

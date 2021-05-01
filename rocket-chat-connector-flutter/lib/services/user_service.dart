@@ -13,7 +13,7 @@ import 'package:rocket_chat_connector_flutter/services/http_service.dart';
 import 'package:path/path.dart' as path;
 import 'package:mime/mime.dart';
 
-import 'package:rocket_chat_connector_flutter/models/filters/userid_Filter.dart';
+import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
 class UserService {
   HttpService _httpService;
 

@@ -51,6 +51,7 @@ dependencies:
   http_parser: ^4.0.0
   mime: ^1.0.0
   flutter_phoenix: ^1.0.0
+  flutter_cache_manager: ^3.0.1
   flutter_emoji_keyboard:
     path: ../flutter_emoji_keyboard
   ss_image_editor:
@@ -83,6 +84,7 @@ flutter:
         - asset: assets/fonts/Billabong.ttf
   assets:
     - assets/images/google_signin_button.png
+    - assets/images/hot-air-balloon-2411851.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

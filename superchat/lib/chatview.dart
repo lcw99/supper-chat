@@ -9,11 +9,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
+import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/new/message_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/message_new_response.dart';
@@ -21,6 +23,7 @@ import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
+import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:ss_image_editor/common/image_picker/image_picker.dart';
 import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
@@ -46,6 +49,64 @@ class ChatView extends StatefulWidget {
   _ChatViewState createState() => _ChatViewState();
 }
 
+class ChatDataStore {
+  final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+  List<ChatItemData> _chatData = [];
+  Map<String, User> _userInfos = Map();
+
+  get length => _chatData.length;
+
+  add(ChatItemData data, Authentication authentication) async {
+    _chatData.add(data);
+
+    Message message = data.message;
+    await updateUserInfo(message.user.id, authentication);
+  }
+
+  updateUserInfo(String userId, Authentication authentication) async {
+    if (!_userInfos.containsKey(userId)) {
+      User userInfo = await UserService(rocketHttpService).getUserInfo(UserIdFilter(userId), authentication);
+      print('@@@@ userInfo=${userInfo.avatarUrl}');
+      _userInfos[userId] = userInfo;
+    }
+  }
+
+  bool containsMessage(String messageId) {
+    return _chatData.indexWhere((element) => element.message.id == messageId) >= 0;
+  }
+
+  insertAt(int index, ChatItemData data) {
+    _chatData.insert(index, data);
+  }
+
+  removeAt(int index) {
+    _chatData.removeAt(index);
+  }
+
+  getMessageAt(int index) {
+    return _chatData[index].message;
+  }
+
+  replaceMessage(int index, Message message) {
+    _chatData[index].message = message;
+  }
+
+  int findIndexByMessageId(String messageId) {
+    int i = _chatData.indexWhere((element) => element.message.id == messageId);
+    return i;
+  }
+
+  GlobalKey<ChatItemViewState> getGlobalKey(int index) {
+    return _chatData[index].key;
+  }
+
+  sortMessagesByTimeStamp() {
+    _chatData.sort((b, a) {
+      return a.message.ts.compareTo(b.message.ts);
+    });
+  }
+}
+
 class ChatItemData {
   GlobalKey<ChatItemViewState> key;
   Message message;
@@ -57,7 +118,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   int chatItemOffset = 0;
   final int chatItemCount = 20;
 
-  List<ChatItemData> chatData = [];
+  ChatDataStore chatDataStore = ChatDataStore();
   bool historyEnd = false;
   final picker = ImagePicker();
 
@@ -93,17 +154,17 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
             print('+++++stream-room-messages:' + jsonEncode(arg));
             Message roomMessage = Message.fromMap(arg);
             //print(jsonEncode(roomMessage));
-            int i = chatData.indexWhere((element) => element.message.id == roomMessage.id);
+            int i = chatDataStore.findIndexByMessageId(roomMessage.id);
             if (i >= 0) {
-              GlobalKey<ChatItemViewState> keyChatItem = chatData[i].key;
+              GlobalKey<ChatItemViewState> keyChatItem = chatDataStore.getGlobalKey(i);
               keyChatItem.currentState.setNewMessage(roomMessage);
-              chatData[i].message = roomMessage;
+              chatDataStore.replaceMessage(i, roomMessage);
               userTypingKey.currentState.setTypingUser('');
             } else {  // new message
               setState(() {
                 print('!!!new message');
                 needScrollToBottom = true;
-                chatData.insert(0, ChatItemData(GlobalKey(), roomMessage));
+                chatDataStore.insertAt(0, ChatItemData(GlobalKey(), roomMessage));
               });
               userTypingKey.currentState.setTypingUser('');
             }
@@ -113,12 +174,10 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
             if (event.notificationFields.notificationArgs.length > 0) {
               var arg = event.notificationFields.notificationArgs[0];
               Message roomMessage = Message.fromMap(arg);
-              int i = chatData.indexWhere((element) => element.message.id == roomMessage.id);
+              int i = chatDataStore.findIndexByMessageId(roomMessage.id);
               if (i >= 0) {
                 print('---deleted message=${roomMessage.id}, index=$i');
-                debugPrint("total msg count before delete=${chatData.length}");
-                chatData.removeAt(i);
-                debugPrint("total msg count after delete=${chatData.length}");
+                chatDataStore.removeAt(i);
                 setState(() {
                   needScrollToBottom = false;
                 });
@@ -128,6 +187,14 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
             if (event.notificationFields.notificationArgs.length > 0) {
               var arg = event.notificationFields.notificationArgs[0];
               userTypingKey.currentState.setTypingUser(arg);
+            }
+          }
+        } else if (event.collection == 'stream-notify-logged') {
+          if (event.notificationFields.notificationArgs.length > 0) {
+            var eventName = event.notificationFields.eventName;
+            print('+++++stream-notify-logged:' + eventName);
+            if (eventName == 'updateAvatar') {
+              clearImageCacheAndUpdateAll();
             }
           }
         } else if (event.collection == 'stream-notify-user') {
@@ -157,6 +224,16 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       }
     });
   }
+
+  clearImageCacheAndUpdateAll() async {
+    print('@@@@@ avatar changed deleteing cache');
+    imageCache.clear();
+    imageCache.clearLiveImages();
+    print('@@@@@ avatar changed deleteing cache done~~~~~');
+    setState(() {
+    });
+  }
+
   @override
   void dispose() {
     unsubscribeRoomEvent(widget.room.id);
@@ -206,6 +283,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
         } (),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
           print('~~~~~~~~ builder update=${snapshot.hasData}');
+          print('~~~~~~~~ builder chatDataStore.length=${chatDataStore.length}');
           if (snapshot.connectionState == ConnectionState.done) {
             print('~~~~~~~~ builder connectionState.done');
             markAsReadScheduler();
@@ -238,13 +316,13 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                 slivers: <Widget>[
                 SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
-                      Message message = chatData[index].message;
+                      Message message = chatDataStore.getMessageAt(index);
                       return Container(
                         //child: _buildChatItem(message, index),
-                        child: ChatItemView(chatHomeState: widget.chatHomeState, key: chatData[index].key, message: message, index: index, me: widget.me, authRC: widget.authRC, ),
+                        child: ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index), message: message, index: index, me: widget.me, authRC: widget.authRC, ),
                       );
                     },
-                    childCount: chatData.length,
+                    childCount: chatDataStore.length,
                   )
                 ),
                 SliverAppBar(
@@ -332,12 +410,6 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       MessageNew msg = MessageNew(roomId: widget.room.id, text: message);
       MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
       _teController.text = '';
-/*
-      setState(() {
-        needScrollToBottom = true;
-        chatData.add(respMsg.message);
-      });
-*/
     }
   }
 
@@ -387,11 +459,9 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
         historyEnd = true;
       else {
         for (Message m in channelMessages.messages)
-          if (!chatData.contains(m))
-            chatData.add(ChatItemData(GlobalKey(), m));
-        chatData.sort((b, a) {
-          return a.message.ts.compareTo(b.message.ts);
-        });
+          if (!chatDataStore.containsMessage(m.id))
+            await chatDataStore.add(ChatItemData(GlobalKey(), m), widget.authRC);
+        chatDataStore.sortMessagesByTimeStamp();
       }
       return ChannelMessages(success: true);
     } else {
