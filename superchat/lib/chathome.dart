@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -94,6 +95,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   connectWebSocket() {
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
     webSocketService.subscribeNotifyUser(webSocketChannel, widget.user);
+    webSocketService.subscribeStreamNotifyLogged(webSocketChannel);
     webSocketChannel.stream.listen((event) async {
       var e = jsonDecode(event);
       print('****************event=${event}');
@@ -266,14 +268,24 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                     expandedHeight: 200.0,
                     floating: false,
                     pinned: true,
+                    systemOverlayStyle: SystemUiOverlayStyle.dark,
                     flexibleSpace: FlexibleSpaceBar(
                         centerTitle: true,
-                        title: Row(children: <Widget>[
-                          Text(widget.title),
+                        title: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(widget.title, style:
+                            TextStyle(fontFamily: "Billabong", fontSize: 30, shadows: <Shadow>[
+                            Shadow(
+                              offset: Offset(-3.0, 3.0),
+                              blurRadius: 5.0,
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            ),
+                          ])),
+                          SizedBox(width: 5,),
                           UnreadCounter(unreadCount: totalUnread),
                         ]),
-                        background: Image.network(
-                          "https://images.pexels.com/photos/907485/pexels-photo-907485.jpeg?auto=compress&cs=tinysrgb&h=350",
+                        background: Image.asset(
+                          'assets/images/hot-air-balloon-2411851.jpg',
                           fit: BoxFit.cover,
                         )),
                   ),
@@ -391,9 +403,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       print('subs removed');
       for (model.Subscription ms in subsUpdate.remove) {
         db.Subscription dbSub = await locator<db.ChatDatabase>().getSubscription(ms.id);
-        model.Subscription sub = model.Subscription.fromMap(jsonDecode(dbSub.info));
-        await locator<db.ChatDatabase>().deleteSubscription(ms.id);
-        await locator<db.ChatDatabase>().deleteRoom(sub.rid);
+        if (dbSub != null) {
+          model.Subscription sub = model.Subscription.fromMap(jsonDecode(dbSub.info));
+          await locator<db.ChatDatabase>().deleteSubscription(ms.id);
+          await locator<db.ChatDatabase>().deleteRoom(sub.rid);
+        }
       }
       bDBUpdated = true;
     }
@@ -467,11 +481,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(room.id, style: TextStyle(color: Colors.grey)),
-          room.description != null ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.topic != null ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          //Text(room.id, style: TextStyle(color: Colors.grey)),
+          room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.lastMessage != null ? Text(room.lastMessage.msg, style: TextStyle(color: Colors.orange)) : SizedBox(),
+          room.lastMessage != null ? Text(room.lastMessage.msg, maxLines: 1, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
           room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
     );

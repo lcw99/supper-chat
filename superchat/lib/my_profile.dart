@@ -7,7 +7,7 @@ import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:superchat/constants/constants.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
-import 'package:rocket_chat_connector_flutter/models/filters/userid_Filter.dart';
+import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
 import 'package:superchat/main.dart';
 
 class MyProfile extends StatefulWidget {
