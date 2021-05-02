@@ -109,8 +109,8 @@ class ChatItemViewState extends State<ChatItemView> {
   }
   _getUserName(Message message) {
     String userName = '';
-    if (message.user.username != null)
-      userName += ' ' + message.user.username;
+    // if (message.user.username != null)
+    //   userName += ' ' + message.user.username;
     if (message.user.name != null)
       userName += ' ' + message.user.name;
     return userName;
@@ -136,14 +136,14 @@ class ChatItemViewState extends State<ChatItemView> {
     return
       GestureDetector (
           onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
+          onLongPress: () { messagePopupMenu(context, tabPosition, message); },
           child:
           Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                bAttachments ? Container(child: buildAttachments(attachments, message)) : SizedBox(),
+                bAttachments ? Container(child: buildAttachments(message)) : SizedBox(),
                 GestureDetector (
                   onTap: () { pickReaction(message); },
-                  onLongPress: () { messagePopupMenu(context, tabPosition, message); },
                   child: buildMessageBody(message),
                 ),
                 Row(
@@ -163,11 +163,13 @@ class ChatItemViewState extends State<ChatItemView> {
               ]));
   }
 
-  buildAttachments(attachments, message) {
+  buildAttachments(Message message) {
+    var attachments = message.attachments;
     List<Widget> widgets = [];
     for (MessageAttachment attachment in attachments) {
       var attachmentBody;
       var downloadLink;
+      //log(attachment.toString());
       if (attachment.type == 'file' && attachment.imageUrl == null) {
         downloadLink = attachment.titleLink;
         attachmentBody = attachment.description != null
@@ -189,13 +191,8 @@ class ChatItemViewState extends State<ChatItemView> {
             SizedBox(width: 5,),
             Column(children: [
               InkWell(
-                child: Icon(Icons.thumb_up_alt_outlined, color: Colors.blueAccent, size: 30),
-                onTap: () { pickReaction(message); },
-              ),
-              SizedBox(height: 5,),
-              InkWell(
-                child: Icon(Icons.menu, color: Colors.blueAccent, size: 30),
-                onTap: () async { messagePopupMenu(context, null, message, downloadLink: downloadLink); },
+                child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
+                onTap: () async { downloadByUrlLaunch(downloadLink); },
               ),
             ])
           ]));
