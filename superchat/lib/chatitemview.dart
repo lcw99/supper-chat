@@ -89,7 +89,7 @@ class ChatItemViewState extends State<ChatItemView> {
             height: specialMessage ? 20 : 40,
             child: ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(url, key: UniqueKey()))
+                child: Image.network(url, /*key: UniqueKey()*/))
         ),
         SizedBox(width: 5,),
         // user name
