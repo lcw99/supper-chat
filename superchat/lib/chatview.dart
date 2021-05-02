@@ -65,11 +65,13 @@ class ChatDataStore {
   }
 
   updateUserInfo(String userId, Authentication authentication) async {
+/*
     if (!_userInfos.containsKey(userId)) {
       User userInfo = await UserService(rocketHttpService).getUserInfo(UserIdFilter(userId), authentication);
       print('@@@@ userInfo=${userInfo.avatarUrl}');
       _userInfos[userId] = userInfo;
     }
+*/
   }
 
   bool containsMessage(String messageId) {
@@ -241,7 +243,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     imageCache.clear();
     imageCache.clearLiveImages();
     print('@@@@@ avatar changed deleteing cache done~~~~~');
-    //setState(() {});
+    setState(() {});
     chatViewKey.currentContext ?? Phoenix.rebirth(chatViewKey.currentContext);
   }
 
