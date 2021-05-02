@@ -117,7 +117,7 @@ class ChatItemData {
 class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   TextEditingController _teController = TextEditingController();
   int chatItemOffset = 0;
-  final int chatItemCount = 20;
+  final int chatItemCount = 50;
 
   ChatDataStore chatDataStore = ChatDataStore();
   bool historyEnd = false;
@@ -297,6 +297,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
               });
             }
             updateAll = false;
+            needScrollToBottom = false;
           }
           if (snapshot.hasData) {
             return NotificationListener<ScrollEndNotification>(
