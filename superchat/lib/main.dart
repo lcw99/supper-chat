@@ -12,16 +12,19 @@ import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:package_info/package_info.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/new/user_new.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart' as rocket_user;
 import 'package:rocket_chat_connector_flutter/services/authentication_service.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
+import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/push_service.dart';
 import 'package:rocket_chat_connector_flutter/models/new/token_new.dart';
 
+import 'chathome.dart';
 import 'chathome.dart';
 import 'database/chatdb.dart';
 
@@ -39,6 +42,11 @@ final googleSignIn = GoogleSignIn();
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 final navGlobalKey = new GlobalKey<NavigatorState>();
 String notificationPayload;
+
+GetIt locator = GetIt.instance;
+
+String version;
+String buildNumber;
 
 emojiConvert() {
 /*
@@ -101,10 +109,18 @@ void main() async {
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
   await _initNotification();
-  runApp(Phoenix(child: SuperChat()));
+  await packageInfo();
+  runApp(MainHome());
 }
 
-GetIt locator = GetIt.instance;
+packageInfo() async {
+  PackageInfo packageInfo = await PackageInfo.fromPlatform();
+
+  String appName = packageInfo.appName;
+  String packageName = packageInfo.packageName;
+  version = packageInfo.version;
+  buildNumber = packageInfo.buildNumber;
+}
 
 Future setupLocator() async {
   locator.registerSingleton(ChatDatabase());
@@ -135,13 +151,26 @@ androidNotification(RemoteMessage message) async {
       0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: _payload);
 }
 
+GlobalKey<ChatHomeState> chatHomeStateKey = GlobalKey();
 Future<void> _onSelectNotification(String payload) async {
   print("onSelectNotification payload=$payload");
-  //navGlobalKey.currentState.push(MaterialPageRoute(builder: (context) => LoginHome()));
   notificationPayload = payload;
-
-  //navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => MainHome()), (route) => false);
-  Phoenix.rebirth(navGlobalKey.currentState.context);
+  if (!navGlobalKey.currentState.mounted)
+    navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
+  else {
+    var json = jsonDecode(payload);
+    String _rid = json['rid'];
+    if (_rid != null) {
+      notificationPayload = null;
+      print('**** rid= $_rid');
+      if (chatHomeStateKey.currentState != null) {
+        chatHomeStateKey.currentState.notificationController.sink.add(rocket_notification.Notification(msg: 'request_close'));
+        chatHomeStateKey.currentState.setChannelById(_rid);
+      }
+    } else {
+      navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
+    }
+  }
 }
 
 Future<void> onDidReceiveLocalNotification(int id, String title, String body, String payload) async {
@@ -165,19 +194,6 @@ _initNotification() async {
   }
 }
 
-class SuperChat extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final title = 'Super Chat';
-    print('***** SuperChat start');
-
-    return MaterialApp(
-      title: title,
-      home: MainHome(),
-    );
-  }
-}
-
 class MainHome extends StatefulWidget {
   const MainHome({Key key}) : super(key: key);
 
@@ -194,14 +210,25 @@ class _MainHome extends State<MainHome> {
     return MaterialApp(
       title: 'Super Chat',
       navigatorKey: navGlobalKey,
-      theme: ThemeData(
-          primarySwatch: Colors.blue,
-          buttonColor: Colors.pink,
-          primaryIconTheme: IconThemeData(color: Colors.black)),
+      theme: ThemeData.light(),
       home: LoginHome(title: 'Super Chat'),
+      //home: Empty(),
     );
   }
 }
+
+class Empty extends StatefulWidget {
+  @override
+  _EmptyState createState() => _EmptyState();
+}
+
+class _EmptyState extends State<Empty> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(color: Colors.white,);
+  }
+}
+
 
 class LoginHome extends StatefulWidget {
   LoginHome({Key key, this.title}) : super(key: key);
@@ -355,7 +382,7 @@ class _LoginHomeState extends State<LoginHome> {
 
     if (!firebaseInitialized) {
       print('!firebaseInitialized----------------------');
-      return CircularProgressIndicator(strokeWidth: 5,);
+      return Container(color: Colors.white);
     }
 
     if (triedSilentLogin == false) {
@@ -371,7 +398,8 @@ class _LoginHomeState extends State<LoginHome> {
 
     if (triedSilentLogin && firebaseInitialized && googleSignIn.currentUser != null) {
       print("******************googleid=" + googleSignIn.currentUser.id);
-      return FutureBuilder<Authentication>(
+      return Scaffold(body:
+        FutureBuilder<Authentication>(
           future: getAuthentication(),
           builder: (context, AsyncSnapshot<Authentication> snapshot) {
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
@@ -384,43 +412,48 @@ class _LoginHomeState extends State<LoginHome> {
               registerToken(auth);
               var _np = notificationPayload;
               notificationPayload = null;
-              return ChatHome(title: 'Super Chat', user: user, authRC: auth, payload: _np,);
-              //return Container();
+              return ChatHome(key: chatHomeStateKey, title: 'Super Chat', user: user, authRC: auth, payload: _np,);
             } else {
-              return Center(child: CircularProgressIndicator(strokeWidth: 1,));
+              return buildShowVersion();
             }
-          });
+        }));
     } else
-      return buildOAuthLoginPage();
+      return Scaffold(body: FutureBuilder<String>(
+        future: Future.delayed(Duration(seconds: 2), () {
+          return '';
+        }),
+        builder: (context, AsyncSnapshot<String> snapshot) {
+          if (snapshot.connectionState == ConnectionState.done)
+            return buildOAuthLoginPage();
+          else
+            return buildShowVersion();
+        }));
+  }
+
+  buildShowVersion() {
+    return Container(color: Colors.white, child:
+      Center(child: Wrap(children: [Column(children: [
+        Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
+        SizedBox(height: 50,),
+        Text('SuperChat $version($buildNumber)', style: TextStyle(fontSize: 10, color: Colors.blueAccent),)
+      ])])));
   }
 
   Scaffold buildOAuthLoginPage() {
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 240.0),
-          child: Column(
-            children: <Widget>[
-              Text(
-                'SuperChat',
-                style: TextStyle(
-                    fontSize: 60.0,
-                    fontFamily: "Billabong",
-                    color: Colors.black),
-              ),
-              Padding(padding: const EdgeInsets.only(bottom: 100.0)),
-              GestureDetector(
-                onTap: login,
-                child: Image.asset(
-                  "assets/images/google_signin_button.png",
-                  width: 225.0,
-                ),
-              )
-            ],
+      body:
+      Container(color: Colors.white, child:
+      Center(child: Wrap(children: [Column(children: [
+        Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
+        SizedBox(height: 50,),
+        GestureDetector(
+          onTap: login,
+          child: Image.asset(
+            "assets/images/google_signin_button.png",
+            width: 225.0,
           ),
-        ),
-      ),
-    );
+        )
+      ])]))));
   }
 
   @override

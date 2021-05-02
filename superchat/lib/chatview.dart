@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -130,6 +131,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   FocusNode myFocusNode;
 
   GlobalKey<_UserTypingState> userTypingKey = GlobalKey();
+  GlobalKey<_ChatViewState> chatViewKey = GlobalKey();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -144,7 +146,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     myFocusNode = FocusNode();
     widget.notificationController.stream.listen((event) {
       if (event.msg == 'request_close') {
-        Navigator.pop(context, null);
+        if (this.mounted)
+          Navigator.pop(context, null);
         return;
       }
       if (event.msg == 'changed' && this.mounted) {
@@ -230,8 +233,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     imageCache.clear();
     imageCache.clearLiveImages();
     print('@@@@@ avatar changed deleteing cache done~~~~~');
-    setState(() {
-    });
+    //setState(() {});
+    chatViewKey.currentContext ?? Phoenix.rebirth(chatViewKey.currentContext);
   }
 
   @override
@@ -254,7 +257,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
     print('~~~ chatview building=$title');
 
-    return Scaffold(
+    return Phoenix(child: Scaffold(
+      key: chatViewKey,
       resizeToAvoidBottomInset: true,
       extendBody: false,
       bottomNavigationBar:
@@ -341,7 +345,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
             return SizedBox();
         }
       )
-    );
+    ));
   }
 
   _buildInputBox() {

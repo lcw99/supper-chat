@@ -54,8 +54,12 @@ subscribeRoomEvent(String roomId) {
 }
 
 unsubscribeRoomEvent(String roomId) {
-  webSocketService.unsubscribeRoomMessages(webSocketChannel, roomId);
-  webSocketService.unsubscribeStreamNotifyRoom(webSocketChannel, roomId);
+  try {
+    webSocketService.unsubscribeRoomMessages(webSocketChannel, roomId);
+    webSocketService.unsubscribeStreamNotifyRoom(webSocketChannel, roomId);
+  } catch (ex) {
+    print(ex.toString());
+  }
 }
 
 class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
@@ -201,7 +205,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       String _rid = json['rid'];
       if (_rid != null) {
         print('**** rid= $_rid');
-        _setChannelById(_rid);
+        setChannelById(_rid);
       }
     }
 
@@ -273,6 +277,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                         centerTitle: true,
                         title: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
+/*
                           Text(widget.title, style:
                             TextStyle(fontFamily: "Billabong", fontSize: 30, shadows: <Shadow>[
                             Shadow(
@@ -281,8 +286,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                               color: Color.fromARGB(255, 0, 0, 0),
                             ),
                           ])),
+                          Image.asset('assets/images/logotextonly.png', width: 150, fit: BoxFit.fitWidth, isAntiAlias: true),
                           SizedBox(width: 5,),
                           UnreadCounter(unreadCount: totalUnread),
+*/
                         ]),
                         background: Image.asset(
                           'assets/images/hot-air-balloon-2411851.jpg',
@@ -321,7 +328,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                   ),
                 )]);
               } else {
-                return Center(child: CircularProgressIndicator(strokeWidth: 10,));
+                return Container(color: Colors.white, child: Center(child: CircularProgressIndicator(strokeWidth: 1,)));
               }
             });
         break;
@@ -338,7 +345,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     });
   }
 
-  _setChannelById(String rid) async {
+  setChannelById(String rid) async {
     db.Room dbRoom = await locator<db.ChatDatabase>().getRoom(rid);
     model.Room room = model.Room.fromMap(jsonDecode(dbRoom.info));
     _setChannel(room);
@@ -485,7 +492,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.lastMessage != null ? Text(room.lastMessage.msg, maxLines: 1, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
+          room.lastMessage != null ? Text(room.lastMessage.msg, maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
           room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
     );
