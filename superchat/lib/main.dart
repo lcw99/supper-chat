@@ -209,6 +209,7 @@ class _MainHome extends State<MainHome> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Super Chat',
+      debugShowCheckedModeBanner: false,
       navigatorKey: navGlobalKey,
       theme: ThemeData.light(),
       home: LoginHome(title: 'Super Chat'),
