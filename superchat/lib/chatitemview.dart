@@ -163,6 +163,19 @@ class ChatItemViewState extends State<ChatItemView> {
               ]));
   }
 
+  String getDownloadLink(Message message) {
+    var downloadLink;
+    var attachments = message.attachments;
+    for (MessageAttachment attachment in attachments) {
+      if (attachment.type == 'file' && attachment.imageUrl == null) {
+        downloadLink = attachment.titleLink;
+      } else {
+        downloadLink = attachment.imageUrl;
+      }
+    }
+    return downloadLink;
+  }
+
   buildAttachments(Message message) {
     var attachments = message.attachments;
     List<Widget> widgets = [];
@@ -200,13 +213,17 @@ class ChatItemViewState extends State<ChatItemView> {
     return Column(children: widgets);
   }
 
-  void downloadByUrlLaunch(String downloadLink) {
+  String buildDownloadUrl(String downloadLink) {
     Map<String, String> query = {
       'rc_token': widget.authRC.data.authToken,
       'rc_uid': widget.authRC.data.userId
     };
     var uri = serverUri.replace(path: downloadLink, queryParameters: query);
-    launch(Uri.encodeFull(uri.toString()));
+    return uri.toString();
+  }
+
+  void downloadByUrlLaunch(String downloadLink) {
+    launch(Uri.encodeFull(buildDownloadUrl(downloadLink)));
   }
 
   Widget buildMessageBody(Message message) {
@@ -411,8 +428,13 @@ class ChatItemViewState extends State<ChatItemView> {
           Share.shareFiles([f.path]);
         }
 */
-      } else
-        Share.share(message.msg);
+      } else {
+        String share = message.msg;
+        if (share == null || share.isEmpty)
+          share = buildDownloadUrl(getDownloadLink(message));
+        if (share != null && share.isNotEmpty)
+          Share.share(share);
+      }
     }
   }
 
