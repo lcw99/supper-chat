@@ -1,13 +1,8 @@
-import 'dart:collection';
-import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:intl/intl.dart';
 import 'package:linkable/linkable.dart';
 import 'package:path_provider/path_provider.dart';
@@ -30,6 +25,7 @@ import 'package:http_parser/http_parser.dart';
 import 'chathome.dart';
 import 'constants/constants.dart';
 import 'wigets/full_screen_image.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 
 class ChatItemView extends StatefulWidget {
   final Message message;
@@ -109,10 +105,10 @@ class ChatItemViewState extends State<ChatItemView> {
   }
   _getUserName(Message message) {
     String userName = '';
-    // if (message.user.username != null)
-    //   userName += ' ' + message.user.username;
     if (message.user.name != null)
       userName += ' ' + message.user.name;
+    if (userName == '' && message.user.username != null)
+      userName += ' ' + message.user.username;
     return userName;
   }
 
@@ -257,7 +253,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 children: [
                 Linkable(
                   text: newMessage,
-                  style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.normal),
+                  style: TextStyle(fontSize: MESSAGE_FONT_SIZE, color: Colors.black54, fontWeight: FontWeight.normal),
                 ),
                 message.editedBy != null ?
                   Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
@@ -344,16 +340,35 @@ class ChatItemViewState extends State<ChatItemView> {
     String emoji = await showDialog(
         context: context,
         builder: (BuildContext context) {
-          return Center(child:
-          Container(
-              child: EmojiKeyboard(
-                height: 300,
-                onEmojiSelected: (Emoji emoji){
-                  Navigator.pop(context, emoji.name);
-                },
-              )
+          return
+          Dialog(insetPadding: EdgeInsets.all(15),
+          child:
+          SizedBox(height: 350, width: MediaQuery.of(context).size.width, child:
+          epf.EmojiPicker(
+            onEmojiSelected: (category, emoji) {
+              print('@@@ selected emoji=${emoji.name}');
+              Navigator.pop(context, emoji.name);
+            },
+            config: epf.Config(
+                columns: 6,
+                emojiSizeMax: 26.0,
+                verticalSpacing: 0,
+                horizontalSpacing: 0,
+                initCategory: epf.Category.RECENT,
+                bgColor: Color(0xFFF2F2F2),
+                indicatorColor: Colors.blue,
+                iconColor: Colors.grey,
+                iconColorSelected: Colors.blue,
+                progressIndicatorColor: Colors.blue,
+                showRecentsTab: true,
+                recentsLimit: 28,
+                noRecentsText: "No Recents",
+                noRecentsStyle: const TextStyle(fontSize: 20, color: Colors.black26),
+                categoryIcons: const epf.CategoryIcons(),
+                buttonMode: epf.ButtonMode.MATERIAL
+            ),
           )
-          );
+          ));
         }
     );
 
@@ -366,7 +381,7 @@ class ChatItemViewState extends State<ChatItemView> {
   sendReaction(message, emoji, bool shouldReact) {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     MessageService messageService = MessageService(rocketHttpService);
-    String em = ':$emoji:';
+    String em = emoji;
     print('!!!!!emoji=$em');
     ReactionNew reaction = ReactionNew(emoji: em, messageId: message.id, shouldReact: shouldReact);
     messageService.postReaction(reaction, widget.authRC);
