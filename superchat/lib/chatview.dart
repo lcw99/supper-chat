@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -27,7 +28,6 @@ import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:ss_image_editor/common/image_picker/image_picker.dart';
-import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
 import 'image_file_desc.dart';
@@ -270,14 +270,58 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(height: 50, color: Colors.white, child: _buildInputBox())
           ),
-          showEmojiKeyboard ? Container(child:
+          showEmojiKeyboard ? Container(
+          height: 240,
+          child:
+          epf.EmojiPicker(
+            onEmojiSelected: (category, emoji) {
+              print(emoji);
+              _teController.text += emoji.emoji;
+              _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
+            },
+            config: epf.Config(
+                columns: 7,
+                emojiSizeMax: 26.0,
+                verticalSpacing: 0,
+                horizontalSpacing: 0,
+                initCategory: epf.Category.RECENT,
+                bgColor: Color(0xFFF2F2F2),
+                indicatorColor: Colors.blue,
+                iconColor: Colors.grey,
+                iconColorSelected: Colors.blue,
+                progressIndicatorColor: Colors.blue,
+                showRecentsTab: true,
+                recentsLimit: 28,
+                noRecentsText: "No Recents",
+                noRecentsStyle: const TextStyle(fontSize: 20, color: Colors.black26),
+                categoryIcons: const epf.CategoryIcons(),
+                buttonMode: epf.ButtonMode.MATERIAL
+            ),
+          )
+/*
+          EmojiPicker(
+              rows: 4,
+              columns: 7,
+              recommendKeywords: ["racing", "horse"],
+              numRecommended: 10,
+              onEmojiSelected: (emoji, category) {
+                print(emoji);
+                _teController.text += emoji.emoji;
+                _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
+              },
+            )
+*/
+/*
           EmojiKeyboard(
             height: 250,
             onEmojiSelected: (Emoji emoji){
               _teController.text += emoji.text;
               _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
             },
-          )) : SizedBox(height: 0,),
+          )
+*/
+          )
+          : SizedBox(height: 0,),
         ])),
       body:
         FutureBuilder(

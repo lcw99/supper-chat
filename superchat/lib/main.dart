@@ -6,7 +6,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FBA;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_emoji_keyboard/flutter_emoji_keyboard.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -29,7 +28,7 @@ import 'chathome.dart';
 import 'database/chatdb.dart';
 
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
-import 'package:flutter_emoji_keyboard/src/all_emojis.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 
 final String serverUrl = "https://chat.smallet.co";
 final String username = "support@semaphore.kr";
@@ -47,61 +46,6 @@ GetIt locator = GetIt.instance;
 
 String version;
 String buildNumber;
-
-emojiConvert() {
-/*
-  Map<String, String> unicodeToName = Map<String, String>();
-  for (var e in emojis.entries) {
-    unicodeToName[e.value] = e.key;
-  }
-
-  int count = 0;
-  var emojiList2 = <Emoji>[];
-  for (var e in emojiListOrg) {
-    if (unicodeToName.containsKey(e.text)) {
-      //print(unicodeToName[e.text]);
-      e.name = unicodeToName[e.text];
-      emojiList2.add(e);
-      count++;
-    } else {
-      //print('@@@ not found = ${e.text}');
-    }
-  }
-  print('unicodeToName item count=${unicodeToName.length}, $count');
-  emojiList = emojiList2;
-
-  StringBuffer sb = StringBuffer();
-  for (var em in emojiList2) {
-    var nn = em.name;
-    var tt = em.text;
-    var and = '[';
-    for (var aa in em.limitRangeAndroid) {
-      and += "MapEntry('${aa.key}', '${aa.value}'),";
-    }
-    and += ']';
-    var ios = '[';
-    for (var aa in em.limitRangeIOS) {
-      ios += "MapEntry('${aa.key}', '${aa.value}'),";
-    }
-    ios += ']';
-    var ee = "Emoji('$nn', '$tt', ${em.category}, limitRangeAndroid: $and, limitRangeIOS: $ios),\n";
-    sb.write(ee);
-  }
-  log(sb.toString());
-
-  count = 0;
-  for (var cat in emojisByCategory.entries) {
-    String catagory = cat.key;
-    var names = cat.value;
-    for (var name in names) {
-      var nn = ':$name:';
-      print("Emoji('$nn', '${emojis[nn]}', EmojiCategory.$catagory,null, null),");
-      count++;
-    }
-  }
-  print('count=$count');
-*/
-}
 
 void main() async {
   //emojiConvert();
@@ -470,3 +414,37 @@ class _LoginHomeState extends State<LoginHome> {
 }
 
 
+/*
+categoryConvert(unicodeToName, Map<String, String> cat, String name) {
+  int count = 0;
+  String names = 'final Map<String, String> $name = Map.fromIterables([';
+  String codes = '[';
+  for (String unicode in cat.values) {
+    if (unicodeToName.containsKey(unicode)) {
+      //print(unicode + ' ' + unicodeToName[unicode]);
+      names += "'${unicodeToName[unicode]}',";
+      codes += "'$unicode',";
+      count++;
+    }
+  }
+  names += ']';
+  codes += ']);';
+  log('$names, $codes');
+}
+
+emojiConvert() {
+  Map<String, String> unicodeToName = Map<String, String>();
+  for (var e in emojis.entries) {
+    unicodeToName[e.value] = e.key;
+  }
+
+  categoryConvert(unicodeToName, epf.smileys, 'smileys');
+  categoryConvert(unicodeToName, epf.activities, 'activities');
+  categoryConvert(unicodeToName, epf.animals, 'animals');
+  categoryConvert(unicodeToName, epf.flags, 'flags');
+  categoryConvert(unicodeToName, epf.foods, 'foods');
+  categoryConvert(unicodeToName, epf.objects, 'objects');
+  categoryConvert(unicodeToName, epf.symbols, 'symbols');
+  categoryConvert(unicodeToName, epf.travel, 'travel');
+}
+*/
