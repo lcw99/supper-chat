@@ -144,6 +144,14 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
     updateAll = true;
     myFocusNode = FocusNode();
+    myFocusNode.addListener(() {
+      if (myFocusNode.hasFocus & showEmojiKeyboard) {
+        setState(() {
+          showEmojiKeyboard = false;
+        });
+      }
+    });
+
     widget.notificationController.stream.listen((event) {
       if (event.msg == 'request_close') {
         if (this.mounted)
@@ -270,7 +278,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(height: 50, color: Colors.white, child: _buildInputBox())
           ),
-          showEmojiKeyboard ? Container(
+          showEmojiKeyboard && MediaQuery.of(context).viewInsets.bottom == 0 ? Container(
           height: 240,
           child:
           epf.EmojiPicker(
@@ -298,28 +306,6 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                 buttonMode: epf.ButtonMode.MATERIAL
             ),
           )
-/*
-          EmojiPicker(
-              rows: 4,
-              columns: 7,
-              recommendKeywords: ["racing", "horse"],
-              numRecommended: 10,
-              onEmojiSelected: (emoji, category) {
-                print(emoji);
-                _teController.text += emoji.emoji;
-                _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
-              },
-            )
-*/
-/*
-          EmojiKeyboard(
-            height: 250,
-            onEmojiSelected: (Emoji emoji){
-              _teController.text += emoji.text;
-              _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
-            },
-          )
-*/
           )
           : SizedBox(height: 0,),
         ])),
