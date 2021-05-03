@@ -379,9 +379,9 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                 return true;
               },
               child: Container(color: Colors.blue.shade100,
-                //child: ScrollablePositionedList.builder(
-                child: ListView.builder(
-                //itemScrollController: itemScrollController,
+                child: ScrollablePositionedList.builder(
+                //child: ListView.builder(
+                itemScrollController: itemScrollController,
                 reverse: true,
                 itemCount: chatDataStore.length,
                 //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -571,8 +571,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     if (_getMoreMessages) {
       historyCallCount++;
       print('full history call=$historyCallCount');
-      var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoomMessage);
-      var dbHistoryReadEnd = await locator<db.ChatDatabase>().getValueByKey(db.historyReadEnd);
+      var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoomMessage + widget.room.id);
+      var dbHistoryReadEnd = await locator<db.ChatDatabase>().getValueByKey(db.historyReadEnd + widget.room.id);
       DateTime updateSince;
       if (lastUpdate != null)
         updateSince = DateTime.tryParse(lastUpdate.value);
@@ -613,9 +613,9 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
         roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
         print('roomMessages.length after network fetch = ${roomMessages.length}');
       }
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoomMessage, value: DateTime.now().toIso8601String()));
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoomMessage + widget.room.id, value: DateTime.now().toIso8601String()));
       if (historyEnd)
-        await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd, value: 'yes'));
+        await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd + widget.room.id, value: 'yes'));
 
       for (var rm in roomMessages) {
         if (!chatDataStore.containsMessage(rm.mid))
