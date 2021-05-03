@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Preferences {
   bool? enableAutoAway;
   int? idleTimeoutLimit;
@@ -191,7 +193,7 @@ class Preferences {
 
   @override
   String toString() {
-    return 'Preferences{enableAutoAway: $enableAutoAway, idleTimeoutLimit: $idleTimeoutLimit, desktopNotificationDuration: $desktopNotificationDuration, audioNotifications: $audioNotifications, desktopNotifications: $desktopNotifications, mobileNotifications: $mobileNotifications, unreadAlert: $unreadAlert, useEmojis: $useEmojis, convertAsciiEmoji: $convertAsciiEmoji, autoImageLoad: $autoImageLoad, saveMobileBandwidth: $saveMobileBandwidth, collapseMediaByDefault: $collapseMediaByDefault, hideUsernames: $hideUsernames, hideRoles: $hideRoles, hideFlexTab: $hideFlexTab, hideAvatars: $hideAvatars, roomsListExhibitionMode: $roomsListExhibitionMode, sidebarViewMode: $sidebarViewMode, sidebarHideAvatar: $sidebarHideAvatar, sidebarShowUnread: $sidebarShowUnread, sidebarShowFavorites: $sidebarShowFavorites, sendOnEnter: $sendOnEnter, messageViewMode: $messageViewMode, emailNotificationMode: $emailNotificationMode, roomCounterSidebar: $roomCounterSidebar, newRoomNotification: $newRoomNotification, newMessageNotification: $newMessageNotification, muteFocusedConversations: $muteFocusedConversations, notificationsSoundVolume: $notificationsSoundVolume}';
+    return jsonEncode(this.toMap());
   }
 
   @override

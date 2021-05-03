@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:collection/collection.dart';
 
 class Reaction {
@@ -25,7 +27,7 @@ class Reaction {
 
   @override
   String toString() {
-    return 'Reaction{usernames: $usernames}';
+    return jsonEncode(this.toMap());
   }
 
   @override

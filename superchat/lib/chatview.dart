@@ -269,6 +269,22 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
     return Phoenix(child: Scaffold(
       key: chatViewKey,
+      appBar: AppBar(
+        title: Text(title),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.star_border_outlined),
+            onPressed: () {
+              _handleStarredMessage();
+            },
+          ),
+          IconButton(
+            icon: Transform.rotate(child: Icon(Icons.push_pin_outlined), angle: 45 * 3.14 / 180,),
+            onPressed: () async {
+            },
+          ),
+        ],
+      ),
       resizeToAvoidBottomInset: true,
       extendBody: false,
       bottomNavigationBar:
@@ -355,13 +371,13 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                   delegate: SliverChildBuilderDelegate((context, index) {
                       Message message = chatDataStore.getMessageAt(index);
                       return Container(
-                        //child: _buildChatItem(message, index),
-                        child: ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index), message: message, index: index, me: widget.me, authRC: widget.authRC, ),
+                        child: ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index), message: message, me: widget.me, authRC: widget.authRC, ),
                       );
                     },
                     childCount: chatDataStore.length,
                   )
                 ),
+/*
                 SliverAppBar(
                   title: Text(title),
                   expandedHeight: 200,
@@ -373,12 +389,51 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                         fit: BoxFit.cover,
                       )),
                 ),
+*/
             ])));
           } else
             return SizedBox();
         }
       )
     ));
+  }
+
+  _handleStarredMessage() async {
+    String emoji = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Starred Messages'),
+            insetPadding: EdgeInsets.all(5),
+            contentPadding: EdgeInsets.all(5),
+            content: Container(height: 350, width: MediaQuery.of(context).size.width, child:
+              _buildStarredMessage(),
+            )
+          );
+        }
+    );
+  }
+
+  _buildStarredMessage() {
+    return FutureBuilder(
+      future: _getStarredMessages(),
+      builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
+        if(snapshot.hasData) {
+          return ListView.builder(
+            itemCount: snapshot.data.messages.length,
+            itemBuilder: (BuildContext c, int index) {
+              var message = snapshot.data.messages[index];
+              return ChatItemView(chatHomeState: null, message: message, me: widget.me, authRC: widget.authRC);
+            });
+        } else {
+          return Center(child: CircularProgressIndicator());
+        }
+      }
+    );
+  }
+
+  Future<ChannelMessages> _getStarredMessages() {
+    return getChannelService().getStarredMessages(widget.room.id, widget.authRC);
   }
 
   _buildInputBox() {
@@ -481,17 +536,20 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     _pickImage(imageSource: ImageSource.camera);
   }
 
+  ChannelService getChannelService() {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+    return ChannelService(rocketHttpService);
+  }
+
   static int historyCallCount = 0;
   Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _updateAll, bool _scrollToBottom) async {
     print('!!!!!! get room history bUpdateAll=$_updateAll');
     if (_updateAll) {
       historyCallCount++;
       print('full history call=$historyCallCount');
-      final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-      ChannelService channelService = ChannelService(rocketHttpService);
       ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
-      ChannelMessages channelMessages = await channelService.roomHistory(filter, widget.authRC, widget.room.t);
-      print('_getChannelMessages return1 _updateAll=$_updateAll');
+      ChannelMessages channelMessages = await getChannelService().roomHistory(filter, widget.authRC, widget.room.t);
+      print('@@@@_getChannelMessages return1 _updateAll=$_updateAll');
       if (channelMessages.messages.length <= 0)
         historyEnd = true;
       else {
@@ -532,9 +590,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   }
 
   Future<void> markAsRead() async {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    ChannelService channelService = ChannelService(rocketHttpService);
-    await channelService.markAsRead(widget.room.id, widget.authRC);
+    await getChannelService().markAsRead(widget.room.id, widget.authRC);
     debugPrint("----------- mark channel(${widget.room.id}) as read");
   }
 }

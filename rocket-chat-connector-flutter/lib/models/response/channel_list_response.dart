@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 
@@ -26,9 +28,19 @@ class ChannelListResponse {
     }
   }
 
+  Map<String, dynamic> toMap() => {
+    'channelList': channelList
+        ?.where((json) => json != null)
+        ?.map((channelList) => channelList.toMap())
+        ?.toList() ??
+        [],
+    'success': success,
+  };
+
+
   @override
   String toString() {
-    return 'MessageResponse{channels: $channelList, success: $success}';
+    return jsonEncode(this.toMap());
   }
 
   @override

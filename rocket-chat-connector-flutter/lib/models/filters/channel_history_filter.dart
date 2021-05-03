@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'filter.dart';
 
@@ -32,7 +34,7 @@ class ChannelHistoryFilter extends Filter {
 
   @override
   String toString() {
-    return 'ChannelHistoryFilter{latest: $latest, oldest: $oldest, inclusive: $inclusive, offset: $offset, count: $count, unreads: $unreads, roomid: $roomId}';
+    return jsonEncode(this.toMap());
   }
 
   @override

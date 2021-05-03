@@ -12,7 +12,7 @@ class RoomFilter extends Filter {
 
   @override
   String toString() {
-    return 'RoomFilter{room: $room}';
+    return jsonEncode(this.toMap());
   }
 
   @override

@@ -23,13 +23,16 @@ class Message {
   Map<String, Reaction>? reactions;
   List<Mention>? mentions;
   List<String>? channels;
-  Map<String, String>? starred;
   String? emoji;
   String? avatar;
   List<MessageAttachment>? attachments;
   User? editedBy;
   DateTime? editedAt;
   List<UrlInMessage>? urls;
+  List<User>? starred;
+  bool? pinned;
+  DateTime? pinnedAt;
+  User? pinnedBy;
 
   Message({
     this.id,
@@ -52,10 +55,20 @@ class Message {
     this.editedBy,
     this.editedAt,
     this.urls,
+    this.pinned,
+    this.pinnedAt,
+    this.pinnedBy,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {
     if (json != null) {
+      pinned = json['pinned'];
+      pinnedAt = json['_pinnedAt'] != null
+          ? (json['_pinnedAt'] is String
+          ? DateTime.parse(json['_pinnedAt']).toUtc()
+          : DateTime.fromMillisecondsSinceEpoch(json['_pinnedAt']['\$date']!, isUtc: true))
+          : null;
+      pinnedBy = json['pinnedBy'] != null ? User.fromMap(json['pinnedBy']) : null;
       alias = json['alias'];
       msg = json['msg'];
       parseUrls = json['parseUrls'];
@@ -93,9 +106,16 @@ class Message {
       }
       channels =
           json['channels'] != null ? List<String>.from(json['channels']) : null;
-      starred = json['starred'] != null
-          ? Map<String, String>.from(json['starred'])
-          : null;
+
+      if (json['starred'] != null) {
+        List<dynamic> jsonList = json['starred'].runtimeType == String
+            ? jsonDecode(json['starred'])
+            : json['starred'];
+        starred = jsonList
+            .where((json) => json != null)
+            .map((json) => User.fromMap(json))
+            .toList();
+      }
       emoji = json['emoji'];
       avatar = json['avatar'];
 
@@ -133,6 +153,16 @@ class Message {
 
   Map<String, dynamic> toMap() {
     Map<String, dynamic> map = {};
+
+    if (pinned != null) {
+      map['pinned'] = pinned;
+    }
+    if (pinnedAt != null) {
+      map['pinnedAt'] = pinnedAt!.toIso8601String();
+    }
+    if (pinnedBy != null) {
+      map['pinnedBy'] = pinnedBy != null ? pinnedBy!.toMap() : null;
+    }
 
     if (id != null) {
       map['_id'] = id;
@@ -183,7 +213,11 @@ class Message {
       map['channels'] = channels;
     }
     if (starred != null) {
-      map['starred'] = starred;
+      map['starred'] = starred
+          ?.where((json) => json != null)
+          ?.map((user) => user.toMap())
+          ?.toList() ??
+          [];
     }
     if (emoji != null) {
       map['emoji'] = emoji;
@@ -215,9 +249,7 @@ class Message {
 
   @override
   String toString() {
-    return 'Message{"_id": "$id", "alias": "$alias", "msg": "$msg", "parseUrls": "$parseUrls", "bot": "$bot", "groupable": "$groupable", "t": "$t", "ts": "$ts", '
-        '"user": "$user", "rid": "$rid", "_updatedAt": "$updatedAt", "reactions": "$reactions", "mentions": "$mentions", "channels": "$channels", "starred": "$starred", '
-        '"emoji": "$emoji", "avatar": "$avatar", "attachments": $attachments, "editedBy": "$editedBy", "editedBy": "$editedBy", "urls": "$urls"}';
+    return jsonEncode(this.toMap());
   }
 
   @override

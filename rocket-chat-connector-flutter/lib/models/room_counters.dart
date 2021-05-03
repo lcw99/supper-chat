@@ -74,7 +74,7 @@ class RoomCounters {
 
   @override
   String toString() {
-    return 'RoomCounters{joined: $joined, members: $members, unreads: $unreads, unreadsFrom: $unreadsFrom, msgs: $msgs, latest: $latest, userMentions: $userMentions, success: $success}';
+    return jsonEncode(this.toMap());
   }
 
   @override

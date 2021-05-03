@@ -150,7 +150,7 @@ class User {
 
   @override
   String toString() {
-    return 'User{_id: $id, name: $name, emails: $emails, status: $status, statusConnection: $statusConnection, username: $username, utcOffset: $utcOffset, active: $active, roles: $roles, settings: $settings, avatarUrl: $avatarUrl, customFields: $customFields, success: $success}';
+    return jsonEncode(this.toMap());
   }
 
   @override

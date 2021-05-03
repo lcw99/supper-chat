@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class TokenNew {
   String? id;
   String? type;
@@ -41,7 +43,7 @@ class TokenNew {
 
   @override
   String toString() {
-    return 'UserNew{id: $id, type: $type, value: $value, appName: $appName}';
+    return jsonEncode(this.toMap());
   }
 
   @override

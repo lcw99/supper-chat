@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class ChannelNew {
   String? name;
 
@@ -23,7 +25,7 @@ class ChannelNew {
 
   @override
   String toString() {
-    return 'ChannelNew{name: $name}';
+    return jsonEncode(this.toMap());
   }
 
   @override

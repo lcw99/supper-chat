@@ -31,7 +31,7 @@ class RoomHistoryFilter extends RoomFilter {
 
   @override
   String toString() {
-    return 'RoomHistoryFilter{latest: $latest, oldest: $oldest, inclusive: $inclusive, offset: $offset, count: $count, unreads: $unreads}';
+    return jsonEncode(this.toMap());
   }
 
   @override

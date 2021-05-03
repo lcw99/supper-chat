@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class UserNew {
   String? username;
   String? email;
@@ -41,7 +43,7 @@ class UserNew {
 
   @override
   String toString() {
-    return 'UserNew{name: $name, email: $email, pass: $pass, username: $username}';
+    return jsonEncode(this.toMap());
   }
 
   @override

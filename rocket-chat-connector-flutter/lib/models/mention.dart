@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Mention {
   String? id;
   String? name;
@@ -25,7 +27,7 @@ class Mention {
 
   @override
   String toString() {
-    return 'Mention{usernames: $username}';
+    return jsonEncode(this.toMap());
   }
 
   @override

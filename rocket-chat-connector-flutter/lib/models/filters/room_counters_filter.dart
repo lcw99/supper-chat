@@ -15,7 +15,7 @@ class RoomCountersFilter extends RoomFilter {
 
   @override
   String toString() {
-    return 'RoomCountersFilter{user: $user}';
+    return jsonEncode(this.toMap());
   }
 
   @override
