@@ -102,7 +102,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.subscribeStreamNotifyLogged(webSocketChannel);
     webSocketChannel.stream.listen((event) async {
       var e = jsonDecode(event);
-      print('****************event=${event}');
+      print('event=${event}');
       rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
       print('collection=${notification.collection}');
       String data = jsonEncode(notification.toMap());
@@ -377,7 +377,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   Future<List<model.Room>> _getMyRoomList() async {
-    var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdate);
+    var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoom);
     DateTime updateSince;
     if (lastUpdate != null)
       updateSince = DateTime.tryParse(lastUpdate.value);
@@ -442,7 +442,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
 
     if (bDBUpdated || lastRoomList == null) {
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdate, value: DateTime.now().toIso8601String()));
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoom, value: DateTime.now().toIso8601String()));
       var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
       print('dbRooms = ${dbRooms.length}');
       List<model.Room> roomList = [];
@@ -492,7 +492,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.lastMessage != null ? Text(room.lastMessage.msg, maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
+          room.lastMessage != null && room.lastMessage.msg != null ? Text(room.lastMessage.msg, maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
           room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
     );

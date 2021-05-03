@@ -103,8 +103,7 @@ class MessageAttachment {
   }
 
   Map<String, dynamic> toMap() => {
-  'attachments':  attachments != null ?
-      'attachments': attachments
+  'attachments':  attachments
               ?.where((json) => json != null)
               ?.map((attachments) => attachments.toMap())
               ?.toList() ??

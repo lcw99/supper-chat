@@ -1,0 +1,1 @@
+typedef ChatItemViewCallback = void Function(String);

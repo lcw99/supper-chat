@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
@@ -18,6 +19,7 @@ import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:share/share.dart';
+import 'package:superchat/constants/types.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
@@ -25,16 +27,23 @@ import 'package:http_parser/http_parser.dart';
 
 import 'chathome.dart';
 import 'constants/constants.dart';
+import 'main.dart';
 import 'wigets/full_screen_image.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
+import 'database/chatdb.dart' as db;
 
 class ChatItemView extends StatefulWidget {
-  final Message message;
+  final String messageId;
   final User me;
   final Authentication authRC;
   final ChatHomeState chatHomeState;
+  final bool onTapExit;
+  final Message message;
+  final int index;
 
-  ChatItemView({Key key, @required this.chatHomeState, @required this.message, @required this.me, @required this.authRC}) : super(key: key);
+  ChatItemView({Key key, @required this.chatHomeState, this.messageId, @required this.me, @required this.authRC,
+    this.onTapExit = false, this.message, this.index = 0,
+  }) : super(key: key);
 
   @override
   ChatItemViewState createState() => ChatItemViewState();
@@ -42,22 +51,41 @@ class ChatItemView extends StatefulWidget {
 
 class ChatItemViewState extends State<ChatItemView> {
   Message message;
-  GlobalKey<_ReactionViewState> keyReactionVew = GlobalKey();
+  GlobalKey<_ReactionViewState> keyReactionView = GlobalKey();
   @override
   Widget build(BuildContext context) {
-    return _buildChatItem(message);
+    if (message != null || widget.message != null) {
+      if (message == null)
+        message = widget.message;
+      return _buildChatItem(message);
+    } else {
+      return FutureBuilder<Message>(
+          future: getMessage(widget.messageId),
+          builder: (context, AsyncSnapshot<Message> snapshot) {
+            if (snapshot.hasData) {
+              message = snapshot.data;
+              return _buildChatItem(message);
+            } else
+              return SizedBox();
+          });
+    }
+  }
+
+  Future<Message> getMessage(messageId) async {
+    db.RoomMessage rm = await locator<db.ChatDatabase>().getMessage(messageId);
+    Message m = Message.fromMap(jsonDecode(rm.info));
+    return m;
   }
 
   @override
   void initState() {
-    message = widget.message;
     super.initState();
   }
 
   setNewMessage(Message newMessage) {
     print('set newMessage=${newMessage.msg}');
-    if (keyReactionVew.currentState != null && newMessage.reactions != null && message.msg == newMessage.msg) {  // reaction case
-       keyReactionVew.currentState.setNewReaction(newMessage.reactions);
+    if (keyReactionView.currentState != null && newMessage.reactions != null && message.msg == newMessage.msg) {  // reaction case
+       keyReactionView.currentState.setNewReaction(newMessage.reactions);
     } else {
       setState(() {
         message = newMessage;
@@ -96,7 +124,7 @@ class ChatItemViewState extends State<ChatItemView> {
           children: [
             Row(children: [
               Text(
-                userName /* + '(${index.toString()})' */,
+                userName  + '(${widget.index.toString()})' ,
                 style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
                 textAlign: TextAlign.left,
               ),
@@ -165,14 +193,19 @@ class ChatItemViewState extends State<ChatItemView> {
     return
       GestureDetector (
           onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
-          onLongPress: () { if (widget.chatHomeState != null) messagePopupMenu(context, tabPosition, message); },
+          onLongPress: () { if (!widget.onTapExit) messagePopupMenu(context, tabPosition, message); },
           child:
           Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 bAttachments ? Container(child: buildAttachments(message)) : SizedBox(),
                 GestureDetector (
-                  onTap: () { pickReaction(message); },
+                  onTap: () {
+                    if (widget.onTapExit)
+                      Navigator.pop(context, message.id);
+                    else
+                      pickReaction(message);
+                  },
                   child: buildMessageBody(message),
                 ),
                 Row(
@@ -182,7 +215,7 @@ class ChatItemViewState extends State<ChatItemView> {
                       Container(
                         height: 30,
                         width: MediaQuery.of(context).size.width,
-                        child: ReactionView(key: keyReactionVew, chatItemViewState: this, message: message, reactions: reactions),
+                        child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
                       ) : SizedBox()),
                       Expanded(flex: 1, child: Container(
                           alignment: Alignment.topRight,
@@ -351,6 +384,7 @@ class ChatItemViewState extends State<ChatItemView> {
     var image = ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
       width: MediaQuery.of(context).size.width - 150,
       cache: true,
+      cacheWidth: 800,
       fit: BoxFit.contain,
       headers: header,
       mode: ExtendedImageMode.gesture,

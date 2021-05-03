@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'dart:ui';
 
@@ -12,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
+import 'package:get_it/get_it.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -27,7 +29,10 @@ import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:ss_image_editor/common/image_picker/image_picker.dart';
+import 'package:superchat/database/chatdb.dart';
+import 'package:superchat/main.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
 import 'image_file_desc.dart';
@@ -35,6 +40,8 @@ import 'constants/constants.dart';
 
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
+import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
+import 'database/chatdb.dart' as db;
 
 class ChatView extends StatefulWidget {
   final StreamController<rocket_notification.Notification> notificationController;
@@ -53,49 +60,49 @@ class ChatView extends StatefulWidget {
 class ChatDataStore {
   final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
   List<ChatItemData> _chatData = [];
-  Map<String, User> _userInfos = Map();
 
   get length => _chatData.length;
 
-  add(ChatItemData data, Authentication authentication) async {
+  add(ChatItemData data) {
     _chatData.add(data);
-
-    Message message = data.message;
-    await updateUserInfo(message.user.id, authentication);
-  }
-
-  updateUserInfo(String userId, Authentication authentication) async {
-/*
-    if (!_userInfos.containsKey(userId)) {
-      User userInfo = await UserService(rocketHttpService).getUserInfo(UserIdFilter(userId), authentication);
-      print('@@@@ userInfo=${userInfo.avatarUrl}');
-      _userInfos[userId] = userInfo;
-    }
-*/
   }
 
   bool containsMessage(String messageId) {
-    return _chatData.indexWhere((element) => element.message.id == messageId) >= 0;
+    return _chatData.indexWhere((element) => element.messageId == messageId) >= 0;
   }
 
-  insertAt(int index, ChatItemData data) {
-    _chatData.insert(index, data);
+  insertAt(int index, Message m) async {
+    String info = jsonEncode(m.toMap());
+    RoomMessage roomMessage = RoomMessage(rid: m.rid, mid: m.id, ts: m.ts, info: info);
+    await locator<db.ChatDatabase>().upsertRoomMessage(roomMessage);
+    _chatData.insert(index, ChatItemData(GlobalKey(), m.id, info));
   }
 
-  removeAt(int index) {
+  removeAt(int index) async {
+    await locator<db.ChatDatabase>().deleteMessage(_chatData[index].messageId);
     _chatData.removeAt(index);
   }
 
-  getMessageAt(int index) {
-    return _chatData[index].message;
+  String getMessageIdAt(int index) {
+    return _chatData[index].messageId;
+  }
+
+  Message getMessageAt(int index) {
+    //print('=======chatdata $index = ${_chatData[index].info}');
+    return Message.fromMap(jsonDecode(_chatData[index].info));
   }
 
   replaceMessage(int index, Message message) {
-    _chatData[index].message = message;
+    String info = jsonEncode(message.toMap());
+    _chatData[index].messageId = message.id;
+    _chatData[index].timeStamp = message.ts;
+    _chatData[index].info = info;
+    RoomMessage rm = RoomMessage(rid: message.rid, ts: message.ts, mid: message.id, info: info);
+    locator<db.ChatDatabase>().upsertRoomMessage(rm);
   }
 
   int findIndexByMessageId(String messageId) {
-    int i = _chatData.indexWhere((element) => element.message.id == messageId);
+    int i = _chatData.indexWhere((element) => element.messageId == messageId);
     return i;
   }
 
@@ -105,30 +112,31 @@ class ChatDataStore {
 
   sortMessagesByTimeStamp() {
     _chatData.sort((b, a) {
-      return a.message.ts.compareTo(b.message.ts);
+      return a.timeStamp.compareTo(b.timeStamp);
     });
   }
 }
 
 class ChatItemData {
   GlobalKey<ChatItemViewState> key;
-  Message message;
-  ChatItemData(this.key, this.message);
+  DateTime timeStamp;
+  String messageId;
+  String info;
+  ChatItemData(this.key, this.messageId, this.info);
 }
 
 class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   TextEditingController _teController = TextEditingController();
   int chatItemOffset = 0;
-  final int chatItemCount = 50;
+  final int chatItemCount = 20;
 
   ChatDataStore chatDataStore = ChatDataStore();
   bool historyEnd = false;
   final picker = ImagePicker();
 
-  final _scrollController = ScrollController();
-
-  bool updateAll = false;
+  bool getMoreMessages = false;
   bool needScrollToBottom = false;
+  int scrollIndex = -1;
   bool showEmojiKeyboard = false;
   FocusNode myFocusNode;
 
@@ -144,7 +152,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   void initState() {
     subscribeRoomEvent(widget.room.id);
 
-    updateAll = true;
+    getMoreMessages = true;
+    needScrollToBottom = true;
     myFocusNode = FocusNode();
     myFocusNode.addListener(() {
       if (myFocusNode.hasFocus & showEmojiKeyboard) {
@@ -177,7 +186,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
               setState(() {
                 print('!!!new message');
                 needScrollToBottom = true;
-                chatDataStore.insertAt(0, ChatItemData(GlobalKey(), roomMessage));
+                chatDataStore.insertAt(0, roomMessage);
               });
               userTypingKey.currentState.setTypingUser('');
             }
@@ -251,7 +260,6 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   void dispose() {
     unsubscribeRoomEvent(widget.room.id);
     _teController.dispose();
-    _scrollController.dispose();
     myFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -266,7 +274,6 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       title = widget.room.usernames.toString();
 
     print('~~~ chatview building=$title');
-
     return Phoenix(child: Scaffold(
       key: chatViewKey,
       appBar: AppBar(
@@ -330,31 +337,41 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       body:
         FutureBuilder(
         future: () {
-          print('@@@@@@ call future _getChannelMessages @@@@@@');
-          return _getChannelMessages(chatItemCount, chatItemOffset, updateAll, needScrollToBottom);
+          print('@@@@@@ call future _getChannelMessages @@@@@@ updateAll=$getMoreMessages');
+          var ua = getMoreMessages;
+          getMoreMessages = false;
+          return _getChannelMessages(chatItemCount, chatItemOffset, ua);
         } (),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
           print('~~~~~~~~ builder update=${snapshot.hasData}');
           print('~~~~~~~~ builder chatDataStore.length=${chatDataStore.length}');
           if (snapshot.connectionState == ConnectionState.done) {
             print('~~~~~~~~ builder connectionState.done');
-            markAsReadScheduler();
             if (needScrollToBottom) {
+              markAsReadScheduler();
               Future.delayed(const Duration(milliseconds: 300), () {
                 scrollToBottom();
               });
             }
-            updateAll = false;
+            if (scrollIndex >= 0) {
+              Future.delayed(const Duration(milliseconds: 300), () {
+                //itemScrollController.scrollTo(index: scrollIndex, duration: Duration(seconds: 1), curve: Curves.easeInOutCubic);
+                itemScrollController.jumpTo(index: scrollIndex, alignment: 0);
+                scrollIndex = -1;
+              });
+            }
+            getMoreMessages = false;
             needScrollToBottom = false;
           }
           if (snapshot.hasData) {
             return NotificationListener<ScrollEndNotification>(
               onNotification: (notification) {
                 if (notification.metrics.atEdge) {
-                  print("listview Scrollend" + notification.metrics.pixels.toString());
-                  if (!historyEnd && notification.metrics.pixels != 0.0) { // bottom
+                  print('*****listview Scrollend = ${notification.metrics.pixels}');
+                  if (!historyEnd && notification.metrics.pixels != notification.metrics.minScrollExtent) { // bottom
+                    print('!!! scrollview hit top');
                     setState(() {
-                      updateAll = true;
+                      getMoreMessages = true;
                       chatItemOffset += chatItemCount;
                     });
                   }
@@ -362,35 +379,21 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
                 return true;
               },
               child: Container(color: Colors.blue.shade100,
-                child: CustomScrollView(
-                controller: _scrollController,
+                //child: ScrollablePositionedList.builder(
+                child: ListView.builder(
+                //itemScrollController: itemScrollController,
                 reverse: true,
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                slivers: <Widget>[
-                SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                      Message message = chatDataStore.getMessageAt(index);
-                      return Container(
-                        child: ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index), message: message, me: widget.me, authRC: widget.authRC, ),
-                      );
-                    },
-                    childCount: chatDataStore.length,
-                  )
+                itemCount: chatDataStore.length,
+                //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                itemBuilder: (context, index) {
+                    Message message = chatDataStore.getMessageAt(index);
+                    // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+                    // messageId: messageId, me: widget.me, authRC: widget.authRC, );
+                    return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+                    message: message, me: widget.me, authRC: widget.authRC, index: index,);
+                  },
                 ),
-/*
-                SliverAppBar(
-                  title: Text(title),
-                  expandedHeight: 200,
-                  floating: false,
-                  pinned: true,
-                  flexibleSpace: FlexibleSpaceBar(
-                      centerTitle: true,
-                      background: ExtendedImage.network(serverUri.replace(path: '/avatar/room/${widget.room.id}', query: 'format=png').toString(),
-                        fit: BoxFit.cover,
-                      )),
-                ),
-*/
-            ])));
+            ));
           } else
             return SizedBox();
         }
@@ -398,20 +401,35 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     ));
   }
 
+  final ItemScrollController itemScrollController = ItemScrollController();
   _handleStarredMessage() async {
-    String emoji = await showDialog(
+    String messageId = await showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text('Starred Messages'),
             insetPadding: EdgeInsets.all(5),
             contentPadding: EdgeInsets.all(5),
-            content: Container(height: 350, width: MediaQuery.of(context).size.width, child:
+            content: Container(height: MediaQuery.of(context).size.height * .7, width: MediaQuery.of(context).size.width, child:
               _buildStarredMessage(),
             )
           );
         }
     );
+    if (messageId == null)
+      return;
+    print('@@@ selected message=$messageId');
+    int index  = -1;
+    do {
+      index = chatDataStore.findIndexByMessageId(messageId);
+      print('@@@ selected message=$messageId, index=$index');
+      chatItemOffset += chatItemCount;
+      await _getChannelMessages(chatItemCount, chatItemOffset, true);
+    } while(index < 0);
+    setState(() {
+      needScrollToBottom = false;
+      scrollIndex = index;
+    });
   }
 
   _buildStarredMessage() {
@@ -423,7 +441,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
             itemCount: snapshot.data.messages.length,
             itemBuilder: (BuildContext c, int index) {
               var message = snapshot.data.messages[index];
-              return ChatItemView(chatHomeState: null, message: message, me: widget.me, authRC: widget.authRC);
+              return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true,);
             });
         } else {
           return Center(child: CircularProgressIndicator());
@@ -541,31 +559,81 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     return ChannelService(rocketHttpService);
   }
 
+  RoomMessage messageToRoomMessage(Message m) {
+    String info = jsonEncode(m.toMap());
+    return RoomMessage(rid: m.rid, mid: m.id, ts: m.ts, info: info);
+  }
+
   static int historyCallCount = 0;
-  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _updateAll, bool _scrollToBottom) async {
-    print('!!!!!! get room history bUpdateAll=$_updateAll');
-    if (_updateAll) {
+  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _getMoreMessages) async {
+    print('!!!!!! get room history bUpdateAll=$_getMoreMessages');
+    historyEnd = false;
+    if (_getMoreMessages) {
       historyCallCount++;
       print('full history call=$historyCallCount');
-      ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
-      ChannelMessages channelMessages = await getChannelService().roomHistory(filter, widget.authRC, widget.room.t);
-      print('@@@@_getChannelMessages return1 _updateAll=$_updateAll');
-      if (channelMessages.messages.length <= 0)
-        historyEnd = true;
-      else {
-        for (Message m in channelMessages.messages)
-          if (!chatDataStore.containsMessage(m.id))
-            await chatDataStore.add(ChatItemData(GlobalKey(), m), widget.authRC);
-        chatDataStore.sortMessagesByTimeStamp();
+      var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoomMessage);
+      var dbHistoryReadEnd = await locator<db.ChatDatabase>().getValueByKey(db.historyReadEnd);
+      DateTime updateSince;
+      if (lastUpdate != null)
+        updateSince = DateTime.tryParse(lastUpdate.value);
+      if (updateSince != null) {
+        SyncMessages syncMessages = await getChannelService().syncMessages(widget.room.id, updateSince, widget.authRC);
+        if (syncMessages.success) {
+          for (Message m in syncMessages.result.updated) {
+            print('updated message=${m.msg}');
+            locator<db.ChatDatabase>().upsertRoomMessage(messageToRoomMessage(m));
+          }
+          for (Message m in syncMessages.result.deleted) {
+            print('deleted message=${m.msg}');
+            locator<db.ChatDatabase>().deleteMessage(m.id);
+          }
+        }
       }
+      List<RoomMessage> roomMessages;
+      bool fetchFromNetwork = false;
+      if (_getMoreMessages) {
+        roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
+        print('roomMessages.length = ${roomMessages.length}');
+        if (roomMessages.length < count)
+          fetchFromNetwork = true;
+      }
+      if (fetchFromNetwork && dbHistoryReadEnd == null) {
+        ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
+        ChannelMessages channelMessages = await getChannelService().roomHistory(filter, widget.authRC, widget.room.t);
+        print('channelMessages.messages.length = ${channelMessages.messages.length}');
+        if (channelMessages.messages.length < count) {
+          print('!!!!!!!!!!!!history end!!!!!!!!!!!!!! roomMessages.length = ${channelMessages.messages.length}');
+          historyEnd = true;
+        }
+        for (Message m in channelMessages.messages) {
+          var rm = messageToRoomMessage(m);
+          log('rm.info = ${rm.info}');
+          locator<db.ChatDatabase>().upsertRoomMessage(rm);
+        }
+        roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
+        print('roomMessages.length after network fetch = ${roomMessages.length}');
+      }
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoomMessage, value: DateTime.now().toIso8601String()));
+      if (historyEnd)
+        await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd, value: 'yes'));
+
+      for (var rm in roomMessages) {
+        if (!chatDataStore.containsMessage(rm.mid))
+          chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, rm.info));
+      }
+      //chatDataStore.sortMessagesByTimeStamp();
+
       return ChannelMessages(success: true);
     } else {
-      print('_getChannelMessages return2 _updateAll=$_updateAll');
+      print('_getChannelMessages return2 _updateAll=$_getMoreMessages');
       return ChannelMessages(success: true);
     }
   }
 
   scrollToBottom() {
+    print('@@@@*** scroll to bottom called');
+    itemScrollController.jumpTo(index: 0);
+/*
     if (_scrollController.hasClients) {
       print('scroll to bottom!!!');
       _scrollController.animateTo(
@@ -574,6 +642,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
         curve: Curves.fastOutSlowIn,
       );
     }
+*/
   }
 
   Queue<String> taskQ = Queue<String>();

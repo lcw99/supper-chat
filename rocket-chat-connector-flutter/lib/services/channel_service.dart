@@ -18,6 +18,7 @@ import 'package:rocket_chat_connector_flutter/models/response/channel_list_respo
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
+import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart';
 
 class ChannelService {
@@ -92,7 +93,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    log("channels.history resp=$resp");
+    log("^^^^^^^^^^^^^^^^^^^^^channels.history^^^^^^^^^^^^ resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));
@@ -112,7 +113,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    log("chat.getStarredMessages resp=$resp");
+    //log("chat.getStarredMessages resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));
@@ -122,6 +123,27 @@ class ChannelService {
     }
     throw RocketChatException(response.body);
   }
+
+  Future<SyncMessages> syncMessages(String roomId, DateTime lastUpdate, Authentication authentication) async {
+    String path = '/api/v1/chat.syncMessages';
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      { 'roomId': roomId, 'lastUpdate': lastUpdate.toIso8601String() },
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("####chat.syncMessages resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return SyncMessages.fromMap(jsonDecode(resp));
+      } else {
+        return SyncMessages();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
 
   Future<ChannelCounters> counters(
     ChannelCountersFilter filter,
