@@ -9,7 +9,10 @@ import 'dart:io';
 // but it's needed for moor to know about the generated code
 part 'chatdb.g.dart';
 
-const String lastUpdate = 'lastUpdate';
+const String lastUpdateRoom = 'lastUpdateRoom';
+
+const String lastUpdateRoomMessage = 'lastUpdateRoomMessage';
+const String historyReadEnd = 'historyReadEnd';
 
 class Rooms extends Table {
   TextColumn get rid => text()();
@@ -36,6 +39,16 @@ class KeyValues extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+class RoomMessages extends Table {
+  TextColumn get rid => text()();
+  DateTimeColumn get ts => dateTime()();
+  TextColumn get mid => text()();
+  TextColumn get info => text()();
+
+  @override
+  Set<Column> get primaryKey => {mid};
+}
+
 LazyDatabase _openConnection() {
   // the LazyDatabase util lets us find the right location for the file async.
   return LazyDatabase(() async {
@@ -49,7 +62,7 @@ LazyDatabase _openConnection() {
 
 // this annotation tells moor to prepare a database class that uses both of the
 // tables we just defined. We'll see how to use that database class in a moment.
-@UseMoor(tables: [Rooms, Subscriptions, KeyValues])
+@UseMoor(tables: [Rooms, Subscriptions, KeyValues, RoomMessages])
 class ChatDatabase extends _$ChatDatabase {
   // we tell the database where to store the data with this constructor
   ChatDatabase() : super(_openConnection());
@@ -57,7 +70,7 @@ class ChatDatabase extends _$ChatDatabase {
   // you should bump this number whenever you change or add a table definition. Migrations
   // are covered later in this readme.
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -68,7 +81,7 @@ class ChatDatabase extends _$ChatDatabase {
         print('migration from=$from, to=$to');
         if (from == 1) {
           await m.alterTable(TableMigration(rooms));
-        } else if (from == 7) {
+        } else if (from == 8) {
           for (final table in allTables) {
             await m.deleteTable(table.actualTableName);
             await m.createTable(table);
@@ -86,9 +99,17 @@ class ChatDatabase extends _$ChatDatabase {
   Future upsertSubscription(Subscription subscription) => into(subscriptions).insertOnConflictUpdate(subscription);
   Future deleteSubscription(String _sid) => (delete(subscriptions)..where((t) => t.sid.equals(_sid))).go();
   Future<Subscription> getSubscription(String _sid) => (select(subscriptions)..where((t) => t.sid.equals(_sid))).getSingleOrNull();
-  
-  Future<KeyValue> getValueByKey(String key) {
-    return (select(keyValues)..where((t) => t.key.equals(key))).getSingleOrNull();
-  }
+
+  Future<KeyValue> getValueByKey(String key) => (select(keyValues)..where((t) => t.key.equals(key))).getSingleOrNull();
   Future upsertKeyValue(KeyValue keyValue) => into(keyValues).insertOnConflictUpdate(keyValue);
+
+  Future<List<RoomMessage>> getRoomMessages(String _rid, int limit, {int offset}) => (select(roomMessages)
+    ..where((t) => t.rid.equals(_rid))
+    ..limit(limit, offset: offset)
+    ..orderBy([(t) => OrderingTerm(expression: t.ts, mode: OrderingMode.desc)])).get();
+  Future upsertRoomMessage(RoomMessage roomMessage) => into(roomMessages).insertOnConflictUpdate(roomMessage);
+  Future deleteRoomMessage(String _rid) => (delete(roomMessages)..where((t) => t.rid.equals(_rid))).go();
+  Future<RoomMessage> getMessage(String _mid) => (select(roomMessages)..where((t) => t.mid.equals(_mid))).getSingleOrNull();
+  Future deleteMessage(String _mid) => (delete(roomMessages)..where((t) => t.mid.equals(_mid))).go();
+
 }

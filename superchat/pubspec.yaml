@@ -58,6 +58,8 @@ dependencies:
     path: ../emoji_picker_flutter
   ss_image_editor:
     path: ../ss_image_editor
+  scrollable_positioned_list:
+    path: ../scrollable_positioned_list
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

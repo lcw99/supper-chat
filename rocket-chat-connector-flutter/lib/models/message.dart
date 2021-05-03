@@ -66,7 +66,7 @@ class Message {
       pinnedAt = json['_pinnedAt'] != null
           ? (json['_pinnedAt'] is String
           ? DateTime.parse(json['_pinnedAt']).toUtc()
-          : DateTime.fromMillisecondsSinceEpoch(json['_pinnedAt']['\$date']!, isUtc: true))
+          : DateTime.fromMillisecondsSinceEpoch(json['_pinnedAt']['\$date']! is String ? int.parse(json['_pinnedAt']['\$date']) : json['_pinnedAt']['\$date'], isUtc: true))
           : null;
       pinnedBy = json['pinnedBy'] != null ? User.fromMap(json['pinnedBy']) : null;
       alias = json['alias'];
@@ -78,14 +78,14 @@ class Message {
       ts = json['ts'] != null
           ? (json['ts'] is String
                 ? DateTime.parse(json['ts']).toUtc()
-                : DateTime.fromMillisecondsSinceEpoch(json['ts']['\$date']!, isUtc: true))
+                : DateTime.fromMillisecondsSinceEpoch(json['ts']['\$date']! is String ? int.parse(json['ts']['\$date']) : json['ts']['\$date'], isUtc: true))
           : null;
       user = json['u'] != null ? User.fromMap(json['u']) : null;
       rid = json['rid'];
       updatedAt = json['_updatedAt'] != null
           ? (json['_updatedAt'] is String
               ? DateTime.parse(json['_updatedAt']).toUtc()
-              : DateTime.fromMillisecondsSinceEpoch(json['_updatedAt']['\$date']!, isUtc: true))
+              : DateTime.fromMillisecondsSinceEpoch(json['_updatedAt']['\$date']! is String ? int.parse(json['_updatedAt']['\$date']) : json['_updatedAt']['\$date'], isUtc: true))
           : null;
       id = json['_id'];
 
@@ -135,7 +135,7 @@ class Message {
       editedAt = json['editedAt'] != null
           ? (json['editedAt'] is String
             ? DateTime.parse(json['editedAt']).toUtc()
-            : DateTime.fromMillisecondsSinceEpoch(json['editedAt']['\$date']!, isUtc: true))
+          : DateTime.fromMillisecondsSinceEpoch(json['editedAt']['\$date']! is String ? int.parse(json['editedAt']['\$date']) : json['editedAt']['\$date'], isUtc: true))
           : null;
 
       if (json['urls'] != null) {
@@ -240,7 +240,11 @@ class Message {
       map['editedAt'] = { '\$date': editedAt!.millisecondsSinceEpoch.toString() };
     }
     if (urls != null) {
-      map['urls'] = urls;
+      map['urls'] = attachments
+          ?.where((json) => json != null)
+          ?.map((urls) => urls.toMap())
+          ?.toList() ??
+          [];
     }
 
     return map;
@@ -304,10 +308,11 @@ class UrlInMessage {
     parsedUrl: json["parsedUrl"] == null ? null : ParsedUrl.fromMap(json["parsedUrl"]),
   );
 
+  Map<String, dynamic> map = {};
   Map<String, dynamic> toMap() => {
     "url": url == null ? null : url,
-    "meta": meta == null ? null : meta,
-    "headers": headers == null ? null : headers,
+    "meta": meta == null ? null : map['meta'] = meta,
+    "headers": headers == null ? null : map['headers'] = headers,
     "parsedUrl": parsedUrl == null ? null : parsedUrl!.toMap(),
   };
 }
