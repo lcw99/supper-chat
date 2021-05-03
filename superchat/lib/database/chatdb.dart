@@ -92,8 +92,13 @@ class ChatDatabase extends _$ChatDatabase {
 
   Future<List<Room>> get getAllRooms => select(rooms).get();
   Future upsertRoom(Room room) => into(rooms).insertOnConflictUpdate(room);
-  Future deleteRoom(String _rid) => (delete(rooms)..where((t) => t.rid.equals(_rid))).go();
   Future<Room> getRoom(String _rid) => (select(rooms)..where((t) => t.rid.equals(_rid))).getSingleOrNull();
+  Future deleteRoom(String _rid) {
+    deleteRoomMessage(_rid);
+    deleteByKey(lastUpdateRoomMessage + _rid);
+    deleteByKey(historyReadEnd + _rid);
+    return (delete(rooms)..where((t) => t.rid.equals(_rid))).go();
+  }
 
   Future<List<Subscription>> get getAllSubscriptions => select(subscriptions).get();
   Future upsertSubscription(Subscription subscription) => into(subscriptions).insertOnConflictUpdate(subscription);
@@ -102,6 +107,7 @@ class ChatDatabase extends _$ChatDatabase {
 
   Future<KeyValue> getValueByKey(String key) => (select(keyValues)..where((t) => t.key.equals(key))).getSingleOrNull();
   Future upsertKeyValue(KeyValue keyValue) => into(keyValues).insertOnConflictUpdate(keyValue);
+  Future deleteByKey(String key) => (delete(keyValues)..where((t) => t.key.equals(key))).go();
 
   Future<List<RoomMessage>> getRoomMessages(String _rid, int limit, {int offset}) => (select(roomMessages)
     ..where((t) => t.rid.equals(_rid))

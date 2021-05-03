@@ -253,7 +253,7 @@ class ChatItemViewState extends State<ChatItemView> {
       } else if (attachment.imageUrl != null) {
         downloadLink = attachment.imageUrl;
         attachmentBody = Column(children: <Widget>[
-          getImage(message, downloadLink),
+          getImage(message, attachment),
           attachment.description != null
               ? Text(attachment.description, style: TextStyle(fontSize: 11),)
               : SizedBox(),
@@ -375,14 +375,23 @@ class ChatItemViewState extends State<ChatItemView> {
     return resp;
   }
 
-  Widget getImage(Message message, String imagePath) {
+  Widget getImage(Message message, MessageAttachment attachment) {
+    String imagePath = attachment.imageUrl;
     Map<String, String> header = {
       'X-Auth-Token': widget.authRC.data.authToken,
       'X-User-Id': widget.authRC.data.userId
     };
 
+    var dpr = MediaQuery.of(context).devicePixelRatio;
+    var imageWidth = MediaQuery.of(context).size.width - 150;
+    var imageWidthInDevice = imageWidth * dpr;
+
+    double r = imageWidthInDevice / attachment.imageDimensions.width;
+    double imageHeightInDevice = attachment.imageDimensions.height * r;
+
     var image = ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
-      width: MediaQuery.of(context).size.width - 150,
+      width: imageWidthInDevice / dpr,
+      height: imageHeightInDevice / dpr,
       cache: true,
       cacheWidth: 800,
       fit: BoxFit.contain,
