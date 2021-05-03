@@ -27,6 +27,6 @@ class SubscriptionUpdate {
 
   @override
   String toString() {
-    return 'Subscription{update: $update, remove: $remove, success: $success}';
+    return jsonEncode(this.toMap());
   }
 }

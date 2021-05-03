@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:extended_image/extended_image.dart';
@@ -29,12 +30,11 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 
 class ChatItemView extends StatefulWidget {
   final Message message;
-  final int index;
   final User me;
   final Authentication authRC;
   final ChatHomeState chatHomeState;
 
-  ChatItemView({Key key, @required this.chatHomeState, @required this.message, @required this.index, @required this.me, @required this.authRC}) : super(key: key);
+  ChatItemView({Key key, @required this.chatHomeState, @required this.message, @required this.me, @required this.authRC}) : super(key: key);
 
   @override
   ChatItemViewState createState() => ChatItemViewState();
@@ -45,7 +45,7 @@ class ChatItemViewState extends State<ChatItemView> {
   GlobalKey<_ReactionViewState> keyReactionVew = GlobalKey();
   @override
   Widget build(BuildContext context) {
-    return _buildChatItem(message, widget.index);
+    return _buildChatItem(message);
   }
 
   @override
@@ -65,44 +65,77 @@ class ChatItemViewState extends State<ChatItemView> {
     }
   }
 
-  _buildChatItem(Message message, int index) {
-    //log("msg=" + index.toString() + message.toString());
+  bool _messageStarred(Message message) {
+    return message.starred != null && message.starred.length > 0;
+  }
+  _buildChatItem(Message message, {String messageText, String avatarPath}) {
+    // if (message.starred != null && message.starred.length > 0)
+    //   log('@@@ starred message=' + message.toString());
+    // if (message.pinned != null && message.pinned)
+    //   log('@@@ pinned message=' + message.toString());
+
+    if (avatarPath == null)
+      avatarPath  = '/avatar/${message.user.username}';
     bool specialMessage = message.t != null;
-    String url = serverUri.replace(path: '/avatar/${message.user.username}', query: 'format=png').toString();
     String userName = _getUserName(message);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
+    var usernameFontSize = USERNAME_FONT_SIZE;
+    if (messageText != null)
+      usernameFontSize *= 0.7;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
-        // avatar
-        Container(
-            padding: EdgeInsets.all(2),
-            alignment: Alignment.topLeft,
-            width: specialMessage ? 20 : 40,
-            height: specialMessage ? 20 : 40,
-            child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(url, key: UniqueKey()))
-        ),
+        _buildUserAvatar(specialMessage, avatarPath),
         SizedBox(width: 5,),
         // user name
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              userName /* + '(${index.toString()})' */,
-              style: TextStyle(fontSize: 10, color: userNameColor),
-              textAlign: TextAlign.left,
-            ),
-            _buildMessage(message, userName),
+            Row(children: [
+              Text(
+                userName /* + '(${index.toString()})' */,
+                style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
+                textAlign: TextAlign.left,
+              ),
+              Wrap(alignment: WrapAlignment.end,
+              children: [
+                _messageStarred(message) ? Wrap(children: [
+                  SizedBox(width: 2,),
+                  Icon(Icons.star_border_outlined, size: 14, color: Colors.redAccent,),
+                ]) : SizedBox(),
+                message.pinnedBy != null ? Wrap(children: [
+                  SizedBox(width: 4,),
+                  Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12,), angle: 45 * 3.14 / 180,),
+                  SizedBox(width: 1,),
+                  Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize),)
+                ])  : SizedBox(),
+              ]),
+            ]),
+            messageText != null
+              ? Text(messageText, style: TextStyle(fontSize: MESSAGE_FONT_SIZE * 0.6))
+              : _buildMessage(message, userName),
             SizedBox(height: 8,),
           ],)),
         SizedBox(width: 40,),
       ],);
   }
+
+  _buildUserAvatar(bool specialMessage, String avatarPath) {
+    String url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
+    return Container(
+        padding: EdgeInsets.all(2),
+        alignment: Alignment.topLeft,
+        width: specialMessage ? 20 : 40,
+        height: specialMessage ? 20 : 40,
+        child: ClipRRect(
+            borderRadius: BorderRadius.circular(8.0),
+            child: Image.network(url, key: UniqueKey()))
+    );
+  }
+
   _getUserName(Message message) {
     String userName = '';
     if (message.user.name != null)
@@ -132,7 +165,7 @@ class ChatItemViewState extends State<ChatItemView> {
     return
       GestureDetector (
           onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
-          onLongPress: () { messagePopupMenu(context, tabPosition, message); },
+          onLongPress: () { if (widget.chatHomeState != null) messagePopupMenu(context, tabPosition, message); },
           child:
           Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +217,7 @@ class ChatItemViewState extends State<ChatItemView> {
         attachmentBody = attachment.description != null
             ? Text(attachment.description, style: TextStyle(fontSize: 10),)
             : Text(attachment.title, style: TextStyle(fontSize: 10),);
-      } else {
+      } else if (attachment.imageUrl != null) {
         downloadLink = attachment.imageUrl;
         attachmentBody = Column(children: <Widget>[
           getImage(message, downloadLink),
@@ -192,6 +225,13 @@ class ChatItemViewState extends State<ChatItemView> {
               ? Text(attachment.description, style: TextStyle(fontSize: 11),)
               : SizedBox(),
         ]);
+      } else {
+        //log(message.toString());
+        attachmentBody = Expanded(child:
+          attachment.authorIcon != null && attachment.text != null
+              ? _buildChatItem(message, messageText: attachment.text, avatarPath: attachment.authorIcon)
+              : SizedBox(),
+          );
       }
       widgets.add(Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -199,10 +239,10 @@ class ChatItemViewState extends State<ChatItemView> {
             attachmentBody,
             SizedBox(width: 5,),
             Column(children: [
-              InkWell(
+              downloadLink != null ? InkWell(
                 child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
                 onTap: () async { downloadByUrlLaunch(downloadLink); },
-              ),
+              ) : SizedBox(),
             ])
           ]));
     }
@@ -231,8 +271,12 @@ class ChatItemViewState extends State<ChatItemView> {
       case 'uj': newMessage = '$userName joined'; break;
       case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
       case 'room_changed_description': newMessage = '$userName change room description'; break;
+      case 'message_pinned': newMessage = '$userName pinned message'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
     }
+    var messageFontSize = MESSAGE_FONT_SIZE;
+    if (message.t != null)
+      messageFontSize = MESSAGE_FONT_SIZE * 0.6;
     var messageBackgroundColor = Colors.white;
     if (message.user.id == widget.me.id)
       messageBackgroundColor = Colors.amber.shade100;
@@ -253,7 +297,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 children: [
                 Linkable(
                   text: newMessage,
-                  style: TextStyle(fontSize: MESSAGE_FONT_SIZE, color: Colors.black54, fontWeight: FontWeight.normal),
+                  style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
                 ),
                 message.editedBy != null ?
                   Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
@@ -378,9 +422,12 @@ class ChatItemViewState extends State<ChatItemView> {
     sendReaction(message, emoji, true);
   }
 
-  sendReaction(message, emoji, bool shouldReact) {
+  MessageService getMessageService() {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    MessageService messageService = MessageService(rocketHttpService);
+    return MessageService(rocketHttpService);
+  }
+  sendReaction(message, emoji, bool shouldReact) {
+    MessageService messageService = getMessageService();
     String em = emoji;
     print('!!!!!emoji=$em');
     ReactionNew reaction = ReactionNew(emoji: em, messageId: message.id, shouldReact: shouldReact);
@@ -396,6 +443,10 @@ class ChatItemViewState extends State<ChatItemView> {
   Future<void> messagePopupMenu(context, Offset tabPosition, Message message, {String downloadLink}) async {
     List<PopupMenuEntry<String>> items = [];
     items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
+    if (_messageStarred(message))
+      items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
+    else
+      items.add(PopupMenuItem(child: Text('Star...'), value: 'star'));
     items.add(PopupMenuItem(child: Text('Reaction...'), value: 'reaction'));
     if (downloadLink != null)
       items.add(PopupMenuItem(child: Text('Download...'), value: 'download'));
@@ -413,6 +464,10 @@ class ChatItemViewState extends State<ChatItemView> {
     );
     if (value == 'delete') {
       widget.chatHomeState.deleteMessage(message.id);
+    } else if (value == 'star') {
+      getMessageService().starMessage(message.id, widget.authRC);
+    } else if (value == 'unstar') {
+      getMessageService().unStarMessage(message.id, widget.authRC);
     } else if (value == 'reaction') {
       pickReaction(message);
     } else if (value == 'edit') {
@@ -428,21 +483,6 @@ class ChatItemViewState extends State<ChatItemView> {
         DefaultCacheManager manager = new DefaultCacheManager();
         File f = await manager.getSingleFile(serverUri.replace(path: downloadLink).toString(), headers: header);
         Share.shareFiles([f.path]);
-/*
-        http.Response r = await getNetworkImageData(downloadLink);
-        if (r.statusCode == 200) {
-          Uint8List data = r.bodyBytes;
-          String contentType = r.headers['content-type'];
-          MediaType mt = MediaType.parse(contentType);
-          print('---content type=$contentType');
-          Directory tempDir = await getTemporaryDirectory();
-          tempDir = await tempDir.createTemp();
-          File f = File(tempDir.path + '/temp_shared_file.' + mt.subtype);
-          print('---shared file=${f.path}');
-          f.writeAsBytes(data);
-          Share.shareFiles([f.path]);
-        }
-*/
       } else {
         String share = message.msg;
         if (share == null || share.isEmpty)

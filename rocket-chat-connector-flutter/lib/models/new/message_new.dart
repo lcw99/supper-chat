@@ -74,7 +74,7 @@ class MessageNew {
 
   @override
   String toString() {
-    return 'MessageNew{alias: $alias, avatar: $avatar, emoji: $emoji, roomId: $roomId, text: $text, attachments: $attachments}';
+    return jsonEncode(this.toMap());
   }
 
   @override

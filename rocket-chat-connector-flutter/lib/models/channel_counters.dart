@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class ChannelCounters {
   bool? joined;
   int? members;
@@ -74,7 +76,7 @@ class ChannelCounters {
 
   @override
   String toString() {
-    return 'ChannelCounters{joined: $joined, members: $members, unreads: $unreads, unreadsFrom: $unreadsFrom, msgs: $msgs, latest: $latest, userMentions: $userMentions, success: $success}';
+    return jsonEncode(this.toMap());
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class ImageDimensions {
   int? width;
   int? height;
@@ -18,7 +20,7 @@ class ImageDimensions {
 
   @override
   String toString() {
-    return '{"width": "$width", "height": "$height"}';
+    return jsonEncode(this.toMap());
   }
 
 }

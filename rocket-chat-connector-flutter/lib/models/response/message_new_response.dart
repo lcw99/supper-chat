@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 
 class MessageNewResponse {
@@ -32,7 +34,7 @@ class MessageNewResponse {
 
   @override
   String toString() {
-    return 'MessageResponse{ts: $ts, channel: $channel, message: $message, success: $success}';
+    return jsonEncode(this.toMap());
   }
 
   @override

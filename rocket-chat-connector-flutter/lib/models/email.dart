@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Email {
   String? address;
   bool? verified;
@@ -16,7 +18,7 @@ class Email {
 
   @override
   String toString() {
-    return 'Email{address: $address, verified: $verified}';
+    return jsonEncode(this.toMap());
   }
 
   @override

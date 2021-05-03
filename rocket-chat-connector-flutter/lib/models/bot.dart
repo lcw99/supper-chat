@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Bot {
   String? i;
 
@@ -23,7 +25,7 @@ class Bot {
 
   @override
   String toString() {
-    return 'bot{i: $i}';
+    return jsonEncode(this.toMap());
   }
 
   @override

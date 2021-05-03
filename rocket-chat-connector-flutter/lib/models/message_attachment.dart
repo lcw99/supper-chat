@@ -26,6 +26,7 @@ class MessageAttachment {
   String? videoUrl;
   ImageDimensions? imageDimensions;
   String? type;
+  List<MessageAttachment>? attachments;
 
   MessageAttachment({
     this.audioUrl,
@@ -48,9 +49,20 @@ class MessageAttachment {
     this.videoUrl,
     this.imageDimensions,
     this.type,
+    this.attachments,
   });
 
   MessageAttachment.fromMap(Map<String, dynamic> json) {
+    if (json['attachments'] != null) {
+      List<dynamic> jsonList = json['attachments'].runtimeType == String //
+          ? jsonDecode(json['attachments'])
+          : json['attachments'];
+      attachments = jsonList
+          .where((json) => json != null)
+          .map((json) => MessageAttachment.fromMap(json))
+          .toList();
+    }
+
     if (json != null) {
       audioUrl = json['audio_url'];
       authorIcon = json['author_icon'];
@@ -91,6 +103,13 @@ class MessageAttachment {
   }
 
   Map<String, dynamic> toMap() => {
+  'attachments':  attachments != null ?
+      'attachments': attachments
+              ?.where((json) => json != null)
+              ?.map((attachments) => attachments.toMap())
+              ?.toList() ??
+              [],
+
         'audio_url': audioUrl,
         'author_icon': authorIcon,
         'author_link': authorLink,
@@ -119,11 +138,7 @@ class MessageAttachment {
 
   @override
   String toString() {
-    return '{"audioUrl": "$audioUrl", "authorIcon": "$authorIcon", "authorLink": "$authorLink", "authorName": "$authorName", "collapsed": "$collapsed", '
-        '"color": "$color", "fields": "$fields", "imageUrl": "$imageUrl", "messageLink": "$messageLink", "text": "$text", "description": "$description", '
-        '"image_preview": "$imagePreview", "thumbUrl": "$thumbUrl", "title": "$title", '
-        '"titleLink": "$titleLink", "titleLinkDownload": "$titleLinkDownload", "ts": "$ts", "videoUrl": "$videoUrl", "imageDimensions": $imageDimensions'
-        '"type": $type}';
+    return jsonEncode(this.toMap());
   }
 
   @override

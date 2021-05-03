@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/filter.dart';
 
@@ -12,7 +14,7 @@ class UpdatedSinceFilter extends Filter {
 
   @override
   String toString() {
-    return 'UpdatedSinceFilter{updateSince: $updatedSince}';
+    return jsonEncode(this.toMap());
   }
 
   @override

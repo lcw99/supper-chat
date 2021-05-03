@@ -71,7 +71,7 @@ class ChannelMessages {
 
   @override
   String toString() {
-    return 'ChannelMessages{count: $count, offset: $offset, total: $total, success: $success, messages: $messages}';
+    return jsonEncode(this.toMap());
   }
 
   @override

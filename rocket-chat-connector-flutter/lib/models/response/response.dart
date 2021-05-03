@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Response {
   bool? success;
 
@@ -17,7 +19,7 @@ class Response {
 
   @override
   String toString() {
-    return 'Response{success: $success}';
+    return jsonEncode(this.toMap());
   }
 
   @override

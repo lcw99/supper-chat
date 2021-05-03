@@ -23,7 +23,7 @@ class RoomNew {
 
   @override
   String toString() {
-    return 'RoomNew{username: $username}';
+    return jsonEncode(this.toMap());
   }
 
   @override

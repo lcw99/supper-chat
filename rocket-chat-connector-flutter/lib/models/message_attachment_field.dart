@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class MessageAttachmentField {
   bool? short;
   String? title;
@@ -25,7 +27,7 @@ class MessageAttachmentField {
 
   @override
   String toString() {
-    return 'MessageAttachmentField{short: $short, title: $title, value: $value}';
+    return jsonEncode(this.toMap());
   }
 
   @override

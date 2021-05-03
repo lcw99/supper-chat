@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 
 class Authentication {
@@ -20,7 +22,7 @@ class Authentication {
 
   @override
   String toString() {
-    return 'Authentication{status: $status}';
+    return jsonEncode(this.toMap());
   }
 
   @override
@@ -61,7 +63,7 @@ class _Data {
 
   @override
   String toString() {
-    return '_Data{authToken: $authToken, userId: $userId, me: $me}';
+    return jsonEncode(this.toMap());
   }
 
   @override

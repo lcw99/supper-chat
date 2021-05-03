@@ -103,6 +103,26 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
+  Future<ChannelMessages> getStarredMessages(String roomId, Authentication authentication) async {
+    String path = '/api/v1/chat.getStarredMessages';
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      {'roomId': roomId},
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("chat.getStarredMessages resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return ChannelMessages.fromMap(jsonDecode(resp));
+      } else {
+        return ChannelMessages();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
   Future<ChannelCounters> counters(
     ChannelCountersFilter filter,
     Authentication authentication,

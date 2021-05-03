@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_filter.dart';
 
@@ -15,7 +17,7 @@ class ChannelCountersFilter extends ChannelFilter {
 
   @override
   String toString() {
-    return 'ChannelCountersFilter{user: $user}';
+    return jsonEncode(this.toMap());
   }
 
   @override
