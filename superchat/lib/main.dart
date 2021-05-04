@@ -270,13 +270,13 @@ class _LoginHomeState extends State<LoginHome> {
     firebaseToken = await _messaging.getToken();
     print('Token: $firebaseToken');
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      print('Got a message whilst in the foreground!');
+      print('###!!!@##@@@@ Got a message whilst in the foreground!!!!!!!!!!');
       print('Message data: ${message.data}');
 
       if (message.notification != null) {
         print('Message also contained a notification: ${message.notification}');
       }
-
+      // todo: need when socket disconnect?
       //androidNotification(message);
     });
 
@@ -364,7 +364,7 @@ class _LoginHomeState extends State<LoginHome> {
         }));
     } else
       return Scaffold(body: FutureBuilder<String>(
-        future: Future.delayed(Duration(seconds: 2), () {
+        future: Future.delayed(Duration(seconds: 5), () {
           return '';
         }),
         builder: (context, AsyncSnapshot<String> snapshot) {
