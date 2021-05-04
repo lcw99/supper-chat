@@ -94,14 +94,14 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     print('_+_+_+_+_+_ reconnecting web socket');
     connectWebSocket();
     webSocketService.sendUserPresence(webSocketChannel, "online");
-    if (bChatScreenOpen)
+    if (bChatScreenOpen && selectedRoom != null)
       subscribeRoomEvent(selectedRoom.id);
   }
 
   void closeSocket() {
     print('_+_+_+_+_+_ disconnecting web socket');
     webSocketService.sendUserPresence(webSocketChannel, "offline");
-    if (bChatScreenOpen)
+    if (bChatScreenOpen && selectedRoom != null)
       unsubscribeRoomEvent(selectedRoom.id);
     webSocketChannel.sink.close();
   }
@@ -183,7 +183,24 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     onDone: () {
       print('!#!#!#!#!#!#!# Socket onDone!!!!!');
       webSocketClosed = true;
-      Future.delayed(Duration(seconds: 3), () { connectSocket(); });
+      if (appState != AppLifecycleState.paused && appState != AppLifecycleState.detached)
+        Future.delayed(Duration(seconds: 3), () { connectSocket(); });
+      else {
+        // dead on foreground. show alert.
+        showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                  title: Text('Network Error'),
+                  insetPadding: EdgeInsets.all(5),
+                  contentPadding: EdgeInsets.all(5),
+                  content: Container(height: MediaQuery.of(context).size.height * .7, width: MediaQuery.of(context).size.width, child:
+                    Text('!!!!'),
+                  )
+              );
+            }
+        );
+      }
     }, cancelOnError: false);
   }
 
