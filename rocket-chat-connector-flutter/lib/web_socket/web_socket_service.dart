@@ -177,6 +177,22 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
+  void createRoom(WebSocketChannel webSocketChannel, String roomName, List<String> users, bool private, { bool readOnly = false, bool broadcast = false }) {
+    String method = 'createChannel';
+    String id = "85";
+    if (private) {
+      method = 'createPrivateGroup';
+      id = "89";
+    }
+    Map msg = {
+      "msg": "method",
+      "method": "$method",
+      "id": "$id",
+      "params": ["$roomName", [users.toString()], readOnly, {}, { "broadcast":broadcast, "encrypted":false }]
+    };
+    webSocketChannel.sink.add(jsonEncode(msg));
+  }
+
 /*
 
   void streamNotifyLoggedSubscribe(WebSocketChannel webSocketChannel, String uid, String userName, int status) {

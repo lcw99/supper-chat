@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 
 class Channel {
   String? id;
@@ -36,7 +37,7 @@ class Channel {
       usernames = json['usernames'] != null ? List<String>.from(json['usernames']) : null;
       msgs = json['msgs'];
       user = json['u'] != null ? User.fromMap(json['u']) : null;
-      ts = DateTime.parse(json['ts']);
+      ts = jsonToDateTime(json['ts']);
       avatarETag = json['avatarETag'];
       description = json['description'];
       topic = json['topic'];

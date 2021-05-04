@@ -7,6 +7,7 @@ import 'package:rocket_chat_connector_flutter/models/mention.dart';
 import 'package:rocket_chat_connector_flutter/models/message_attachment.dart';
 import 'package:rocket_chat_connector_flutter/models/reaction.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 
 class Message {
   String? id;
@@ -63,11 +64,7 @@ class Message {
   Message.fromMap(Map<String, dynamic>? json) {
     if (json != null) {
       pinned = json['pinned'];
-      pinnedAt = json['_pinnedAt'] != null
-          ? (json['_pinnedAt'] is String
-          ? DateTime.parse(json['_pinnedAt']).toUtc()
-          : DateTime.fromMillisecondsSinceEpoch(json['_pinnedAt']['\$date']! is String ? int.parse(json['_pinnedAt']['\$date']) : json['_pinnedAt']['\$date'], isUtc: true))
-          : null;
+      pinnedAt = jsonToDateTime(json['_pinnedAt']);
       pinnedBy = json['pinnedBy'] != null ? User.fromMap(json['pinnedBy']) : null;
       alias = json['alias'];
       msg = json['msg'];
@@ -75,18 +72,10 @@ class Message {
       bot = json['bot'] != null ? Bot.fromMap(json['bot']) : null;
       groupable = json['groupable'];
       t = json['t'];
-      ts = json['ts'] != null
-          ? (json['ts'] is String
-                ? DateTime.parse(json['ts']).toUtc()
-                : DateTime.fromMillisecondsSinceEpoch(json['ts']['\$date']! is String ? int.parse(json['ts']['\$date']) : json['ts']['\$date'], isUtc: true))
-          : null;
+      ts = jsonToDateTime(json['ts']);
       user = json['u'] != null ? User.fromMap(json['u']) : null;
       rid = json['rid'];
-      updatedAt = json['_updatedAt'] != null
-          ? (json['_updatedAt'] is String
-              ? DateTime.parse(json['_updatedAt']).toUtc()
-              : DateTime.fromMillisecondsSinceEpoch(json['_updatedAt']['\$date']! is String ? int.parse(json['_updatedAt']['\$date']) : json['_updatedAt']['\$date'], isUtc: true))
-          : null;
+      updatedAt = jsonToDateTime(json['_updatedAt']);
       id = json['_id'];
 
       if (json['reactions'] != null) {
@@ -132,11 +121,7 @@ class Message {
       editedBy =
           json['editedBy'] != null ? User.fromMap(json['editedBy']) : null;
 
-      editedAt = json['editedAt'] != null
-          ? (json['editedAt'] is String
-            ? DateTime.parse(json['editedAt']).toUtc()
-          : DateTime.fromMillisecondsSinceEpoch(json['editedAt']['\$date']! is String ? int.parse(json['editedAt']['\$date']) : json['editedAt']['\$date'], isUtc: true))
-          : null;
+      editedAt = jsonToDateTime(json['editedAt']);
 
       if (json['urls'] != null) {
         List<dynamic> jsonList = json['urls'].runtimeType == String //
@@ -240,7 +225,7 @@ class Message {
       map['editedAt'] = { '\$date': editedAt!.millisecondsSinceEpoch.toString() };
     }
     if (urls != null) {
-      map['urls'] = attachments
+      map['urls'] = urls
           ?.where((json) => json != null)
           ?.map((urls) => urls.toMap())
           ?.toList() ??

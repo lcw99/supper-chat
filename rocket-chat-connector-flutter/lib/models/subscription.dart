@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 import 'package:rocket_chat_connector_flutter/models/message_user.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 
 Subscription subscriptionFromMap(String str) => Subscription.fromMap(json.decode(str));
 
@@ -53,27 +54,15 @@ class Subscription {
     unread: json["unread"] == null ? null : json["unread"],
     userMentions: json["userMentions"] == null ? null : json["userMentions"],
     groupMentions: json["groupMentions"] == null ? null : json["groupMentions"],
-    ts: json['ts'] != null
-        ? (json['ts'] is String
-        ? DateTime.parse(json['ts'])
-        : DateTime.fromMillisecondsSinceEpoch(json['ts']['\$date']!))
-        : null,
+    ts: jsonToDateTime(json['ts']),
     rid: json["rid"] == null ? null : json["rid"],
     name: json["name"] == null ? null : json["name"],
     fname: json["fname"] == null ? null : json["fname"],
     customFields: json["customFields"] == null ? null : CustomFields.fromMap(json["customFields"]),
     t: json["t"] == null ? null : json["t"],
     u: json["u"] == null ? null : MessageUser.fromMap(json["u"]),
-    updatedAt: json['_updatedAt'] != null
-        ? (json['_updatedAt'] is String
-        ? DateTime.parse(json['_updatedAt'])
-        : DateTime.fromMillisecondsSinceEpoch(json['_updatedAt']['\$date']!))
-        : null,
-    ls: json['ls'] != null
-        ? (json['ls'] is String
-        ? DateTime.parse(json['ls'])
-        : DateTime.fromMillisecondsSinceEpoch(json['ls']['\$date']!))
-        : null,
+    updatedAt: jsonToDateTime(json['_updatedAt']),
+    ls: jsonToDateTime(json['ls']),
     blocked: json["blocked"] == null ? null : json["blocked"],
   );
 

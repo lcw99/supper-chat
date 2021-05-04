@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:rocket_chat_connector_flutter/models/message_attachment_field.dart';
 
 import 'image_dimensions.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 
 class MessageAttachment {
   String? audioUrl;
@@ -92,7 +93,7 @@ class MessageAttachment {
       title = json['title'];
       titleLink = json['title_link'];
       titleLinkDownload = json['title_link_download'];
-      ts = DateTime.parse(json['ts']);
+      ts = jsonToDateTime(json['ts']);
       videoUrl = json['video_url'];
 
       imageDimensions = json['image_dimensions'] != null

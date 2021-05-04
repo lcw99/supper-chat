@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
+
 class RoomCounters {
   bool? joined;
   int? members;
@@ -24,11 +28,9 @@ class RoomCounters {
       joined = json['joined'];
       members = json['members'];
       unreads = json['unreads'] != null ? json['unreads'] : 0;
-      unreadsFrom = json['unreadsFrom'] != null
-          ? DateTime.parse(json['unreadsFrom'])
-          : null;
+      unreadsFrom = jsonToDateTime(json['unreadsFrom']);
       msgs = json['msgs'];
-      latest = json['latest'] != null ? DateTime.parse(json['latest']) : null;
+      latest = jsonToDateTime(json['latest']);
       userMentions = json['userMentions'];
       success = json['success'];
     }

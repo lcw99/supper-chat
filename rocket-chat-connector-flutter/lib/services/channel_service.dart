@@ -165,7 +165,7 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<ChannelListResponse> list(Authentication authentication) async {
+  Future<ChannelListResponse> getChannelList(Authentication authentication) async {
     http.Response response = await _httpService.get(
       '/api/v1/channels.list', authentication
     );
@@ -173,7 +173,7 @@ class ChannelService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         var resp = utf8.decode(response.bodyBytes);
-        log("channels.list resp=$resp");
+        log("@@@@@@@ channels.list resp=$resp");
         return ChannelListResponse.fromMap(jsonDecode(resp));
       } else {
         return ChannelListResponse();
