@@ -54,7 +54,7 @@ class ChatView extends StatefulWidget {
   ChatView({Key key, @required this.chatHomeState, @required this.notificationController, @required this.authRC, @required this.room, @required this.me, this.sharedObject }) : super(key: key);
 
   @override
-  _ChatViewState createState() => _ChatViewState();
+  ChatViewState createState() => ChatViewState();
 }
 
 class ChatDataStore {
@@ -125,7 +125,7 @@ class ChatItemData {
   ChatItemData(this.key, this.messageId, this.info);
 }
 
-class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
+class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   TextEditingController _teController = TextEditingController();
   int chatItemOffset = 0;
   final int chatItemCount = 20;
@@ -141,7 +141,7 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   FocusNode myFocusNode;
 
   GlobalKey<_UserTypingState> userTypingKey = GlobalKey();
-  GlobalKey<_ChatViewState> chatViewKey = GlobalKey();
+  GlobalKey<ChatViewState> chatViewKey = GlobalKey();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -179,7 +179,8 @@ class _ChatViewState extends State<ChatView> with WidgetsBindingObserver {
             int i = chatDataStore.findIndexByMessageId(roomMessage.id);
             if (i >= 0) {
               GlobalKey<ChatItemViewState> keyChatItem = chatDataStore.getGlobalKey(i);
-              keyChatItem.currentState.setNewMessage(roomMessage);
+              if (keyChatItem.currentState != null)
+                  keyChatItem.currentState.setNewMessage(roomMessage);
               chatDataStore.replaceMessage(i, roomMessage);
               userTypingKey.currentState.setTypingUser('');
             } else {  // new message

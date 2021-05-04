@@ -21,6 +21,7 @@ import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:rocket_chat_connector_flutter/web_socket/web_socket_service.dart';
+import 'package:superchat/chatitemview.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
@@ -38,6 +39,9 @@ import 'create_room.dart';
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
 
 final GlobalKey<CreateRoomState> createRoomKey = GlobalKey();
+final GlobalKey<ChatViewState>chatViewStateKey = GlobalKey();
+
+bool webSocketClosed = false;
 
 class ChatHome extends StatefulWidget {
   ChatHome({Key key, @required this.title, @required this.user, @required this.authRC, this.payload}) : super(key: key);
@@ -86,17 +90,31 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   AppLifecycleState appState = AppLifecycleState.resumed;
 
+  void connectSocket() {
+    print('_+_+_+_+_+_ reconnecting web socket');
+    connectWebSocket();
+    webSocketService.sendUserPresence(webSocketChannel, "online");
+    if (bChatScreenOpen)
+      subscribeRoomEvent(selectedRoom.id);
+  }
+
+  void closeSocket() {
+    print('_+_+_+_+_+_ disconnecting web socket');
+    webSocketService.sendUserPresence(webSocketChannel, "offline");
+    if (bChatScreenOpen)
+      unsubscribeRoomEvent(selectedRoom.id);
+    webSocketChannel.sink.close();
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     print('+++++====ChatHome state=$state');
     appState = state;
     if (state == AppLifecycleState.resumed) {
-      connectWebSocket();
-      webSocketService.sendUserPresence(webSocketChannel, "online");
+      connectSocket();
     } else {
       if (state == AppLifecycleState.paused) {
-        webSocketService.sendUserPresence(webSocketChannel, "offline");
-        webSocketChannel.sink.close();
+        closeSocket();
       }
     }
   }
@@ -128,7 +146,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           }
         } else if (notification.msg == 'changed') {
           notificationController.add(notification);
-
           if (notification.collection == 'stream-notify-user' &&notification.notificationFields != null) {
             String eventName = notification.notificationFields.eventName;
             if (eventName.endsWith('notification')) {
@@ -159,9 +176,15 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           }
         }
       }
-      onError() {}
-      onDone() {}
-    });
+    },
+    onError: (Object error) {
+      print('!#!#!#!#!#!#!# Socket onError!!!!!');
+    },
+    onDone: () {
+      print('!#!#!#!#!#!#!# Socket onDone!!!!!');
+      webSocketClosed = true;
+      Future.delayed(Duration(seconds: 3), () { connectSocket(); });
+    }, cancelOnError: false);
   }
 
   handleSharedData() {
@@ -396,7 +419,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
     bChatScreenOpen = true;
     final result = await Navigator.push(context, MaterialPageRoute(
-        builder: (context) => ChatView(chatHomeState: this, authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj)),
+        builder: (context) => ChatView(key: chatViewStateKey, chatHomeState: this, authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj)),
     );
     bChatScreenOpen = false;
     if (refresh)
@@ -498,12 +521,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
     return RoomSnapshotInfo(roomList,
         imagePath != null ? imagePath : 'assets/images/nepal-2184940_1920.jpg',
-        titleText != null ? titleText : 'MY ROOM');
+        titleText != null ? titleText : 'MY ROOMS');
   }
 
   @override
   void dispose() {
     webSocketService.sendUserPresence(webSocketChannel, "offline");
+    print('_+_+_+_+_+_dispose disconnecting web socket');
     webSocketChannel.sink.close();
     _intentDataStreamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -538,10 +562,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     String lm;
     if (room.lastMessage != null && room.lastMessage.msg != null)
       lm = room.lastMessage.msg;
-    print('@@@@1 lm = $lm');
     if ((lm == null || lm.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
       lm = room.lastMessage.attachments.first.title;
-    print('@@@@2 lm = $lm');
     return lm;
   }
 
