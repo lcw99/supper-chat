@@ -4,8 +4,10 @@
 
 import 'dart:convert';
 
+import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/models/message_user.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 
 Room roomFromMap(String str) => Room.fromMap(json.decode(str));
 
@@ -51,7 +53,7 @@ class Room {
   bool? roomDefault;
   DateTime? updatedAt;
   String? description;
-  LastMessage? lastMessage;
+  Message? lastMessage;
   DateTime? lm;
   String? avatarETag;
   String? topic;
@@ -71,10 +73,10 @@ class Room {
     encrypted: json["encrypted"] == null ? null : json["encrypted"],
     ro: json["ro"] == null ? null : json["ro"],
     roomDefault: json["default"] == null ? null : json["default"],
-    updatedAt: json["_updatedAt"] == null ? null : DateTime.parse(json["_updatedAt"]),
+    updatedAt: jsonToDateTime(json["_updatedAt"]),
     description: json["description"] == null ? null : json["description"],
-    lastMessage: json["lastMessage"] == null ? null : LastMessage.fromMap(json["lastMessage"]),
-    lm: json["lm"] == null ? null : DateTime.parse(json["lm"]),
+    lastMessage: json["lastMessage"] == null ? null : Message.fromMap(json["lastMessage"]),
+    lm: jsonToDateTime(json["lm"]),
     avatarETag: json["avatarETag"] == null ? null : json["avatarETag"],
     topic: json["topic"] == null ? null : json["topic"],
     announcement: json["announcement"] == null ? null : json["announcement"],
@@ -118,47 +120,4 @@ class CustomFields {
   };
 }
 
-class LastMessage {
-  LastMessage({
-    this.id,
-    this.rid,
-    this.msg,
-    this.ts,
-    this.u,
-    this.updatedAt,
-    this.mentions,
-    this.channels,
-  });
-
-  String? id;
-  String? rid;
-  String? msg;
-  DateTime? ts;
-  MessageUser? u;
-  DateTime? updatedAt;
-  List<dynamic>? mentions;
-  List<dynamic>? channels;
-
-  factory LastMessage.fromMap(Map<String, dynamic> json) => LastMessage(
-    id: json["_id"] == null ? null : json["_id"],
-    rid: json["rid"] == null ? null : json["rid"],
-    msg: json["msg"] == null ? null : json["msg"],
-    ts: json["ts"] == null ? null : DateTime.parse(json["ts"]),
-    u: json["u"] == null ? null : MessageUser.fromMap(json["u"]),
-    updatedAt: json["_updatedAt"] == null ? null : DateTime.parse(json["_updatedAt"]),
-    mentions: json["mentions"] == null ? null : List<dynamic>.from(json["mentions"].map((x) => x)),
-    channels: json["channels"] == null ? null : List<dynamic>.from(json["channels"].map((x) => x)),
-  );
-
-  Map<String, dynamic> toMap() => {
-    "_id": id == null ? null : id,
-    "rid": rid == null ? null : rid,
-    "msg": msg == null ? null : msg,
-    "ts": ts == null ? null : ts!.toIso8601String(),
-    "u": u == null ? null : u!.toMap(),
-    "_updatedAt": updatedAt == null ? null : updatedAt!.toIso8601String(),
-    "mentions": mentions == null ? null : List<dynamic>.from(mentions!.map((x) => x)),
-    "channels": channels == null ? null : List<dynamic>.from(channels!.map((x) => x)),
-  };
-}
 

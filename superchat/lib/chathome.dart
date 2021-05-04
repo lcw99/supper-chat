@@ -10,7 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
+import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
+import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/subscription.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
@@ -31,8 +33,11 @@ import 'wigets/unread_counter.dart';
 import 'chatview.dart';
 import 'database/chatdb.dart' as db;
 import 'main.dart';
+import 'create_room.dart';
 
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
+
+final GlobalKey<CreateRoomState> createRoomKey = GlobalKey();
 
 class ChatHome extends StatefulWidget {
   ChatHome({Key key, @required this.title, @required this.user, @required this.authRC, this.payload}) : super(key: key);
@@ -110,8 +115,18 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         if (appState == AppLifecycleState.resumed)
           webSocketService.streamChannelMessagesPong(webSocketChannel);
       } else {
-        //print("***got noti= " + data);
-        if (notification.msg == 'changed') {
+        if (notification.msg == 'updated') {
+        } else if (notification.msg == 'result') {
+          if (notification.id == '85' || notification.id == '89') {  // 85: createChannel, 89: createPrivateGroup
+            if (notification.error != null) {
+              if (createRoomKey.currentState.mounted)
+                createRoomKey.currentState.onError(notification.error.reason);
+            }
+            if (notification.result != null) {
+              createRoomKey.currentState.onOk(notification.result.name);
+            }
+          }
+        } else if (notification.msg == 'changed') {
           notificationController.add(notification);
 
           if (notification.collection == 'stream-notify-user' &&notification.notificationFields != null) {
@@ -232,6 +247,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => MyProfile(widget.user, widget.authRC)));
               },
             ),
+            ListTile(
+              title: Text('Create Room'),
+              onTap: () async {
+                Navigator.pop(context);
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => CreateRoom(key: createRoomKey, chatHomeState: this, user: widget.user)));
+              },
+            ),
           ],
         ),
       ),
@@ -243,8 +265,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
             backgroundColor: Colors.red,
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.wb_sunny_outlined),
+            label: 'Public',
+            backgroundColor: Colors.green,
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.chat),
-            label: 'Chatting',
+            label: 'Direct',
             backgroundColor: Colors.green,
           ),
         ],
@@ -256,85 +283,85 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
 
-  List<model.Room> lastRoomList;
   _buildPage() {
     debugPrint("_buildPage=" + selectedPage.toString());
     switch(selectedPage) {
       case 0:
-        return FutureBuilder<List<model.Room>>(
+        return FutureBuilder<RoomSnapshotInfo>(
             future: _getMyRoomList(),
-            builder: (context, AsyncSnapshot<List<model.Room>> snapshot) {
-              if (snapshot.hasData) {
-                List<model.Room> roomList = snapshot.data;
-                lastRoomList = roomList;
-                return CustomScrollView(slivers: <Widget>[
-                  SliverAppBar(
-                    expandedHeight: 200.0,
-                    floating: false,
-                    pinned: true,
-                    systemOverlayStyle: SystemUiOverlayStyle.dark,
-                    flexibleSpace: FlexibleSpaceBar(
-                        centerTitle: true,
-                        title: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-/*
-                          Text(widget.title, style:
-                            TextStyle(fontFamily: "Billabong", fontSize: 30, shadows: <Shadow>[
-                            Shadow(
-                              offset: Offset(-3.0, 3.0),
-                              blurRadius: 5.0,
-                              color: Color.fromARGB(255, 0, 0, 0),
-                            ),
-                          ])),
-                          Image.asset('assets/images/logotextonly.png', width: 150, fit: BoxFit.fitWidth, isAntiAlias: true),
-                          SizedBox(width: 5,),
-                          UnreadCounter(unreadCount: totalUnread),
-*/
-                        ]),
-                        background: Image.asset(
-                          'assets/images/hot-air-balloon-2411851.jpg',
-                          fit: BoxFit.cover,
-                        )),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      model.Room room = roomList[index];
-                      String roomName = room.name;
-                      int unreadCount = 0;
-                      if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
-                        unreadCount = room.subscription.unread;
-                      if (roomName == null) {
-                        if (room.t == 'd') {
-                          roomName = room.usernames.toString();
-                        }
-                      }
-                      return ListTile(
-                        onTap: () {
-                          _setChannel(room);
-                        },
-                        title: Text(roomName, style: TextStyle(color: Colors.black)),
-                        subtitle: buildSubTitle(room),
-                        leading: Container(
-                          width: 80,
-                          height: 80,
-                          child: room.avatarETag != null ?
-                            Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(), fit: BoxFit.fitWidth,) :
-                            const Icon(Icons.group)),
-                        trailing: UnreadCounter(unreadCount: unreadCount),
-                        dense: true,
-                        selected: selectedRoom != null ? selectedRoom.id == room.id : false,
-                      );
-                    }, childCount: roomList.length,
-                  ),
-                )]);
-              } else {
-                return Container(color: Colors.white, child: Center(child: CircularProgressIndicator(strokeWidth: 1,)));
-              }
-            });
+            builder: roomBuilder
+        );
         break;
       case 1:
-        return Container();
+        return FutureBuilder<RoomSnapshotInfo>(
+            future: _getPublicRoomList(),
+            builder: roomBuilder,
+        );
         break;
+      case 2:
+        return FutureBuilder<RoomSnapshotInfo>(
+          future: _getMyRoomList(roomType: 'd', titleText: 'Direct', imagePath: 'assets/images/maldives-3220702_1920.jpg'),
+          builder: roomBuilder,
+        );
+        break;
+    }
+  }
+
+  Widget roomBuilder(context, AsyncSnapshot<RoomSnapshotInfo> snapshot) {
+    if (snapshot.hasData) {
+      List<model.Room> roomList = snapshot.data.roomList;
+      return CustomScrollView(
+        slivers: <Widget>[
+        SliverAppBar(
+          expandedHeight: 200.0,
+          floating: false,
+          pinned: true,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
+          flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              title: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(snapshot.data.titleText, style: TextStyle(fontFamily: 'Audiowide', fontSize: 15),),
+                  ]),
+              background: Image.asset(
+                snapshot.data.titleImagePath,
+                fit: BoxFit.cover,
+              )),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            model.Room room = roomList[index];
+            String roomName = room.name;
+            int unreadCount = 0;
+            if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
+              unreadCount = room.subscription.unread;
+            if (roomName == null) {
+              if (room.t == 'd') {
+                roomName = room.usernames.toString();
+              }
+            }
+            return ListTile(
+              onTap: () {
+                _setChannel(room);
+              },
+              title: Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+              subtitle: buildSubTitle(room),
+              leading: Container(
+                  width: 80,
+                  height: 80,
+                  child: room.avatarETag != null ?
+                  Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(), fit: BoxFit.fitWidth,) :
+                  room.t == 'd' ? const Icon(Icons.chat) : const Icon(Icons.group)),
+              trailing: UnreadCounter(unreadCount: unreadCount),
+              dense: true,
+              selected: selectedRoom != null ? selectedRoom.id == room.id : false,
+            );
+          }, childCount: roomList.length,
+          ),
+        )
+      ]);
+    } else {
+      return Container(color: Colors.white, child: Center(child: CircularProgressIndicator(strokeWidth: 1,)));
     }
   }
 
@@ -376,7 +403,17 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       setState(() {});
   }
 
-  Future<List<model.Room>> _getMyRoomList() async {
+  ChannelService getChannelService() {
+    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
+    return ChannelService(rocketHttpService);
+  }
+
+  Future<RoomSnapshotInfo> _getPublicRoomList() async {
+    ChannelListResponse rep = await getChannelService().getChannelList(widget.authRC);
+    return RoomSnapshotInfo(rep.channelList, 'assets/images/sunrise-1634197_1920.jpg', 'PUBLIC ROOMS');
+  }
+
+  Future<RoomSnapshotInfo> _getMyRoomList({String roomType, String titleText, String imagePath}) async {
     var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoom);
     DateTime updateSince;
     if (lastUpdate != null)
@@ -384,8 +421,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
     print('updateSince = ${updateSince}');
 
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    ChannelService channelService = ChannelService(rocketHttpService);
+    ChannelService channelService = getChannelService();
     UpdatedSinceFilter filter = UpdatedSinceFilter(updateSince);
     RoomUpdate roomUpdate = await channelService.getRooms(widget.authRC, filter);
     List<model.Room> updatedRoom = roomUpdate.update;
@@ -441,28 +477,28 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       bDBUpdated = true;
     }
 
-    if (bDBUpdated || lastRoomList == null) {
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoom, value: DateTime.now().toIso8601String()));
-      var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
-      print('dbRooms = ${dbRooms.length}');
-      List<model.Room> roomList = [];
-      totalUnread = 0;
-      for (db.Room dr in dbRooms) {
-        model.Room room = model.Room.fromMap(jsonDecode(dr.info));
-        if (dr.sid != null) {
-          var dbSubscription = await locator<db.ChatDatabase>().getSubscription(dr.sid);
-          room.subscription = model.Subscription.fromMap(jsonDecode(dbSubscription.info));
-          //print('room unread=${room.subscription.unread}');
-          //print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
-          totalUnread += room.subscription.unread;
-        }
-        roomList.add(room);
+    await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoom, value: DateTime.now().toIso8601String()));
+    var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
+    print('dbRooms = ${dbRooms.length}');
+    List<model.Room> roomList = [];
+    totalUnread = 0;
+    for (db.Room dr in dbRooms) {
+      model.Room room = model.Room.fromMap(jsonDecode(dr.info));
+      if (dr.sid != null) {
+        var dbSubscription = await locator<db.ChatDatabase>().getSubscription(dr.sid);
+        room.subscription = model.Subscription.fromMap(jsonDecode(dbSubscription.info));
+        //print('room unread=${room.subscription.unread}');
+        //print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
+        totalUnread += room.subscription.unread;
       }
-      bDBUpdated = false;
-      return roomList;
-    } else {
-      return lastRoomList;
+      if (roomType== null || (roomType != null && room.t == roomType))
+        roomList.add(room);
     }
+    bDBUpdated = false;
+    roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
+    return RoomSnapshotInfo(roomList,
+        imagePath != null ? imagePath : 'assets/images/nepal-2184940_1920.jpg',
+        titleText != null ? titleText : 'MY ROOM');
   }
 
   @override
@@ -492,10 +528,21 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.lastMessage != null && room.lastMessage.msg != null ? Text(room.lastMessage.msg, maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
-          room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
+          getLastMessage(room) != null ? Text(getLastMessage(room), maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
+          room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
     );
+  }
+
+  String getLastMessage(model.Room room) {
+    String lm;
+    if (room.lastMessage != null && room.lastMessage.msg != null)
+      lm = room.lastMessage.msg;
+    print('@@@@1 lm = $lm');
+    if ((lm == null || lm.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
+      lm = room.lastMessage.attachments.first.title;
+    print('@@@@2 lm = $lm');
+    return lm;
   }
 
   deleteMessage(messageId) {
@@ -506,4 +553,16 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.updateMessage(webSocketChannel, message);
   }
 
+  createRoom(String roomName, List<String> users, bool private) {
+    webSocketService.createRoom(webSocketChannel, roomName, users, private);
+  }
+
+}
+
+class RoomSnapshotInfo {
+  List<model.Room> roomList;
+  String titleImagePath;
+  String titleText;
+
+  RoomSnapshotInfo(this.roomList, this.titleImagePath, this.titleText);
 }

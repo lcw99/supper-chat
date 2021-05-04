@@ -2,9 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
+import 'package:rocket_chat_connector_flutter/models/room.dart';
 
 class ChannelListResponse {
-  List<Channel>? channelList = [];
+  List<Room>? channelList = [];
   bool? success;
 
   ChannelListResponse({
@@ -17,7 +18,7 @@ class ChannelListResponse {
       List? l = json['channels'] != null ? List.from(json['channels']) : null;
       if (l != null) {
         for (var e in l) {
-          Channel c = Channel.fromMap(e);
+          Room c = Room.fromMap(e);
           channelList!.add(c);
         }
       } else

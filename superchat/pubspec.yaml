@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.5+5
+version: 1.0.6+6
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -83,14 +83,16 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   fonts:
-    - family: Billabong
+    - family: Audiowide
       fonts:
-        - asset: assets/fonts/Billabong.ttf
+        - asset: assets/fonts/Audiowide-Regular.ttf
   assets:
     - assets/images/google_signin_button.png
-    - assets/images/hot-air-balloon-2411851.jpg
+    - assets/images/sunrise-1634197_1920.jpg
     - assets/images/logo.png
     - assets/images/logotextonly.png
+    - assets/images/nepal-2184940_1920.jpg
+    - assets/images/maldives-3220702_1920.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

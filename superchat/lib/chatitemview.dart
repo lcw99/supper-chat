@@ -313,6 +313,7 @@ class ChatItemViewState extends State<ChatItemView> {
     var messageBackgroundColor = Colors.white;
     if (message.user.id == widget.me.id)
       messageBackgroundColor = Colors.amber.shade100;
+
     return Container(
         child: Column(children: <Widget>[
           newMessage == '' ? SizedBox() : Container(
@@ -353,13 +354,13 @@ class ChatItemViewState extends State<ChatItemView> {
                 ? Column (
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget> [
-                  urlInMessage.meta['ogImage'] != null ? Image.network(urlInMessage.meta['ogImage']) : SizedBox(),
+                  urlInMessage.meta['ogImage'] != null ? Image.network(urlInMessage.meta['ogImage'], cacheWidth: 500,) : SizedBox(),
                   urlInMessage.meta['ogTitle'] != null ? Text(urlInMessage.meta['ogTitle'], style: TextStyle(fontWeight: FontWeight.bold)) : SizedBox(),
                   urlInMessage.meta['ogDescription'] != null ? Text(urlInMessage.meta['ogDescription'], style: TextStyle(fontSize: 11, color: Colors.blue)) : SizedBox(),
                 ])
                 : urlInMessage.meta != null && urlInMessage.meta['oembedThumbnailUrl'] != null
                 ? Column (children: <Widget> [
-              urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl']) : SizedBox(),
+              urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl'], cacheWidth: 500) : SizedBox(),
               urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
             ])
                 : SizedBox()
@@ -411,6 +412,13 @@ class ChatItemViewState extends State<ChatItemView> {
         );
       },
     );
+
+    if (widget.onTapExit) {
+      return InkWell(
+        child: image,
+        onTap: () { Navigator.pop(context, message.id); },
+      );
+    }
 
     return FullScreenWidget(
       child: Hero(
