@@ -223,7 +223,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           } else if (event.notificationFields != null && event.notificationFields.eventName.endsWith('typing')) {
             if (event.notificationFields.notificationArgs.length > 0) {
               var arg = event.notificationFields.notificationArgs[0];
-              userTypingKey.currentState.setTypingUser(arg);
+              if (arg != widget.me.username)
+                userTypingKey.currentState.setTypingUser(arg);
             }
           }
         } else if (event.collection == 'stream-notify-logged') {
@@ -374,12 +375,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           print('~~~~~~~~ builder chatDataStore.length=${chatDataStore.length}');
           if (snapshot.connectionState == ConnectionState.done) {
             print('------- builder connectionState.done needScrollToBottom=$needScrollToBottom');
-            if (needScrollToBottom) {
-              markAsReadJob.trigger();
-              Future.delayed(const Duration(milliseconds: 300), () {
-                scrollToBottom();
-              });
-            }
+            markAsReadJob.trigger();
             getMoreMessages = false;
             needScrollToBottom = false;
           }
@@ -401,6 +397,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         print('---------->>> jumpto = $scrollIndex');
         itemScrollController.jumpTo(index: scrollIndex, alignment: 0);
         scrollIndex = -1;
+      });
+    }
+
+    if (needScrollToBottom) {
+      needScrollToBottom = false;
+      Future.delayed(const Duration(milliseconds: 300), () {
+        scrollToBottom();
       });
     }
 

@@ -571,7 +571,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   void dispose() {
     webSocketService.sendUserPresence(webSocketChannel, "offline");
     print('_+_+_+_+_+_dispose disconnecting web socket');
-    webSocketChannel.sink.close();
+    closeSocket();
     _intentDataStreamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
