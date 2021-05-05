@@ -337,11 +337,13 @@ class _LoginHomeState extends State<LoginHome> {
   String loginStatus = '...';
   GlobalKey loginStatusKey = GlobalKey();
   void showLoginStatus(String s) {
+/*
     if (loginStatusKey.currentState == null)
       return;
     loginStatusKey.currentState.setState(() {
       loginStatus = s;
     });
+*/
   }
 
 
@@ -387,7 +389,11 @@ class _LoginHomeState extends State<LoginHome> {
               registerToken(auth);
               var _np = notificationPayload;
               notificationPayload = null;
-              return ChatHome(key: chatHomeStateKey, title: 'Super Chat', user: user, authRC: auth, payload: _np,);
+              Future.delayed(Duration.zero, () {
+                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) =>
+                    ChatHome(key: chatHomeStateKey, title: 'Super Chat', user: user, authRC: auth, payload: _np,)));
+              });
+              return SizedBox();
             } else {
               return buildShowVersion();
             }
