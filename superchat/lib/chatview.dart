@@ -151,7 +151,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   AnimationController _hideFabAnimation;
 
   Future<void> sendUserTyping() async {
-    webSocketService.sendUserTyping(webSocketChannel, widget.room.id, widget.me.username, true);
+    webSocketService.sendUserTyping(widget.room.id, widget.me.username, true);
   }
 
   @override

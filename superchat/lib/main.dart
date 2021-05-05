@@ -290,7 +290,7 @@ class _LoginHomeState extends State<LoginHome> {
       // todo: need when socket disconnect?
       //androidNotification(message);
       if (chatHomeStateKey.currentState.isWebSocketClosed())
-        chatHomeStateKey.currentState.connectSocket();
+        chatHomeStateKey.currentState.subscribeAndConnect();
     });
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
