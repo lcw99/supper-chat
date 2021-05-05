@@ -24,11 +24,9 @@ import 'package:rocket_chat_connector_flutter/services/push_service.dart';
 import 'package:rocket_chat_connector_flutter/models/new/token_new.dart';
 
 import 'chathome.dart';
-import 'chathome.dart';
 import 'database/chatdb.dart';
 
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
-import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 
 final String serverUrl = "https://chat.smallet.co";
 final String username = "support@semaphore.kr";
@@ -43,6 +41,8 @@ final navGlobalKey = new GlobalKey<NavigatorState>();
 String notificationPayload;
 
 GetIt locator = GetIt.instance;
+
+double textScaleFactor = 1.0;
 
 String version;
 String buildNumber;
@@ -108,8 +108,8 @@ Future<void> _onSelectNotification(String payload) async {
       notificationPayload = null;
       print('**** rid= $_rid');
       if (chatHomeStateKey.currentState != null) {
-        chatHomeStateKey.currentState.notificationController.sink.add(rocket_notification.Notification(msg: 'request_close'));
-        chatHomeStateKey.currentState.setChannelById(_rid);
+        chatHomeStateKey.currentState.notificationController.sink.add(rocket_notification.Notification(msg: 'request_close', collection: _rid));
+        Future.delayed(Duration(seconds: 1), () { chatHomeStateKey.currentState.setChannelById(_rid);} );
       }
     } else {
       navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
@@ -193,6 +193,17 @@ class _LoginHomeState extends State<LoginHome> {
   bool firebaseInitialized = false;
 
   String firebaseToken;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeFlutterFire().then((_) {
+      setState(() {
+        firebaseInitialized = true;
+        print("!!!!!!!!!!!!!!! initializeFlutterFire done");
+      });
+    });
+  }
 
   Future<Null> _ensureLoggedIn(BuildContext context) async {
     GoogleSignInAccount user = googleSignIn.currentUser;
@@ -278,6 +289,8 @@ class _LoginHomeState extends State<LoginHome> {
       }
       // todo: need when socket disconnect?
       //androidNotification(message);
+      if (chatHomeStateKey.currentState.isWebSocketClosed())
+        chatHomeStateKey.currentState.connectSocket();
     });
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -321,9 +334,23 @@ class _LoginHomeState extends State<LoginHome> {
     });
   }
 
+  String loginStatus = '...';
+  GlobalKey loginStatusKey = GlobalKey();
+  void showLoginStatus(String s) {
+    if (loginStatusKey.currentState == null)
+      return;
+    loginStatusKey.currentState.setState(() {
+      loginStatus = s;
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
     rocket_user.User user;
+
+    textScaleFactor = MediaQuery.of(context).textScaleFactor;
+    print('===text scale factor = $textScaleFactor');
 
     if (!firebaseInitialized) {
       print('!firebaseInitialized----------------------');
@@ -343,10 +370,13 @@ class _LoginHomeState extends State<LoginHome> {
 
     if (triedSilentLogin && firebaseInitialized && googleSignIn.currentUser != null) {
       print("******************googleid=" + googleSignIn.currentUser.id);
+      showLoginStatus('google login complete');
       return Scaffold(body:
         FutureBuilder<Authentication>(
           future: getAuthentication(),
           builder: (context, AsyncSnapshot<Authentication> snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting)
+              showLoginStatus('waiting chat server login');
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
               String avatarUrl = googleSignIn.currentUser.photoUrl;
@@ -380,7 +410,10 @@ class _LoginHomeState extends State<LoginHome> {
       Center(child: Wrap(children: [Column(children: [
         Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
         SizedBox(height: 50,),
-        Text('SuperChat $version($buildNumber)', style: TextStyle(fontSize: 10, color: Colors.blueAccent),)
+        SizedBox(height: 50, child: Column(children: [
+          Text('SuperChat $version($buildNumber)', style: TextStyle(fontSize: 10, color: Colors.blueAccent),),
+          Text('$loginStatus', key: loginStatusKey),
+        ])),
       ])])));
   }
 
@@ -396,21 +429,13 @@ class _LoginHomeState extends State<LoginHome> {
           child: Image.asset(
             "assets/images/google_signin_button.png",
             width: 225.0,
+            height: 50,
+            fit: BoxFit.contain,
           ),
         )
       ])]))));
   }
 
-  @override
-  void initState() {
-    super.initState();
-    initializeFlutterFire().then((_) {
-      setState(() {
-        firebaseInitialized = true;
-        print("!!!!!!!!!!!!!!! initializeFlutterFire done");
-      });
-    });
-  }
 }
 
 

@@ -125,10 +125,10 @@ class ChatItemData {
   ChatItemData(this.key, this.messageId, this.info);
 }
 
-class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
+class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerProviderStateMixin<ChatView>  {
   TextEditingController _teController = TextEditingController();
   int chatItemOffset = 0;
-  final int chatItemCount = 20;
+  final int chatItemCount = 50;
 
   ChatDataStore chatDataStore = ChatDataStore();
   bool historyEnd = false;
@@ -148,11 +148,25 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     print('+++++==== ChatView state=$state');
   }
 
+  AnimationController _hideFabAnimation;
+
+  Future<void> sendUserTyping() async {
+    webSocketService.sendUserTyping(webSocketChannel, widget.room.id, widget.me.username, true);
+  }
+
   @override
   void initState() {
     subscribeRoomEvent(widget.room.id);
 
-    getMoreMessages = true;
+    var userTypingJob = RepeatedJobWaiter(sendUserTyping, waitingTime: 5000);
+    _teController.addListener(() {
+      if (_teController.text.isNotEmpty)
+        userTypingJob.trigger();
+    });
+
+    _hideFabAnimation = AnimationController(vsync: this, duration: kThemeAnimationDuration);
+
+    getMoreMessages = false;
     needScrollToBottom = true;
     myFocusNode = FocusNode();
     myFocusNode.addListener(() {
@@ -166,7 +180,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
     widget.notificationController.stream.listen((event) {
       if (event.msg == 'request_close') {
         if (this.mounted)
-          Navigator.pop(context, null);
+          Navigator.pop(context, event.collection);
         return;
       }
       if (event.msg == 'changed' && this.mounted) {
@@ -261,6 +275,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   void dispose() {
     unsubscribeRoomEvent(widget.room.id);
     _teController.dispose();
+    _hideFabAnimation.dispose();
     myFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -268,6 +283,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    var markAsReadJob = RepeatedJobWaiter(markAsRead);
+
     String title = widget.room.id;
     if (widget.room.name != null)
       title = widget.room.name;
@@ -276,6 +293,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
     print('~~~ chatview building=$title');
     return Phoenix(child: Scaffold(
+      floatingActionButton: Visibility(
+        child: ScaleTransition(
+        scale: _hideFabAnimation,
+        alignment: Alignment.bottomCenter,
+        child: FloatingActionButton(onPressed: (){}, backgroundColor: Colors.amber, child: UserTyping(key: userTypingKey, hideFabAnimation: _hideFabAnimation,)))),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       key: chatViewKey,
       appBar: AppBar(
         title: Text(title),
@@ -299,7 +322,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
         Container(color: Colors.blue.shade100, child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-          UserTyping(key: userTypingKey),
+          //UserTyping(key: userTypingKey),
           Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(height: 50, color: Colors.white, child: _buildInputBox())
@@ -336,70 +359,81 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
           : SizedBox(height: 0,),
         ])),
       body:
+        !getMoreMessages && (chatDataStore.length > 0) ? buildChatList() :
         FutureBuilder(
         future: () {
           print('@@@@@@ call future _getChannelMessages @@@@@@ updateAll=$getMoreMessages');
           var ua = getMoreMessages;
           getMoreMessages = false;
+          if (chatDataStore.length == 0)
+            ua = true;
           return _getChannelMessages(chatItemCount, chatItemOffset, ua);
         } (),
         builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
-          print('~~~~~~~~ builder update=${snapshot.hasData}');
+          print('~~~~~~~~ builder update=${snapshot.hasData}, con state=${snapshot.connectionState}');
           print('~~~~~~~~ builder chatDataStore.length=${chatDataStore.length}');
           if (snapshot.connectionState == ConnectionState.done) {
-            print('~~~~~~~~ builder connectionState.done');
+            print('------- builder connectionState.done needScrollToBottom=$needScrollToBottom');
             if (needScrollToBottom) {
-              markAsReadScheduler();
+              markAsReadJob.trigger();
               Future.delayed(const Duration(milliseconds: 300), () {
                 scrollToBottom();
-              });
-            }
-            if (scrollIndex >= 0) {
-              Future.delayed(const Duration(milliseconds: 300), () {
-                //itemScrollController.scrollTo(index: scrollIndex, duration: Duration(seconds: 1), curve: Curves.easeInOutCubic);
-                itemScrollController.jumpTo(index: scrollIndex, alignment: 0);
-                scrollIndex = -1;
               });
             }
             getMoreMessages = false;
             needScrollToBottom = false;
           }
           if (snapshot.hasData) {
-            return NotificationListener<ScrollEndNotification>(
-              onNotification: (notification) {
-                if (notification.metrics.atEdge) {
-                  print('*****listview Scrollend = ${notification.metrics.pixels}');
-                  if (!historyEnd && notification.metrics.pixels != notification.metrics.minScrollExtent) { // bottom
-                    print('!!! scrollview hit top');
-                    setState(() {
-                      getMoreMessages = true;
-                      chatItemOffset += chatItemCount;
-                    });
-                  }
-                }
-                return true;
-              },
-              child: Container(color: Colors.blue.shade100,
-                child: ScrollablePositionedList.builder(
-                //child: ListView.builder(
-                itemScrollController: itemScrollController,
-                reverse: true,
-                itemCount: chatDataStore.length,
-                //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                itemBuilder: (context, index) {
-                    Message message = chatDataStore.getMessageAt(index);
-                    // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-                    // messageId: messageId, me: widget.me, authRC: widget.authRC, );
-                    return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-                    message: message, me: widget.me, authRC: widget.authRC, index: index,);
-                  },
-                ),
-            ));
-          } else
+            return buildChatList();
+          } else {
+            print('***** builder has no data');
             return SizedBox();
+          }
         }
       )
     ));
+  }
+
+  Widget buildChatList() {
+    if (scrollIndex >= 0) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        //itemScrollController.scrollTo(index: scrollIndex, duration: Duration(seconds: 1), curve: Curves.easeInOutCubic);
+        print('---------->>> jumpto = $scrollIndex');
+        itemScrollController.jumpTo(index: scrollIndex, alignment: 0);
+        scrollIndex = -1;
+      });
+    }
+
+    return NotificationListener<ScrollEndNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.atEdge) {
+            print('*****listview Scrollend = ${notification.metrics.pixels}');
+            if (!historyEnd && notification.metrics.pixels != notification.metrics.minScrollExtent) { // bottom
+              print('!!! scrollview hit top');
+              setState(() {
+                getMoreMessages = true;
+                chatItemOffset += chatItemCount;
+              });
+            }
+          }
+          return true;
+        },
+        child: Container(color: Colors.blue.shade100,
+          child:ScrollablePositionedList.builder(
+          //child: ListView.builder(
+            itemScrollController: itemScrollController,
+            reverse: true,
+            itemCount: chatDataStore.length,
+            //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            itemBuilder: (context, index) {
+              Message message = chatDataStore.getMessageAt(index);
+              // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+              // messageId: messageId, me: widget.me, authRC: widget.authRC, );
+              return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+                message: message, me: widget.me, authRC: widget.authRC, index: index,);
+            },
+          ),
+        ));
   }
 
   final ItemScrollController itemScrollController = ItemScrollController();
@@ -421,12 +455,18 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       return;
     print('@@@ selected message=$messageId');
     int index  = -1;
+    int count = 0;
     do {
       index = chatDataStore.findIndexByMessageId(messageId);
       print('@@@ selected message=$messageId, index=$index');
       chatItemOffset += chatItemCount;
-      await _getChannelMessages(chatItemCount, chatItemOffset, true);
-    } while(index < 0);
+      await _getChannelMessages(chatItemCount, chatItemOffset, true, syncMessages: false);
+      count++;
+      await Future.delayed(Duration(seconds: 1), () {});
+    } while(index < 0 && count < 100);
+    if (count >= 100) {
+      print('!!!!!!!!!!!!!!! not found for 100 pages');
+    }
     setState(() {
       needScrollToBottom = false;
       scrollIndex = index;
@@ -566,8 +606,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
   }
 
   static int historyCallCount = 0;
-  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _getMoreMessages) async {
-    print('!!!!!! get room history bUpdateAll=$_getMoreMessages');
+  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _getMoreMessages, { bool syncMessages = true }) async {
+    print('!!!!!! get room history _getMoreMessages=$_getMoreMessages');
     historyEnd = false;
     if (_getMoreMessages) {
       historyCallCount++;
@@ -577,7 +617,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
       DateTime updateSince;
       if (lastUpdate != null)
         updateSince = DateTime.tryParse(lastUpdate.value);
-      if (updateSince != null) {
+      if (updateSince == null)
+        _getMoreMessages = true;
+      if (updateSince != null && syncMessages) {
         SyncMessages syncMessages = await getChannelService().syncMessages(widget.room.id, updateSince, widget.authRC);
         if (syncMessages.success) {
           for (Message m in syncMessages.result.updated) {
@@ -608,12 +650,17 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
         }
         for (Message m in channelMessages.messages) {
           var rm = messageToRoomMessage(m);
-          log('rm.info = ${rm.info}');
+          //log('rm.info = ${rm.info}');
           locator<db.ChatDatabase>().upsertRoomMessage(rm);
         }
+      }
+      if (fetchFromNetwork) {
         roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
         print('roomMessages.length after network fetch = ${roomMessages.length}');
       }
+      if (roomMessages.length < count)
+        historyEnd = true;
+
       await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoomMessage + widget.room.id, value: DateTime.now().toIso8601String()));
       if (historyEnd)
         await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd + widget.room.id, value: 'yes'));
@@ -633,7 +680,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 
   scrollToBottom() {
     print('@@@@*** scroll to bottom called');
-    itemScrollController.jumpTo(index: 0);
+    if (itemScrollController != null)
+      itemScrollController.jumpTo(index: 0);
 /*
     if (_scrollController.hasClients) {
       print('scroll to bottom!!!');
@@ -646,27 +694,33 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver {
 */
   }
 
-  Queue<String> taskQ = Queue<String>();
-  markAsReadScheduler() {
-    if (taskQ.isNotEmpty)
-      return;
-    taskQ.add('job');
-    Future.delayed(const Duration(milliseconds: 3000), () async {
-      if (taskQ.isNotEmpty) {
-        await markAsRead();
-        taskQ.removeFirst();
-      }
-    });
-  }
-
   Future<void> markAsRead() async {
     await getChannelService().markAsRead(widget.room.id, widget.authRC);
     debugPrint("----------- mark channel(${widget.room.id}) as read");
   }
 }
 
+class RepeatedJobWaiter {
+  Future Function() callBack;
+  int waitingTime;
+  RepeatedJobWaiter(this.callBack, {this.waitingTime = 2000});
+
+  Queue<String> taskQ = Queue<String>();
+  trigger() {
+    if (taskQ.isNotEmpty)
+      return;
+    print('^^^^^^^^^^^^Job Schedule call= $callBack');
+    callBack();
+    taskQ.add('job');
+    Future.delayed(Duration(milliseconds: waitingTime), () async {
+      taskQ.clear();
+    });
+  }
+}
+
 class UserTyping extends StatefulWidget {
-  UserTyping({Key key}) : super(key: key);
+  final AnimationController hideFabAnimation;
+  UserTyping({Key key, @required this.hideFabAnimation}) : super(key: key);
 
   @override
   _UserTypingState createState() => _UserTypingState();
@@ -709,25 +763,17 @@ class _UserTypingState extends State<UserTyping> {
 
   @override
   Widget build(BuildContext context) {
-    return typing != '' ?
-        AnimatedContainer(
-          alignment: Alignment.center,
-          margin: EdgeInsets.only(bottom: 5),
-          curve: Curves.fastOutSlowIn,
-          duration: Duration(seconds: 1),
-          padding: EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: _color,
-            border: Border.all(color: Colors.blueAccent, width: 0),
-            borderRadius: BorderRadius.all(
-                Radius.circular(2.0) //                 <--- border radius here
-            ),
-          ),
-          width: _width,
-          child:Text('$typing typing...', style: TextStyle(fontSize: 10),)
-        )
-        : SizedBox();
+    String avatarPath = '/avatar/$typing';
+    String url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
+    if (typing == '') {
+      widget.hideFabAnimation.reverse();
+      return SizedBox();
+    } else {
+      widget.hideFabAnimation.forward();
+      return CircleAvatar(radius: 20, backgroundImage: NetworkImage(url));
+    }
   }
+
 }
 
 

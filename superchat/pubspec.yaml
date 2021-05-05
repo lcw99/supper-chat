@@ -54,6 +54,7 @@ dependencies:
   flutter_cache_manager: ^3.0.1
   flutter_native_splash: ^1.1.8+4
   package_info: ^2.0.0
+  logger: ^1.0.0
   emoji_picker_flutter:
     path: ../emoji_picker_flutter
   ss_image_editor:

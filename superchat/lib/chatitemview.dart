@@ -307,7 +307,7 @@ class ChatItemViewState extends State<ChatItemView> {
       case 'message_pinned': newMessage = '$userName pinned message'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
     }
-    var messageFontSize = MESSAGE_FONT_SIZE;
+    var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
     if (message.t != null)
       messageFontSize = MESSAGE_FONT_SIZE * 0.6;
     var messageBackgroundColor = Colors.white;
@@ -347,7 +347,12 @@ class ChatItemViewState extends State<ChatItemView> {
   Widget buildUrls(Message message) {
     UrlInMessage urlInMessage = message.urls.first;
     return GestureDetector(
-        onTap: () async { await canLaunch(urlInMessage.url) ? launch(urlInMessage.url) : print('url launch failed${urlInMessage.url}'); },
+        onTap: () async {
+          if (widget.onTapExit)
+            Navigator.pop(context, message.id);
+          else
+            await canLaunch(urlInMessage.url) ? launch(urlInMessage.url) : print('url launch failed${urlInMessage.url}');
+        },
         child: Container(
             width: MediaQuery.of(context).size.width * 0.7,
             child: urlInMessage.meta != null && urlInMessage.meta['ogImage'] != null
@@ -491,7 +496,15 @@ class ChatItemViewState extends State<ChatItemView> {
       sendReaction(message, emoji, true);
   }
 
-  Future<void> messagePopupMenu(context, Offset tabPosition, Message message, {String downloadLink}) async {
+  Future<void> messagePopupMenu(context, Offset tabPosition, Message message) async {
+    String imagePath;
+    String downloadPath;
+    if (message.attachments != null && message.attachments.length > 0) {
+      var att = message.attachments.first;
+      imagePath = att.imageUrl;
+      if (att.titleLinkDownload)
+        downloadPath = message.attachments.first.titleLink;
+    }
     List<PopupMenuEntry<String>> items = [];
     items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
     if (_messageStarred(message))
@@ -499,7 +512,7 @@ class ChatItemViewState extends State<ChatItemView> {
     else
       items.add(PopupMenuItem(child: Text('Star...'), value: 'star'));
     items.add(PopupMenuItem(child: Text('Reaction...'), value: 'reaction'));
-    if (downloadLink != null)
+    if (downloadPath != null)
       items.add(PopupMenuItem(child: Text('Download...'), value: 'download'));
     if (message.user.id == widget.me.id) {
       items.add(PopupMenuItem(child: Text('Delete...'), value: 'delete'));
@@ -524,15 +537,15 @@ class ChatItemViewState extends State<ChatItemView> {
     } else if (value == 'edit') {
       handleUpdateMessage(message);
     } else if (value == 'download') {
-      downloadByUrlLaunch(downloadLink);
+      downloadByUrlLaunch(downloadPath);
     } else if (value == 'share') {
-      if (downloadLink != null) {
+      if (imagePath != null) {
         Map<String, String> header = {
           'X-Auth-Token': widget.authRC.data.authToken,
           'X-User-Id': widget.authRC.data.userId
         };
         DefaultCacheManager manager = new DefaultCacheManager();
-        File f = await manager.getSingleFile(serverUri.replace(path: downloadLink).toString(), headers: header);
+        File f = await manager.getSingleFile(serverUri.replace(path: imagePath).toString(), headers: header);
         Share.shareFiles([f.path]);
       } else {
         String share = message.msg;
