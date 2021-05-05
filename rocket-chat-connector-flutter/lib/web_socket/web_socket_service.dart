@@ -128,6 +128,16 @@ class WebSocketService {
     webSocketChannel.sink.add(jsonEncode(msg));
   }
 
+  void sendUserTyping(WebSocketChannel webSocketChannel, String roomId, String userName, bool typing) {
+    Map msg = {
+      "msg": "method",
+      "method": "stream-notify-room",
+      "id": "42",
+      "params": ["$roomId/typing", "$userName", typing]
+    };
+    webSocketChannel.sink.add(jsonEncode(msg));
+  }
+
   void subscribeStreamNotifyRoom(WebSocketChannel webSocketChannel, String rid) {
     subscribeStreamNotifyRoomEvent(webSocketChannel, rid, 'typing');
     subscribeStreamNotifyRoomEvent(webSocketChannel, rid, 'deleteMessage');

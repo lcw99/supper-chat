@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:logger/logger.dart';
+import 'package:oktoast/oktoast.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
@@ -21,6 +23,7 @@ import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:rocket_chat_connector_flutter/web_socket/web_socket_service.dart';
+import 'package:ss_image_editor/common/data/tu_chong_source.dart';
 import 'package:superchat/chatitemview.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -71,6 +74,8 @@ unsubscribeRoomEvent(String roomId) {
   }
 }
 
+AppLifecycleState appState = AppLifecycleState.resumed;
+
 class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   int selectedPage = 0;
   int totalUnread = 0;
@@ -88,11 +93,15 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   List<SharedMediaFile> _sharedFiles;
   String _sharedText;
 
-  AppLifecycleState appState = AppLifecycleState.resumed;
+  bool forceSocketDisconnected = false;
+
+  static int socketConnectionRetryCount = 0;
+
+  bool isWebSocketClosed() => webSocketClosed;
 
   void connectSocket() {
     print('_+_+_+_+_+_ reconnecting web socket');
-    connectWebSocket();
+    connectAndHandleWebSocket();
     webSocketService.sendUserPresence(webSocketChannel, "online");
     if (bChatScreenOpen && selectedRoom != null)
       subscribeRoomEvent(selectedRoom.id);
@@ -100,6 +109,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   void closeSocket() {
     print('_+_+_+_+_+_ disconnecting web socket');
+    socketConnectionRetryCount = 0;
+    forceSocketDisconnected = true;
     webSocketService.sendUserPresence(webSocketChannel, "offline");
     if (bChatScreenOpen && selectedRoom != null)
       unsubscribeRoomEvent(selectedRoom.id);
@@ -119,19 +130,19 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
   }
 
-  connectWebSocket() {
+  connectAndHandleWebSocket() {
     webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
     webSocketService.subscribeNotifyUser(webSocketChannel, widget.user);
     webSocketService.subscribeStreamNotifyLogged(webSocketChannel);
     webSocketChannel.stream.listen((event) async {
+      socketConnectionRetryCount = 0;
       var e = jsonDecode(event);
       print('event=${event}');
       rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
       print('collection=${notification.collection}');
       String data = jsonEncode(notification.toMap());
       if (notification.msg == 'ping') {
-        if (appState == AppLifecycleState.resumed)
-          webSocketService.streamChannelMessagesPong(webSocketChannel);
+        webSocketService.streamChannelMessagesPong(webSocketChannel);
       } else {
         if (notification.msg == 'updated') {
         } else if (notification.msg == 'result') {
@@ -160,7 +171,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               }
             } else if (eventName.endsWith('rooms-changed')) {
               print('!!!!! rooms-changed');
-              setState(() {});
+              if (this.mounted)
+                setState(() {});
             } else if (eventName.endsWith('subscriptions-changed')) {
               print('!!!!! subscriptions-changed');
               if (notification.notificationFields.notificationArgs[0] == 'updated') {
@@ -168,7 +180,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 String info = jsonEncode(sub.toMap());
                 await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: sub.id, info: info));
                 bDBUpdated = true;
-                setState(() {});
+                if (this.mounted)
+                  setState(() {});
               }
             } else {
               print('**************** unknown eventName=$eventName');
@@ -178,30 +191,37 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       }
     },
     onError: (Object error) {
-      print('!#!#!#!#!#!#!# Socket onError!!!!!');
+      Logger().e('!#!#!#!#!#!#!# Socket onError!!!!!', error);
     },
     onDone: () {
       print('!#!#!#!#!#!#!# Socket onDone!!!!!');
       webSocketClosed = true;
-      if (appState != AppLifecycleState.paused && appState != AppLifecycleState.detached)
-        Future.delayed(Duration(seconds: 3), () { connectSocket(); });
-      else {
-        // dead on foreground. show alert.
-        showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                  title: Text('Network Error'),
-                  insetPadding: EdgeInsets.all(5),
-                  contentPadding: EdgeInsets.all(5),
-                  content: Container(height: MediaQuery.of(context).size.height * .7, width: MediaQuery.of(context).size.width, child:
-                    Text('!!!!'),
-                  )
-              );
-            }
-        );
+      if (!forceSocketDisconnected) {
+        Logger().e('!#!#!#!#!#!#!# huh... network dead appState=$appState, socketConnectionRetryCount=$socketConnectionRetryCount');
+        if (this.mounted) {
+          try {
+            showToast('!#!#!#!#!#!#!# huh... network dead appState=$appState');
+          } catch (e) {
+          }
+        }
+        retryToConnectWebSocket();
       }
+      forceSocketDisconnected = false;
     }, cancelOnError: false);
+  }
+
+  retryToConnectWebSocket() {
+    print('!#!#!#!#!#!#!# retry web socket.');
+    Future.delayed(Duration(seconds: 10), () {
+      socketConnectionRetryCount++;
+      if (socketConnectionRetryCount < 3)
+        connectSocket();
+      else {
+        print('socket reconnect try=$socketConnectionRetryCount, now giving up...');
+        socketConnectionRetryCount = 0;
+        // todo: need to show dialog??
+      }
+    });
   }
 
   handleSharedData() {
@@ -252,7 +272,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     handleSharedData();
 
     notificationStream = notificationController.stream;
-    connectWebSocket();
+    connectAndHandleWebSocket();
 
     print('**** payload= ${widget.payload}');
     if (widget.payload != null) {
@@ -439,6 +459,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         builder: (context) => ChatView(key: chatViewStateKey, chatHomeState: this, authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj)),
     );
     bChatScreenOpen = false;
+/*
+    if (result != null) {
+      print('!!!!! auto navigate to room = $result');
+      Future.delayed(Duration(seconds: 1), () { setChannelById(result); });
+    }
+*/
     if (refresh)
       setState(() {});
   }
