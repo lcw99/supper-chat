@@ -57,18 +57,18 @@ class ChatHome extends StatefulWidget {
   ChatHomeState createState() => ChatHomeState();
 }
 
-WebSocketChannel webSocketChannel;
-WebSocketService webSocketService = WebSocketService();
+//WebSocketChannel webSocketChannel;
+WebSocketService webSocketService;
 
 subscribeRoomEvent(String roomId) {
-  webSocketService.subscribeRoomMessages(webSocketChannel, roomId);
-  webSocketService.subscribeStreamNotifyRoom(webSocketChannel, roomId);
+  webSocketService.subscribeRoomMessages(roomId);
+  webSocketService.subscribeStreamNotifyRoom(roomId);
 }
 
 unsubscribeRoomEvent(String roomId) {
   try {
-    webSocketService.unsubscribeRoomMessages(webSocketChannel, roomId);
-    webSocketService.unsubscribeStreamNotifyRoom(webSocketChannel, roomId);
+    webSocketService.unsubscribeRoomMessages(roomId);
+    webSocketService.unsubscribeStreamNotifyRoom(roomId);
   } catch (ex) {
     print(ex.toString());
   }
@@ -99,22 +99,25 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   bool isWebSocketClosed() => webSocketClosed;
 
-  void connectSocket() {
+  void subscribeAndConnect() {
     print('_+_+_+_+_+_ reconnecting web socket');
-    connectAndHandleWebSocket();
-    webSocketService.sendUserPresence(webSocketChannel, "online");
+    webSocketService.connect();
+    handleWebSocket();
+    webSocketService.subscribeNotifyUser(widget.user);
+    webSocketService.subscribeStreamNotifyLogged();
+    webSocketService.sendUserPresence("online");
     if (bChatScreenOpen && selectedRoom != null)
       subscribeRoomEvent(selectedRoom.id);
   }
 
-  void closeSocket() {
+  void unsubscribeAndClose() {
     print('_+_+_+_+_+_ disconnecting web socket');
     socketConnectionRetryCount = 0;
     forceSocketDisconnected = true;
-    webSocketService.sendUserPresence(webSocketChannel, "offline");
+    webSocketService.sendUserPresence("offline");
     if (bChatScreenOpen && selectedRoom != null)
       unsubscribeRoomEvent(selectedRoom.id);
-    webSocketChannel.sink.close();
+    webSocketService.close();
   }
 
   @override
@@ -122,19 +125,17 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     print('+++++====ChatHome state=$state');
     appState = state;
     if (state == AppLifecycleState.resumed) {
-      connectSocket();
+      subscribeAndConnect();
     } else {
       if (state == AppLifecycleState.paused) {
-        closeSocket();
+        unsubscribeAndClose();
       }
     }
   }
 
-  connectAndHandleWebSocket() {
-    webSocketChannel = webSocketService.connectToWebSocket(webSocketUrl, widget.authRC);
-    webSocketService.subscribeNotifyUser(webSocketChannel, widget.user);
-    webSocketService.subscribeStreamNotifyLogged(webSocketChannel);
-    webSocketChannel.stream.listen((event) async {
+  StreamSubscription subscription;
+  handleWebSocket() {
+    subscription = webSocketService.getStreamController().listen((event) async {
       socketConnectionRetryCount = 0;
       var e = jsonDecode(event);
       print('event=${event}');
@@ -142,7 +143,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       print('collection=${notification.collection}');
       String data = jsonEncode(notification.toMap());
       if (notification.msg == 'ping') {
-        webSocketService.streamChannelMessagesPong(webSocketChannel);
+        webSocketService.streamChannelMessagesPong();
       } else {
         if (notification.msg == 'updated') {
         } else if (notification.msg == 'result') {
@@ -194,17 +195,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       Logger().e('!#!#!#!#!#!#!# Socket onError!!!!!', error);
     },
     onDone: () {
-      print('!#!#!#!#!#!#!# Socket onDone!!!!!');
+      subscription.cancel();
+      print('!#!#!#!#!#!#!# Socket onDone!!!!! = ${webSocketService.webSocketChannel.closeCode}, appState=$appState');
       webSocketClosed = true;
-      if (!forceSocketDisconnected) {
+      if (appState == AppLifecycleState.resumed) {
         Logger().e('!#!#!#!#!#!#!# huh... network dead appState=$appState, socketConnectionRetryCount=$socketConnectionRetryCount');
-        if (this.mounted) {
-          try {
-            showToast('!#!#!#!#!#!#!# huh... network dead appState=$appState');
-          } catch (e) {
-          }
-        }
-        retryToConnectWebSocket();
+        Future.delayed(Duration.zero, () { showAlertDialog(); });
       }
       forceSocketDisconnected = false;
     }, cancelOnError: false);
@@ -212,16 +208,37 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   retryToConnectWebSocket() {
     print('!#!#!#!#!#!#!# retry web socket.');
-    Future.delayed(Duration(seconds: 10), () {
+    Future.delayed(Duration.zero, () {
       socketConnectionRetryCount++;
       if (socketConnectionRetryCount < 3)
-        connectSocket();
+        subscribeAndConnect();
       else {
         print('socket reconnect try=$socketConnectionRetryCount, now giving up...');
         socketConnectionRetryCount = 0;
-        // todo: need to show dialog??
       }
     });
+  }
+
+  showAlertDialog() async {
+    await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+              title: Text('Network error'),
+              content: Text('Retry to connect?'),
+              actions: [
+                TextButton(
+                  child: Text("OK"),
+                  onPressed: () {
+                    retryToConnectWebSocket();
+                    Navigator.pop(context);
+                  },
+                ),
+              ]
+          );
+        }
+    );
+    socketConnectionRetryCount = 0;
   }
 
   handleSharedData() {
@@ -266,13 +283,15 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     bDBUpdated = false;
+    webSocketService = WebSocketService(url: webSocketUrl, authentication: widget.authRC);
+    webSocketService.connect();
+    handleWebSocket();
 
     WidgetsBinding.instance.addObserver(this);
 
     handleSharedData();
 
     notificationStream = notificationController.stream;
-    connectAndHandleWebSocket();
 
     print('**** payload= ${widget.payload}');
     if (widget.payload != null) {
@@ -569,9 +588,9 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    webSocketService.sendUserPresence(webSocketChannel, "offline");
+    webSocketService.sendUserPresence("offline");
     print('_+_+_+_+_+_dispose disconnecting web socket');
-    closeSocket();
+    unsubscribeAndClose();
     _intentDataStreamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -611,15 +630,15 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   deleteMessage(messageId) {
-    webSocketService.deleteMessage(webSocketChannel, messageId);
+    webSocketService.deleteMessage(messageId);
   }
 
   editMessage(Message message) {
-    webSocketService.updateMessage(webSocketChannel, message);
+    webSocketService.updateMessage(message);
   }
 
   createRoom(String roomName, List<String> users, bool private) {
-    webSocketService.createRoom(webSocketChannel, roomName, users, private);
+    webSocketService.createRoom(roomName, users, private);
   }
 
 }
@@ -631,3 +650,4 @@ class RoomSnapshotInfo {
 
   RoomSnapshotInfo(this.roomList, this.titleImagePath, this.titleText);
 }
+
