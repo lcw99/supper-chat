@@ -11,6 +11,7 @@ import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:logger/logger.dart';
 import 'package:package_info/package_info.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/new/user_new.dart';
@@ -100,7 +101,7 @@ Future<void> _onSelectNotification(String payload) async {
   print("onSelectNotification payload=$payload");
   notificationPayload = payload;
   if (!navGlobalKey.currentState.mounted)
-    navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
+    navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome(notificationPayloadLocal: payload,)), (route) => false);
   else {
     var json = jsonDecode(payload);
     String _rid = json['rid'];
@@ -133,8 +134,12 @@ _initNotification() async {
 
   final notificationAppLaunchDetails = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
   if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
-    notificationPayload = notificationAppLaunchDetails.payload;
-    print("=============== called from notification = $notificationPayload");
+    if (notificationPayload == null) {
+      notificationPayload = notificationAppLaunchDetails.payload;
+      print("=============== called from notification = $notificationPayload");
+    } else {
+      Logger().w('notificationPayload already setted = $notificationPayload');
+    }
   }
 }
 
@@ -176,13 +181,15 @@ class _EmptyState extends State<Empty> {
 
 
 class LoginHome extends StatefulWidget {
-  LoginHome({Key key, this.title}) : super(key: key);
-
+  final String notificationPayloadLocal;
   final String title;
+
+  LoginHome({Key key, this.title, this.notificationPayloadLocal}) : super(key: key);
 
   @override
   _LoginHomeState createState() {
-    print('_LoginHomeState createState payload=$notificationPayload');
+    Logger().i('_LoginHomeState createState payload=$notificationPayload, payloadlocal=$notificationPayloadLocal');
+    notificationPayload = notificationPayloadLocal;
     return _LoginHomeState();
   }
 }

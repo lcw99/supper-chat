@@ -44,8 +44,6 @@ final String webSocketUrl = "wss://chat.smallet.co/websocket";
 final GlobalKey<CreateRoomState> createRoomKey = GlobalKey();
 final GlobalKey<ChatViewState>chatViewStateKey = GlobalKey();
 
-bool webSocketClosed = false;
-
 class ChatHome extends StatefulWidget {
   ChatHome({Key key, @required this.title, @required this.user, @required this.authRC, this.payload}) : super(key: key);
   final String title;
@@ -97,17 +95,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   static int socketConnectionRetryCount = 0;
 
-  bool isWebSocketClosed() => webSocketClosed;
+  bool isWebSocketClosed() => webSocketService.socketClosed;
 
   void subscribeAndConnect() {
-    print('_+_+_+_+_+_ reconnecting web socket');
+    print('_+_+_+_+_+_ connecting web socket');
+    attachWebSocketHandler();
     webSocketService.connect();
-    handleWebSocket();
-    webSocketService.subscribeNotifyUser(widget.user);
-    webSocketService.subscribeStreamNotifyLogged();
-    webSocketService.sendUserPresence("online");
-    if (bChatScreenOpen && selectedRoom != null)
-      subscribeRoomEvent(selectedRoom.id);
   }
 
   void unsubscribeAndClose() {
@@ -126,20 +119,32 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     appState = state;
     if (state == AppLifecycleState.resumed) {
       subscribeAndConnect();
-    } else {
-      if (state == AppLifecycleState.paused) {
-        unsubscribeAndClose();
-      }
+    } else if (state == AppLifecycleState.paused) {
+      unsubscribeAndClose();
     }
   }
 
   StreamSubscription subscription;
-  handleWebSocket() {
-    subscription = webSocketService.getStreamController().listen((event) async {
+  attachWebSocketHandler() {
+    if (subscription != null)
+      return;
+    subscription = webSocketService.getStreamController().stream.listen((event) async {
       socketConnectionRetryCount = 0;
       var e = jsonDecode(event);
       print('event=${event}');
       rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
+      if (notification.msg == WebSocketService.connectedMessage){
+        webSocketService.subscribeNotifyUser(widget.user);
+        webSocketService.subscribeStreamNotifyLogged();
+        webSocketService.sendUserPresence("online");
+        if (bChatScreenOpen && selectedRoom != null)
+          subscribeRoomEvent(selectedRoom.id);
+        return;
+      }
+      if (notification.msg == WebSocketService.networkErrorMessage){
+        showAlertDialog();
+        return;
+      }
       print('collection=${notification.collection}');
       String data = jsonEncode(notification.toMap());
       if (notification.msg == 'ping') {
@@ -195,9 +200,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       Logger().e('!#!#!#!#!#!#!# Socket onError!!!!!', error);
     },
     onDone: () {
-      subscription.cancel();
       print('!#!#!#!#!#!#!# Socket onDone!!!!! = ${webSocketService.webSocketChannel.closeCode}, appState=$appState');
-      webSocketClosed = true;
       if (appState == AppLifecycleState.resumed) {
         Logger().e('!#!#!#!#!#!#!# huh... network dead appState=$appState, socketConnectionRetryCount=$socketConnectionRetryCount');
         Future.delayed(Duration.zero, () { showAlertDialog(); });
@@ -284,8 +287,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     super.initState();
     bDBUpdated = false;
     webSocketService = WebSocketService(url: webSocketUrl, authentication: widget.authRC);
-    webSocketService.connect();
-    handleWebSocket();
+    subscribeAndConnect();
 
     WidgetsBinding.instance.addObserver(this);
 

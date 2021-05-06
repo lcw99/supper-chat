@@ -1,25 +1,38 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:connectivity/connectivity.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 
 class WebSocketService {
   String? url;
   Authentication? authentication;
+  bool socketClosed = true;
 
-  static int callCount = 0;
-
+  int connectionCount = 0;
+  int errorCount = 0;
   static final WebSocketService _singleton = WebSocketService._internal();
-
   WebSocketChannel? webSocketChannel;
 
-  WebSocketService._internal();
+  static const connectedMessage = '--connected--';
+
+  static const networkErrorMessage = '--network-error--';
+
+  WebSocketService._internal() {
+    Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+      Logger().i('network changed = ${result.toString()}');
+    });
+  }
+
+  StreamController<String> streamController = new StreamController(sync: true);
 
   factory WebSocketService({String? url, Authentication? authentication}) {
     _singleton.url = url;
@@ -27,18 +40,54 @@ class WebSocketService {
     return _singleton;
   }
 
-  Stream getStreamController() => webSocketChannel!.stream;
-  
-  void connect() {
+  StreamController getStreamController() => streamController;
+
+  bool connect() {
+    if (!socketClosed) {
+      Logger().e("websocket connection alive, connection count=$connectionCount");
+      return false;
+    }
+    connectionCount++;
+    if (connectionCount > 1)
+      Logger().e("****** Websocket connection count=$connectionCount *****");
+    else
+      Logger().i("****** Websocket connection count=$connectionCount *****");
     webSocketChannel = WebSocketChannel.connect(Uri.parse(url!));
+    socketClosed = false;
     _sendConnectRequest();
     _sendLoginRequest(authentication!);
+    streamController.add(jsonEncode(rocket_notification.Notification(msg: connectedMessage).toMap()));
+    webSocketChannel!.stream.listen((event) {
+      socketClosed = false;
+      print('ws event = $event');
+      streamController.add(event);
+    }, onDone: () {
+      Logger().w("****** Websocket donDone connection count=$connectionCount *****");
+      socketClosed = true;
+      if (connectionCount > 0) {    // abnormal disconnection. retry to connect
+        Logger().w('retry to connect web socket');
+        Future.delayed(Duration(seconds: 3), () {
+          connectionCount = 0;
+          connect();
+        });
+      }
+    }, onError: (e) {
+      errorCount++;
+      if (errorCount > 3) {
+        errorCount = 0;
+        connectionCount = 0;
+        streamController.add(jsonEncode(rocket_notification.Notification(msg: networkErrorMessage).toMap()));
+      }
+      Logger().e("****** Websocket donError connection count=$connectionCount, error=$errorCount *****", e);
+    });
+    return true;
   }
 
   void close() {
+    connectionCount--;
+    Logger().i("****** Websocket connection count=$connectionCount *****");
     webSocketChannel!.sink.close(1010, 'by_me');
   }
-
 
   void _sendConnectRequest() {
     Map msg = {
@@ -99,10 +148,9 @@ class WebSocketService {
   }
 
   void subscribeNotifyUserEvent(User user, String event) {
-    callCount++;
     Map msg = {
       "msg": "sub",
-      "id": "stream-notify-user-$callCount",
+      "id": "stream-notify-user-$event",
       "name": "stream-notify-user",
       "params": ["${user.id}/$event", false]
     };
@@ -165,7 +213,6 @@ class WebSocketService {
   }
 
   void subscribeStreamNotifyRoomEvent(String rid, String event) {
-    callCount++;
     Map msg = {
       "msg": "sub",
       "id": "stream-notify-room-$rid-$event",
