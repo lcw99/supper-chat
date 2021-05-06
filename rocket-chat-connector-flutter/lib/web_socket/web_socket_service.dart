@@ -59,7 +59,7 @@ class WebSocketService {
     streamController.add(jsonEncode(rocket_notification.Notification(msg: connectedMessage).toMap()));
     webSocketChannel!.stream.listen((event) {
       socketClosed = false;
-      print('ws event = $event');
+      //print('ws event = $event');
       streamController.add(event);
     }, onDone: () {
       Logger().w("****** Websocket donDone connection count=$connectionCount *****");
@@ -270,6 +270,38 @@ class WebSocketService {
     };
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
+
+  void eraseRoom(String roomId) {
+    Map msg = {
+      "msg": "method",
+      "method": "eraseRoom",
+      "id": "92",
+      "params": ["$roomId"]
+    };
+    webSocketChannel!.sink.add(jsonEncode(msg));
+  }
+
+  void updateRoom(String roomId, {String? roomName, String? roomDescription, String? roomTopic, String? roomType}) {
+    if (roomName != null)
+      updateRoomParam(roomId, "roomName", roomName);
+    if (roomDescription != null)
+      updateRoomParam(roomId, "roomDescription", roomDescription);
+    if (roomTopic != null)
+      updateRoomParam(roomId, "roomTopic", roomTopic);
+    if (roomType != null)
+      updateRoomParam(roomId, "roomType", roomType);
+  }
+
+  void updateRoomParam(String roomId, String setting, String? value) {
+    Map msg = {
+      "msg": "method",
+      "method": "saveRoomSettings",
+      "id": "16",
+      "params": ["$roomId", "$setting", "$value"]
+    };
+    webSocketChannel!.sink.add(jsonEncode(msg));
+  }
+
 
 /*
 

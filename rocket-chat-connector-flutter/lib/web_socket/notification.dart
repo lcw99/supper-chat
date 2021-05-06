@@ -26,7 +26,7 @@ class Notification {
   String? id;
   NotificationFields? notificationFields;
   Error? error;
-  Room? result;
+  dynamic? result;
 
   factory Notification.fromMap(Map<String, dynamic> json) => Notification(
     msg: json["msg"] == null ? null : json["msg"],
@@ -34,7 +34,7 @@ class Notification {
     id: json["id"] == null ? null : json["id"],
     notificationFields: json["fields"] == null ? null : NotificationFields.fromMap(json["fields"]),
     error: json["error"] == null ? null : Error.fromMap(json["error"]),
-    result: json["result"] == null ? null : Room.fromMap(json["result"]),
+    result: json["result"] == null ? null : json["result"] is int ? json["result"] : Room.fromMap(json["result"]),
   );
 
   Map<String, dynamic> toMap() => {
@@ -43,7 +43,7 @@ class Notification {
     "id": id == null ? null : id,
     "fields": notificationFields == null ? null : notificationFields!.toMap(),
     "error": error == null ? null : error!.toMap(),
-    "result": result == null ? null : result!.toMap(),
+    "result": result == null ? null : result is int ? result : result!.toMap(),
   };
 }
 
