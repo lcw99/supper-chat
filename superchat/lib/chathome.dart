@@ -37,11 +37,11 @@ import 'wigets/unread_counter.dart';
 import 'chatview.dart';
 import 'database/chatdb.dart' as db;
 import 'main.dart';
-import 'create_room.dart';
+import 'update_room.dart';
 
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
 
-final GlobalKey<CreateRoomState> createRoomKey = GlobalKey();
+final GlobalKey<UpdateRoomState> updateRoomKey = GlobalKey();
 final GlobalKey<ChatViewState>chatViewStateKey = GlobalKey();
 
 class ChatHome extends StatefulWidget {
@@ -144,14 +144,9 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       } else {
         if (event.msg == 'updated') {
         } else if (event.msg == 'result') {
-          if (event.id == '85' || event.id == '89') {  // 85: createChannel, 89: createPrivateGroup
-            if (event.error != null) {
-              if (createRoomKey.currentState.mounted)
-                createRoomKey.currentState.onError(event.error.reason);
-            }
-            if (event.result != null) {
-              createRoomKey.currentState.onOk(event.result.name);
-            }
+          if (event.id == '85' || event.id == '89' || event.id == '16') {  // 85: createChannel, 89: createPrivateGroup, 16: update room
+            if (updateRoomKey.currentState.mounted)
+              updateRoomKey.currentState.onEvent(event);
           }
         } else if (event.msg == 'changed') {
           notificationController.add(event);
@@ -310,7 +305,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               title: Text('Create Room'),
               onTap: () async {
                 Navigator.pop(context);
-                await Navigator.push(context, MaterialPageRoute(builder: (context) => CreateRoom(key: createRoomKey, chatHomeState: this, user: widget.user)));
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => UpdateRoom(key: updateRoomKey, chatHomeState: this, user: widget.user)));
               },
             ),
           ],
@@ -620,8 +615,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.createRoom(roomName, users, private);
   }
 
-  updateRoom(String roomId, {String roomDescription, String roomTopic, String roomType}) {
-    webSocketService.updateRoom(roomId, roomDescription: roomDescription, roomTopic: roomTopic, roomType: roomType);
+  updateRoom(String roomId, {String roomName, String roomDescription, String roomTopic, String roomType}) {
+    webSocketService.updateRoom(roomId, roomName: roomName, roomDescription: roomDescription, roomTopic: roomTopic, roomType: roomType);
   }
 
   deleteRoom(String roomId) {

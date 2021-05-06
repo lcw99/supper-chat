@@ -35,6 +35,7 @@ import 'package:superchat/database/chatdb.dart';
 import 'package:superchat/main.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
+import 'update_room.dart';
 import 'image_file_desc.dart';
 import 'constants/constants.dart';
 
@@ -314,11 +315,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             onSelected: (value) {
               if (value == 'delete_room')
                 deleteRoom();
+              else if (value == 'update_room')
+                updateRoom();
               else if (value == 'pin_message') {}
             },
             itemBuilder: (context){
               return [
                 PopupMenuItem(child: Text("Pin Message..."), value: 'pin_message',),
+                PopupMenuItem(child: Text("Edit Room..."), value: 'update_room',),
                 PopupMenuItem(child: Text("Delete Room..."), value: 'delete_room',),
               ];
               }),
@@ -709,7 +713,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     debugPrint("----------- mark channel(${widget.room.id}) as read");
   }
 
-  deleteRoom() async {
+  void deleteRoom() async {
     var result = await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -736,6 +740,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     );
     if (result == 'OK')
       Navigator.pop(context);
+  }
+
+  void updateRoom() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) =>
+        UpdateRoom(key: updateRoomKey, chatHomeState: widget.chatHomeState, user: widget.me, room: widget.room,)));
   }
 }
 
