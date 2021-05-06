@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
+import 'package:toggle_switch/toggle_switch.dart';
 
 import 'chathome.dart';
 
@@ -13,9 +14,16 @@ class CreateRoom extends StatefulWidget {
 }
 
 class CreateRoomState extends State<CreateRoom> {
-  TextEditingController _teController = TextEditingController();
+  TextEditingController _tecRoomName = TextEditingController();
+  TextEditingController _tecRoomDescription = TextEditingController();
+  TextEditingController _tecRoomTopic = TextEditingController();
   String errorText;
   String hintText = 'Room_Name';
+  String helperText = 'alphanumeric, no space';
+  bool roomCreated = false;
+
+  bool isPrivate = true;
+  String buttonText = "Create Room";
 
   @override
   Widget build(BuildContext context) {
@@ -23,31 +31,78 @@ class CreateRoomState extends State<CreateRoom> {
       appBar: AppBar(
         title: Text('Create Room'),
       ),
-      body: Container(
+      body: SingleChildScrollView(child: Container(
       padding: EdgeInsets.all(30),
-      child: Column(children: [
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         TextFormField(
           autofocus: true,
-          controller: _teController,
+          readOnly: roomCreated,
+          controller: _tecRoomName,
           keyboardType: TextInputType.text,
           maxLines: 1,
           decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),
-              helperText: 'alphanumeric, no space', hintText: hintText, errorText: errorText),
+              helperText: helperText, hintText: hintText, errorText: errorText),
         ),
-        InkWell(
-          onTap: () {
-            if (_teController.text == '')
+        SizedBox(height: 15,),
+        ToggleSwitch(
+          minWidth: 110.0,
+          minHeight: 35,
+          cornerRadius: 8.0,
+          activeBgColor: Colors.cyan,
+          activeFgColor: Colors.white,
+          inactiveBgColor: Colors.grey,
+          inactiveFgColor: Colors.white,
+          labels: ['Private', 'Public'],
+          fontSize: 12,
+          icons: [Icons.lock, Icons.public],
+          onToggle: (index) {
+            if (index == 0)
+              isPrivate = true;
+            else
+              isPrivate = false;
+          },
+        ),
+        roomCreated ? Column(
+          children: [
+          SizedBox(height: 10,),
+          TextFormField(
+            autofocus: true,
+            controller: _tecRoomDescription,
+            keyboardType: TextInputType.text,
+            maxLines: 3,
+            decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),
+                helperText: 'Room description', ),
+          ),
+          SizedBox(height: 10,),
+          TextFormField(
+            autofocus: true,
+            controller: _tecRoomTopic,
+            keyboardType: TextInputType.text,
+            maxLines: 3,
+            decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),
+                helperText: 'Room topic'),
+          ),
+        ]) : SizedBox(),
+        TextButton(
+          onPressed: () {
+            if (_tecRoomName.text.isEmpty)
               return;
-            widget.chatHomeState.createRoom(_teController.text, [widget.user.username], true);
+            if (buttonText == 'Create Room')
+              widget.chatHomeState.createRoom(_tecRoomName.text, [widget.user.username], isPrivate);
+            else if (buttonText == 'Update Room')
+              {}
             //Navigator.pop(context);
           },
           child: Container(
-            padding: EdgeInsets.all(12.0),
-            child: Text('Update'),
+            padding: EdgeInsets.zero,
+            child: Text(buttonText),
           ),
         ),
       ])
-    ));
+    )));
   }
 
   onError(String errorMessage) {
@@ -58,13 +113,16 @@ class CreateRoomState extends State<CreateRoom> {
 
   void onOk(String roomName) {
     setState(() {
-      errorText = '$roomName created';
+      roomCreated = true;
+      errorText = null;
+      helperText = '$roomName created';
+      buttonText = 'Update Room';
     });
   }
 
   @override
   void dispose() {
-    _teController.dispose();
+    _tecRoomName.dispose();
     super.dispose();
   }
 

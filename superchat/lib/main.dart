@@ -189,7 +189,8 @@ class LoginHome extends StatefulWidget {
   @override
   _LoginHomeState createState() {
     Logger().i('_LoginHomeState createState payload=$notificationPayload, payloadlocal=$notificationPayloadLocal');
-    notificationPayload = notificationPayloadLocal;
+    if (notificationPayload == null)
+      notificationPayload = notificationPayloadLocal;
     return _LoginHomeState();
   }
 }

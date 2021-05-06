@@ -310,11 +310,18 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               _handleStarredMessage();
             },
           ),
-          IconButton(
-            icon: Transform.rotate(child: Icon(Icons.push_pin_outlined), angle: 45 * 3.14 / 180,),
-            onPressed: () async {
+          PopupMenuButton(
+            onSelected: (value) {
+              if (value == 'delete_room')
+                deleteRoom();
+              else if (value == 'pin_message') {}
             },
-          ),
+            itemBuilder: (context){
+              return [
+                PopupMenuItem(child: Text("Pin Message..."), value: 'pin_message',),
+                PopupMenuItem(child: Text("Delete Room..."), value: 'delete_room',),
+              ];
+              }),
         ],
       ),
       resizeToAvoidBottomInset: true,
@@ -700,6 +707,35 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Future<void> markAsRead() async {
     await getChannelService().markAsRead(widget.room.id, widget.authRC);
     debugPrint("----------- mark channel(${widget.room.id}) as read");
+  }
+
+  deleteRoom() async {
+    var result = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+            title: Text('Delete Room'),
+            content: Text('Are you sure?'),
+            actions: [
+              TextButton(
+                child: Text("Cancel"),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              TextButton(
+                child: Text("OK"),
+                onPressed: () {
+                  widget.chatHomeState.deleteRoom(widget.room.id);
+                  Navigator.pop(context, 'OK');
+                },
+              ),
+            ]
+        );
+      }
+    );
+    if (result == 'OK')
+      Navigator.pop(context);
   }
 }
 

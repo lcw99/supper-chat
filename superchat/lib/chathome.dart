@@ -85,15 +85,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   Stream<rocket_notification.Notification> notificationStream;
 
   static bool bChatScreenOpen = false;
-  bool bDBUpdated = false;
 
   StreamSubscription _intentDataStreamSubscription;
   List<SharedMediaFile> _sharedFiles;
   String _sharedText;
-
-  bool forceSocketDisconnected = false;
-
-  static int socketConnectionRetryCount = 0;
 
   bool isWebSocketClosed() => webSocketService.socketClosed;
 
@@ -105,8 +100,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   void unsubscribeAndClose() {
     print('_+_+_+_+_+_ disconnecting web socket');
-    socketConnectionRetryCount = 0;
-    forceSocketDisconnected = true;
     webSocketService.sendUserPresence("offline");
     if (bChatScreenOpen && selectedRoom != null)
       unsubscribeRoomEvent(selectedRoom.id);
@@ -128,12 +121,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   attachWebSocketHandler() {
     if (subscription != null)
       return;
-    subscription = webSocketService.getStreamController().stream.listen((event) async {
-      socketConnectionRetryCount = 0;
-      var e = jsonDecode(event);
-      print('event=${event}');
-      rocket_notification.Notification notification = rocket_notification.Notification.fromMap(e);
-      if (notification.msg == WebSocketService.connectedMessage){
+    subscription = webSocketService.getStreamController().stream.listen((e) async {
+      var json = jsonDecode(e);
+      print('event=$e');
+      rocket_notification.Notification event = rocket_notification.Notification.fromMap(json);
+      if (event.msg == WebSocketService.connectedMessage){
         webSocketService.subscribeNotifyUser(widget.user);
         webSocketService.subscribeStreamNotifyLogged();
         webSocketService.sendUserPresence("online");
@@ -141,34 +133,34 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           subscribeRoomEvent(selectedRoom.id);
         return;
       }
-      if (notification.msg == WebSocketService.networkErrorMessage){
+      if (event.msg == WebSocketService.networkErrorMessage){
         showAlertDialog();
         return;
       }
-      print('collection=${notification.collection}');
-      String data = jsonEncode(notification.toMap());
-      if (notification.msg == 'ping') {
+      print('collection=${event.collection}');
+      String data = jsonEncode(event.toMap());
+      if (event.msg == 'ping') {
         webSocketService.streamChannelMessagesPong();
       } else {
-        if (notification.msg == 'updated') {
-        } else if (notification.msg == 'result') {
-          if (notification.id == '85' || notification.id == '89') {  // 85: createChannel, 89: createPrivateGroup
-            if (notification.error != null) {
+        if (event.msg == 'updated') {
+        } else if (event.msg == 'result') {
+          if (event.id == '85' || event.id == '89') {  // 85: createChannel, 89: createPrivateGroup
+            if (event.error != null) {
               if (createRoomKey.currentState.mounted)
-                createRoomKey.currentState.onError(notification.error.reason);
+                createRoomKey.currentState.onError(event.error.reason);
             }
-            if (notification.result != null) {
-              createRoomKey.currentState.onOk(notification.result.name);
+            if (event.result != null) {
+              createRoomKey.currentState.onOk(event.result.name);
             }
           }
-        } else if (notification.msg == 'changed') {
-          notificationController.add(notification);
-          if (notification.collection == 'stream-notify-user' &&notification.notificationFields != null) {
-            String eventName = notification.notificationFields.eventName;
+        } else if (event.msg == 'changed') {
+          notificationController.add(event);
+          if (event.collection == 'stream-notify-user' &&event.notificationFields != null) {
+            String eventName = event.notificationFields.eventName;
             if (eventName.endsWith('notification')) {
-              if (notification.notificationFields.notificationArgs != null &&
-                  notification.notificationFields.notificationArgs.length > 0) {
-                var arg = notification.notificationFields.notificationArgs[0];
+              if (event.notificationFields.notificationArgs != null &&
+                  event.notificationFields.notificationArgs.length > 0) {
+                var arg = event.notificationFields.notificationArgs[0];
                 var payload = arg['payload'] != null ? jsonEncode(arg['payload']) : null;
                 if (payload != null && !(bChatScreenOpen && selectedRoom != null && selectedRoom.id == arg['payload']['rid'])) {
                   RemoteMessage message = RemoteMessage(data: {'title': arg['title'], 'message': arg['text'], 'ejson': payload});
@@ -181,11 +173,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 setState(() {});
             } else if (eventName.endsWith('subscriptions-changed')) {
               print('!!!!! subscriptions-changed');
-              if (notification.notificationFields.notificationArgs[0] == 'updated') {
-                model.Subscription sub = model.Subscription.fromMap(notification.notificationFields.notificationArgs[1]);
+              if (event.notificationFields.notificationArgs[0] == 'updated') {
+                model.Subscription sub = model.Subscription.fromMap(event.notificationFields.notificationArgs[1]);
                 String info = jsonEncode(sub.toMap());
                 await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: sub.id, info: info));
-                bDBUpdated = true;
+                if (this.mounted)
+                  setState(() {});
+              } else if (event.notificationFields.notificationArgs[0] == 'removed') {
                 if (this.mounted)
                   setState(() {});
               }
@@ -202,24 +196,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     onDone: () {
       print('!#!#!#!#!#!#!# Socket onDone!!!!! = ${webSocketService.webSocketChannel.closeCode}, appState=$appState');
       if (appState == AppLifecycleState.resumed) {
-        Logger().e('!#!#!#!#!#!#!# huh... network dead appState=$appState, socketConnectionRetryCount=$socketConnectionRetryCount');
+        Logger().e('!#!#!#!#!#!#!# huh... network dead appState=$appState');
         Future.delayed(Duration.zero, () { showAlertDialog(); });
       }
-      forceSocketDisconnected = false;
     }, cancelOnError: false);
-  }
-
-  retryToConnectWebSocket() {
-    print('!#!#!#!#!#!#!# retry web socket.');
-    Future.delayed(Duration.zero, () {
-      socketConnectionRetryCount++;
-      if (socketConnectionRetryCount < 3)
-        subscribeAndConnect();
-      else {
-        print('socket reconnect try=$socketConnectionRetryCount, now giving up...');
-        socketConnectionRetryCount = 0;
-      }
-    });
   }
 
   showAlertDialog() async {
@@ -233,7 +213,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 TextButton(
                   child: Text("OK"),
                   onPressed: () {
-                    retryToConnectWebSocket();
+                    subscribeAndConnect();
                     Navigator.pop(context);
                   },
                 ),
@@ -241,7 +221,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           );
         }
     );
-    socketConnectionRetryCount = 0;
   }
 
   handleSharedData() {
@@ -285,7 +264,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    bDBUpdated = false;
     webSocketService = WebSocketService(url: webSocketUrl, authentication: widget.authRC);
     subscribeAndConnect();
 
@@ -425,7 +403,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               onTap: () {
                 _setChannel(room);
               },
-              title: Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+              title: Row(children: [
+                room.t == 'p' ? Icon(Icons.lock, color: Colors.blueAccent, size: 17,) : Icon(Icons.public, color: Colors.blueAccent, size: 17),
+                SizedBox(width: 3,),
+                Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+              ]),
               subtitle: buildSubTitle(room),
               leading: Container(
                   width: 80,
@@ -526,7 +508,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         String info = jsonEncode(ms.toMap());
         await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: ms.id, info: info));
       }
-      bDBUpdated = true;
     }
 
     if (subsUpdate.remove.isNotEmpty) {
@@ -539,7 +520,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           await locator<db.ChatDatabase>().deleteRoom(sub.rid);
         }
       }
-      bDBUpdated = true;
     }
 
     if (updatedRoom.isNotEmpty) {
@@ -550,7 +530,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         String sid = subscription == null ? null : subscription.id;
         await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, sid: sid, info: info));
       }
-      bDBUpdated = true;
     }
 
     List<model.Room> removedRoom = roomUpdate.remove;
@@ -561,7 +540,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       for (model.Room mr in removedRoom) {
         await locator<db.ChatDatabase>().deleteRoom(mr.id);
       }
-      bDBUpdated = true;
     }
 
     await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoom, value: DateTime.now().toIso8601String()));
@@ -581,7 +559,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       if (roomType== null || (roomType != null && room.t == roomType))
         roomList.add(room);
     }
-    bDBUpdated = false;
     roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
     return RoomSnapshotInfo(roomList,
         imagePath != null ? imagePath : 'assets/images/nepal-2184940_1920.jpg',
@@ -641,6 +618,14 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   createRoom(String roomName, List<String> users, bool private) {
     webSocketService.createRoom(roomName, users, private);
+  }
+
+  updateRoom(String roomId, {String roomDescription, String roomTopic, String roomType}) {
+    webSocketService.updateRoom(roomId, roomDescription: roomDescription, roomTopic: roomTopic, roomType: roomType);
+  }
+
+  deleteRoom(String roomId) {
+    webSocketService.eraseRoom(roomId);
   }
 
 }
