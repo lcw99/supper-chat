@@ -35,6 +35,7 @@ import 'package:superchat/database/chatdb.dart';
 import 'package:superchat/main.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
+import 'room_info.dart';
 import 'update_room.dart';
 import 'image_file_desc.dart';
 import 'constants/constants.dart';
@@ -313,17 +314,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           ),
           PopupMenuButton(
             onSelected: (value) {
-              if (value == 'delete_room')
-                deleteRoom();
-              else if (value == 'update_room')
-                updateRoom();
+              if (value == 'room_info')
+                roomInformation();
               else if (value == 'pin_message') {}
             },
             itemBuilder: (context){
               return [
                 PopupMenuItem(child: Text("Pin Message..."), value: 'pin_message',),
-                PopupMenuItem(child: Text("Edit Room..."), value: 'update_room',),
-                PopupMenuItem(child: Text("Delete Room..."), value: 'delete_room',),
+                PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
               ];
               }),
         ],
@@ -713,39 +711,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     debugPrint("----------- mark channel(${widget.room.id}) as read");
   }
 
-  void deleteRoom() async {
-    var result = await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-            title: Text('Delete Room'),
-            content: Text('Are you sure?'),
-            actions: [
-              TextButton(
-                child: Text("Cancel"),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              ),
-              TextButton(
-                child: Text("OK"),
-                onPressed: () {
-                  widget.chatHomeState.deleteRoom(widget.room.id);
-                  Navigator.pop(context, 'OK');
-                },
-              ),
-            ]
-        );
-      }
-    );
-    if (result == 'OK')
-      Navigator.pop(context);
+  void roomInformation() {
+    Navigator.push(context, MaterialPageRoute(builder: (context) =>
+        RoomInfo(key: updateRoomKey, chatHomeState: widget.chatHomeState, user: widget.me, room: widget.room,)));
   }
 
-  void updateRoom() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) =>
-        UpdateRoom(key: updateRoomKey, chatHomeState: widget.chatHomeState, user: widget.me, room: widget.room,)));
-  }
 }
 
 class RepeatedJobWaiter {
