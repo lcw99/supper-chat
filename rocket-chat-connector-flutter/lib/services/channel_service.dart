@@ -20,6 +20,7 @@ import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart';
+import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 
 class ChannelService {
   HttpService _httpService;
@@ -119,6 +120,26 @@ class ChannelService {
         return ChannelMessages.fromMap(jsonDecode(resp));
       } else {
         return ChannelMessages();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<model.Room> getRoomInfo(String roomId, Authentication authentication) async {
+    String path = '/api/v1/rooms.info';
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      {'roomId': roomId},
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("chat.getRoomInfo resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty) {
+        return model.Room.fromMap(jsonDecode(resp)['room']);
+      } else {
+        return model.Room();
       }
     }
     throw RocketChatException(response.body);

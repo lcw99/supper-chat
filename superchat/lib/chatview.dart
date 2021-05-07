@@ -13,8 +13,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:oktoast/oktoast.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
@@ -77,7 +79,7 @@ class ChatDataStore {
     String info = jsonEncode(m.toMap());
     RoomMessage roomMessage = RoomMessage(rid: m.rid, mid: m.id, ts: m.ts, info: info);
     await locator<db.ChatDatabase>().upsertRoomMessage(roomMessage);
-    _chatData.insert(index, ChatItemData(GlobalKey(), m.id, info));
+    _chatData.insert(index, ChatItemData(GlobalKey(), m.id, info, m.ts));
   }
 
   removeAt(int index) async {
@@ -124,7 +126,7 @@ class ChatItemData {
   DateTime timeStamp;
   String messageId;
   String info;
-  ChatItemData(this.key, this.messageId, this.info);
+  ChatItemData(this.key, this.messageId, this.info, this.timeStamp);
 }
 
 class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerProviderStateMixin<ChatView>  {
@@ -146,8 +148,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   GlobalKey<ChatViewState> chatViewKey = GlobalKey();
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     print('+++++==== ChatView state=$state');
+    if (state == AppLifecycleState.resumed) {
+      await _getChannelMessages(chatItemCount, chatItemOffset, true, syncMessages: true);
+      setState(() {
+        getMoreMessages = false;  // do not call future build.
+      });
+    }
   }
 
   AnimationController _hideFabAnimation;
@@ -468,13 +476,24 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     print('@@@ selected message=$messageId');
     int index  = -1;
     int count = 0;
+
+    Fluttertoast.showToast(
+        msg: "Searching...",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+    );
+
     do {
       index = chatDataStore.findIndexByMessageId(messageId);
       print('@@@ selected message=$messageId, index=$index');
       chatItemOffset += chatItemCount;
       await _getChannelMessages(chatItemCount, chatItemOffset, true, syncMessages: false);
       count++;
-      await Future.delayed(Duration(seconds: 1), () {});
+      //await Future.delayed(Duration(seconds: 1), () {});
     } while(index < 0 && count < 100);
     if (count >= 100) {
       print('!!!!!!!!!!!!!!! not found for 100 pages');
@@ -483,6 +502,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       needScrollToBottom = false;
       scrollIndex = index;
     });
+    Future.delayed(Duration(seconds: 1), () { Fluttertoast.cancel(); } );
   }
 
   _buildStarredMessage() {
@@ -619,7 +639,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   static int historyCallCount = 0;
   Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _getMoreMessages, { bool syncMessages = true }) async {
-    print('!!!!!! get room history _getMoreMessages=$_getMoreMessages');
+    print('!!!!!! get room history _getMoreMessages=$_getMoreMessages, syncMessages=$syncMessages');
     historyEnd = false;
     if (_getMoreMessages) {
       historyCallCount++;
@@ -632,6 +652,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       if (updateSince == null)
         _getMoreMessages = true;
       if (updateSince != null && syncMessages) {
+        print('@@@ start syncMessages');
         SyncMessages syncMessages = await getChannelService().syncMessages(widget.room.id, updateSince, widget.authRC);
         if (syncMessages.success) {
           for (Message m in syncMessages.result.updated) {
@@ -648,14 +669,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       bool fetchFromNetwork = false;
       if (_getMoreMessages) {
         roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
-        print('roomMessages.length = ${roomMessages.length}');
+        print('read database offset=$offset, count=$count, roomMessages.length = ${roomMessages.length}');
         if (roomMessages.length < count)
           fetchFromNetwork = true;
       }
       if (fetchFromNetwork && dbHistoryReadEnd == null) {
         ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
         ChannelMessages channelMessages = await getChannelService().roomHistory(filter, widget.authRC, widget.room.t);
-        print('channelMessages.messages.length = ${channelMessages.messages.length}');
+        print('@@@ fetch from network, channelMessages.messages.length = ${channelMessages.messages.length}');
         if (channelMessages.messages.length < count) {
           print('!!!!!!!!!!!!history end!!!!!!!!!!!!!! roomMessages.length = ${channelMessages.messages.length}');
           historyEnd = true;
@@ -668,7 +689,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       }
       if (fetchFromNetwork) {
         roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
-        print('roomMessages.length after network fetch = ${roomMessages.length}');
+        print('@@@@ roomMessages.length after network fetch = ${roomMessages.length}');
       }
       if (roomMessages.length < count)
         historyEnd = true;
@@ -678,14 +699,16 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd + widget.room.id, value: 'yes'));
 
       for (var rm in roomMessages) {
-        if (!chatDataStore.containsMessage(rm.mid))
-          chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, rm.info));
+        if (!chatDataStore.containsMessage(rm.mid)) {
+          print('@@@@ add new message=${rm.info}');
+          chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, rm.info, rm.ts));
+        }
       }
-      //chatDataStore.sortMessagesByTimeStamp();
+      chatDataStore.sortMessagesByTimeStamp();
 
       return ChannelMessages(success: true);
     } else {
-      print('_getChannelMessages return2 _updateAll=$_getMoreMessages');
+      print('_getChannelMessages return2 _getMoreMessages=$_getMoreMessages');
       return ChannelMessages(success: true);
     }
   }
@@ -711,9 +734,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     debugPrint("----------- mark channel(${widget.room.id}) as read");
   }
 
-  void roomInformation() {
-    Navigator.push(context, MaterialPageRoute(builder: (context) =>
-        RoomInfo(key: updateRoomKey, chatHomeState: widget.chatHomeState, user: widget.me, room: widget.room,)));
+  Future<void> roomInformation() async {
+    var ret = await Navigator.push(context, MaterialPageRoute(builder: (context) =>
+        RoomInfo(key: updateRoomKey, chatHomeState: widget.chatHomeState, user: widget.me, roomId: widget.room.id,)));
+    if (ret == 'room deleted')
+        Navigator.pop(context);
   }
 
 }
@@ -748,9 +773,6 @@ class _UserTypingState extends State<UserTyping> {
   String typing = '';
   Timer t;
 
-  double _width = 200;
-  Color _color = Colors.white;
-
   @override
   void initState() {
     super.initState();
@@ -769,11 +791,6 @@ class _UserTypingState extends State<UserTyping> {
       t = Timer(Duration(seconds: 7), () {
         setState(() {
           typing = '';
-        });
-      });
-      Timer(Duration(seconds: 1), () {
-        setState(() {
-          _width = _width == 200 ? 150 : 200;
         });
       });
     }
