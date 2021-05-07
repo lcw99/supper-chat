@@ -32,7 +32,7 @@ class WebSocketService {
     });
   }
 
-  StreamController<String> streamController = new StreamController(sync: true);
+  StreamController<String> streamController = new StreamController();
 
   factory WebSocketService({String? url, Authentication? authentication}) {
     _singleton.url = url;
@@ -60,7 +60,11 @@ class WebSocketService {
     webSocketChannel!.stream.listen((event) {
       socketClosed = false;
       //print('ws event = $event');
-      streamController.add(event);
+      try {
+        streamController.add(event);
+      } catch (e) {
+        Logger().e('streamController.add error', e);
+      }
     }, onDone: () {
       Logger().w("****** Websocket donDone connection count=$connectionCount *****");
       socketClosed = true;
