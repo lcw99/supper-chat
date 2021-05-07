@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart';
@@ -39,6 +41,8 @@ class UpdateRoomState extends State<UpdateRoom> {
 
   bool editMode = false;
 
+  StreamSubscription streamSub;
+
   @override
   void initState() {
     editMode = widget.room != null;
@@ -51,6 +55,10 @@ class UpdateRoomState extends State<UpdateRoom> {
       _tecRoomTopic.text = widget.room.topic;
       isPrivate = widget.room.t == 'c' ? false : true;
     }
+
+    streamSub = resultMessageController.stream.listen((event) {
+      onEvent(event);
+    });
     super.initState();
   }
 
@@ -186,6 +194,7 @@ class UpdateRoomState extends State<UpdateRoom> {
 
   @override
   void dispose() {
+    streamSub.cancel();
     _tecRoomName.dispose();
     super.dispose();
   }
