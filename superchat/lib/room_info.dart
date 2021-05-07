@@ -1,13 +1,17 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:decorated_icon/decorated_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:image/image.dart' as image_util;
 import 'package:image_picker/image_picker.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:superchat/chathome.dart';
 import 'package:superchat/main.dart';
 import 'package:superchat/update_room.dart';
+import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rc;
 
 import 'constants/constants.dart';
 
@@ -24,6 +28,34 @@ class RoomInfo extends StatefulWidget {
 
 class _RoomInfoState extends State<RoomInfo> {
   PickedFile newAvatar;
+
+  @override
+  void initState() {
+    resultMessageController.stream.listen((event) {
+      onEvent(event);
+    });
+    super.initState();
+  }
+
+  onEvent(rc.Notification event) {
+    if (event.id == '16') { // 16: update room
+      String msg;
+      if (event.result != null && event.result['result']) {
+        msg = "Room avatar updated.";
+      } else {
+        msg = "Room avatar update error";
+      }
+      Fluttertoast.showToast(
+          msg: msg,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,18 +79,19 @@ class _RoomInfoState extends State<RoomInfo> {
     Widget avatar = Icon(Icons.no_photography_outlined, size: 100, color: Colors.blueAccent,);
     if (newAvatar != null)
       avatar = Image.file(File(newAvatar.path),
-        fit: BoxFit.fitHeight,
+        fit: BoxFit.contain,
         width: imageWidth,
         height: imageHeight,
         cacheWidth: 800,
-        cacheHeight: 600,
       );
     else if (room.avatarETag != null)
       avatar = Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(),
-        fit: BoxFit.fitHeight,
+        fit: BoxFit.contain,
         width: imageWidth,
         height: imageHeight,
+        cacheWidth: 800,
       );
+
     return Scaffold(
         appBar: AppBar(
           title: Text('Room Information'),
@@ -84,6 +117,10 @@ class _RoomInfoState extends State<RoomInfo> {
                         ),
                         newAvatar != null ? InkWell(
                           onTap: () async {
+                            var image = image_util.decodeImage(await newAvatar.readAsBytes());
+                            var smallImage = image_util.copyResize(image, width: 200);
+                            String base64 = 'data:image/jpeg;base64,' + base64Encode(image_util.encodeJpg(smallImage));
+                            widget.chatHomeState.updateRoom(widget.roomId, roomAvatar: base64);
                           },
                           child: DecoratedIcon(Icons.save_outlined, color: Colors.blueAccent, size: 40,
                               shadows: [BoxShadow(color: Colors.black45, offset: Offset(3, 3))],),
@@ -150,7 +187,7 @@ class _RoomInfoState extends State<RoomInfo> {
 
   Future<void> editRoom(context, room) async {
     await Navigator.push(context, MaterialPageRoute(builder: (context) =>
-        UpdateRoom(key: updateRoomKey, chatHomeState: widget.chatHomeState, user: widget.user, room: room,)));
+        UpdateRoom(chatHomeState: widget.chatHomeState, user: widget.user, room: room,)));
     setState(() {});
   }
 

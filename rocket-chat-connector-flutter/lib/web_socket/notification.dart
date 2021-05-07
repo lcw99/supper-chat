@@ -78,7 +78,7 @@ class Error {
   });
 
   bool? isClientSafe;
-  String? error;
+  dynamic? error;
   String? reason;
   Details? details;
   String? message;

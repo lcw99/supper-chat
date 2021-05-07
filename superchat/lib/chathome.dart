@@ -41,9 +41,6 @@ import 'update_room.dart';
 
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
 
-final GlobalKey<UpdateRoomState> updateRoomKey = GlobalKey();
-final GlobalKey<ChatViewState>chatViewStateKey = GlobalKey();
-
 class ChatHome extends StatefulWidget {
   ChatHome({Key key, @required this.title, @required this.user, @required this.authRC, this.payload}) : super(key: key);
   final String title;
@@ -73,6 +70,7 @@ unsubscribeRoomEvent(String roomId) {
 }
 
 AppLifecycleState appState = AppLifecycleState.resumed;
+final StreamController<rocket_notification.Notification> resultMessageController = StreamController<rocket_notification.Notification>.broadcast();
 
 class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   int selectedPage = 0;
@@ -82,7 +80,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   bool firebaseInitialized = false;
 
   final StreamController<rocket_notification.Notification> notificationController = StreamController<rocket_notification.Notification>.broadcast();
-  Stream<rocket_notification.Notification> notificationStream;
 
   static bool bChatScreenOpen = false;
 
@@ -145,8 +142,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         if (event.msg == 'updated') {
         } else if (event.msg == 'result') {
           if (event.id == '85' || event.id == '89' || event.id == '16') {  // 85: createChannel, 89: createPrivateGroup, 16: update room
-            if (updateRoomKey.currentState.mounted)
-              updateRoomKey.currentState.onEvent(event);
+            resultMessageController.add(event);
           }
         } else if (event.msg == 'changed') {
           notificationController.add(event);
@@ -266,8 +262,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
     handleSharedData();
 
-    notificationStream = notificationController.stream;
-
     print('**** payload= ${widget.payload}');
     if (widget.payload != null) {
       var json = jsonDecode(widget.payload);
@@ -305,7 +299,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               title: Text('Create Room'),
               onTap: () async {
                 Navigator.pop(context);
-                await Navigator.push(context, MaterialPageRoute(builder: (context) => UpdateRoom(key: updateRoomKey, chatHomeState: this, user: widget.user)));
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => UpdateRoom(chatHomeState: this, user: widget.user)));
               },
             ),
           ],
@@ -454,7 +448,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
     bChatScreenOpen = true;
     final result = await Navigator.push(context, MaterialPageRoute(
-        builder: (context) => ChatView(key: chatViewStateKey, chatHomeState: this, authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj)),
+        builder: (context) => ChatView(chatHomeState: this, authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj)),
     );
     bChatScreenOpen = false;
 /*
@@ -567,6 +561,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     unsubscribeAndClose();
     _intentDataStreamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    notificationController.close();
+    resultMessageController.close();
     super.dispose();
   }
 
@@ -615,8 +611,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.createRoom(roomName, users, private);
   }
 
-  updateRoom(String roomId, {String roomName, String roomDescription, String roomTopic, String roomType}) {
-    webSocketService.updateRoom(roomId, roomName: roomName, roomDescription: roomDescription, roomTopic: roomTopic, roomType: roomType);
+  updateRoom(String roomId, {String roomName, String roomDescription,
+      String roomTopic, String roomType, String announcement, String roomAvatar}) {
+    webSocketService.updateRoom(roomId, roomName: roomName, roomDescription: roomDescription,
+        roomTopic: roomTopic, roomType: roomType, announcement: announcement, roomAvatar: roomAvatar);
   }
 
   deleteRoom(String roomId) {

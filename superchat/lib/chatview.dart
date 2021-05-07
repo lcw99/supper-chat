@@ -736,7 +736,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   Future<void> roomInformation() async {
     var ret = await Navigator.push(context, MaterialPageRoute(builder: (context) =>
-        RoomInfo(key: updateRoomKey, chatHomeState: widget.chatHomeState, user: widget.me, roomId: widget.room.id,)));
+        RoomInfo(chatHomeState: widget.chatHomeState, user: widget.me, roomId: widget.room.id,)));
     if (ret == 'room deleted')
         Navigator.pop(context);
   }
