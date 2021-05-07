@@ -56,6 +56,7 @@ dependencies:
   package_info: ^2.0.0
   logger: ^1.0.0
   toggle_switch: ^0.1.9
+  decorated_icon: ^1.2.0
   emoji_picker_flutter:
     path: ../emoji_picker_flutter
   ss_image_editor:

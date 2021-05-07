@@ -285,7 +285,7 @@ class WebSocketService {
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 
-  void updateRoom(String roomId, {String? roomName, String? roomDescription, String? roomTopic, String? roomType}) {
+  void updateRoom(String roomId, {String? roomName, String? roomDescription, String? roomTopic, String? roomType, String? announcement, String? roomAvatar}) {
     if (roomName != null)
       updateRoomParam(roomId, "roomName", roomName);
     if (roomDescription != null)
@@ -294,6 +294,10 @@ class WebSocketService {
       updateRoomParam(roomId, "roomTopic", roomTopic);
     if (roomType != null)
       updateRoomParam(roomId, "roomType", roomType);
+    if (announcement != null)
+      updateRoomParam(roomId, "announcement", announcement);
+    if (roomAvatar != null)
+      updateRoomParam(roomId, "roomAvatar", roomAvatar);
   }
 
   void updateRoomParam(String roomId, String setting, String? value) {

@@ -1,9 +1,15 @@
+import 'dart:io';
+
+import 'package:decorated_icon/decorated_icon.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:superchat/chathome.dart';
 import 'package:superchat/main.dart';
 import 'package:superchat/update_room.dart';
+
+import 'constants/constants.dart';
 
 
 class RoomInfo extends StatefulWidget {
@@ -17,6 +23,8 @@ class RoomInfo extends StatefulWidget {
 }
 
 class _RoomInfoState extends State<RoomInfo> {
+  PickedFile newAvatar;
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<model.Room>(
@@ -34,6 +42,23 @@ class _RoomInfoState extends State<RoomInfo> {
   }
 
   Widget buildPage(context, model.Room room) {
+    double imageWidth = MediaQuery.of(context).size.width;
+    double imageHeight = imageWidth * 0.6;
+    Widget avatar = Icon(Icons.no_photography_outlined, size: 100, color: Colors.blueAccent,);
+    if (newAvatar != null)
+      avatar = Image.file(File(newAvatar.path),
+        fit: BoxFit.fitHeight,
+        width: imageWidth,
+        height: imageHeight,
+        cacheWidth: 800,
+        cacheHeight: 600,
+      );
+    else if (room.avatarETag != null)
+      avatar = Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(),
+        fit: BoxFit.fitHeight,
+        width: imageWidth,
+        height: imageHeight,
+      );
     return Scaffold(
         appBar: AppBar(
           title: Text('Room Information'),
@@ -43,6 +68,29 @@ class _RoomInfoState extends State<RoomInfo> {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Stack(children: [
+                    Container(height: imageHeight, width: imageWidth, alignment: Alignment.center, child: avatar),
+                    Container(height: imageHeight, width: imageWidth, alignment: Alignment.bottomRight, child:
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                        InkWell(
+                          onTap: () async {
+                            newAvatar = await ImagePicker().getImage(source: ImageSource.gallery);
+                            setState(() {});
+                          },
+                          child: DecoratedIcon(Icons.edit_outlined, color: Colors.blueAccent, size: 40,
+                              shadows: [BoxShadow(color: Colors.black45, offset: Offset(3, 3))],),
+                        ),
+                        newAvatar != null ? InkWell(
+                          onTap: () async {
+                          },
+                          child: DecoratedIcon(Icons.save_outlined, color: Colors.blueAccent, size: 40,
+                              shadows: [BoxShadow(color: Colors.black45, offset: Offset(3, 3))],),
+                        ) : SizedBox(),
+                      ])
+                    ),
+                  ]),
                   TextFormField(
                     readOnly: true,
                     initialValue: room.name,
