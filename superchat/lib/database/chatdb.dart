@@ -76,6 +76,12 @@ class ChatDatabase extends _$ChatDatabase {
       }
   );
 
+  deleteAllTables() {
+    for (final table in allTables) {
+      delete(table);
+    }
+  }
+
   Future<List<Room>> get getAllRooms => select(rooms).get();
   Future upsertRoom(Room room) => into(rooms).insertOnConflictUpdate(room);
   Future<Room> getRoom(String _rid) => (select(rooms)..where((t) => t.rid.equals(_rid))).getSingleOrNull();

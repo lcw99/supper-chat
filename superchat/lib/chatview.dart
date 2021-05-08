@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter_dropzone/flutter_dropzone.dart';
+import 'package:moor/moor.dart' as moor;
 import 'package:universal_io/io.dart';
 import 'dart:ui';
 
@@ -264,7 +268,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           List<SharedMediaFile> mediaFiles = widget.sharedObject;
           if (mediaFiles.isNotEmpty && !kIsWeb) {
             File f = File(mediaFiles.first.path);
-            postImage(f, null);
+            postFile(file: f);
           }
         }
       }
@@ -290,6 +294,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     super.dispose();
   }
 
+  DropzoneViewController dropzoneViewController;
+  String droppedFile;
   @override
   Widget build(BuildContext context) {
     var markAsReadJob = RepeatedJobWaiter(markAsRead);
@@ -405,6 +411,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     ));
   }
 
+  bool onDropFile = false;
   Widget buildChatList() {
     if (scrollIndex >= 0) {
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -436,22 +443,60 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           }
           return true;
         },
-        child: Container(color: Colors.blue.shade100,
-          child:ScrollablePositionedList.builder(
-          //child: ListView.builder(
-            itemScrollController: itemScrollController,
-            reverse: true,
-            itemCount: chatDataStore.length,
-            //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            itemBuilder: (context, index) {
-              Message message = chatDataStore.getMessageAt(index);
-              // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-              // messageId: messageId, me: widget.me, authRC: widget.authRC, );
-              return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-                message: message, me: widget.me, authRC: widget.authRC, index: index,);
-            },
-          ),
-        ));
+        child:
+        Container(color: onDropFile ? Colors.purpleAccent.shade100 : Colors.blue.shade100,
+          child: Stack(children: [
+            DropzoneView(
+              operation: DragOperation.copy,
+              cursor: CursorType.grab,
+              onCreated: (ctrl) => dropzoneViewController = ctrl,
+              onLoaded: () => print('Zone loaded'),
+              onError: (ev) => print('Error: $ev'),
+              onHover: () {
+/*
+                if (chatListKey.currentState != null)
+                  chatListKey.currentState.setState(() {
+                    onDropFile = true;
+                  });
+*/
+                setState(() {
+                  onDropFile = true;
+                });
+              },
+              onDrop: (ev) async {
+                print('Drop: $ev');
+                setState(() {
+                    onDropFile = false;
+                });
+                inspect(ev);
+                String fileName = ev.name;
+                Uint8List bytes = await dropzoneViewController.getFileData(ev);
+                String mimeType = await dropzoneViewController.getFileMIME(ev);
+                postFile(bytes: bytes, desc: fileName, mimeType: mimeType);
+              },
+              onLeave: () {
+                setState(() {
+                  onDropFile = false;
+                });
+              },
+            ),
+            ScrollablePositionedList.builder(
+              //child: ListView.builder(
+              itemScrollController: itemScrollController,
+              reverse: true,
+              itemCount: chatDataStore.length,
+              //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              itemBuilder: (context, index) {
+                Message message = chatDataStore.getMessageAt(index);
+                // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+                // messageId: messageId, me: widget.me, authRC: widget.authRC, );
+                return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+                  message: message, me: widget.me, authRC: widget.authRC, index: index,);
+              }
+            ),
+          ])
+        )
+    );
   }
 
   final ItemScrollController itemScrollController = ItemScrollController();
@@ -565,10 +610,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 _pickImage();
               else if (value == 'take_photo')
                 _takePhoto();
+              else if (value == 'pick_file')
+                _pickFile();
             },
             itemBuilder: (context){
               return [
                 PopupMenuItem(child: Text("Pick Image..."), value: 'pick_image',),
+                PopupMenuItem(child: Text("Pick File..."), value: 'pick_file',),
                 PopupMenuItem(child: Text("Take Photo..."), value: 'take_photo',),
               ];
           }),
@@ -594,6 +642,23 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     }
   }
 
+  void _pickFile() async {
+    FilePickerResult result = await FilePicker.platform.pickFiles();
+
+    if(result != null) {
+      if (result.files.single.path != null) {
+        File file = File(result.files.single.path);
+        Message newMessage = await postFile(file: file);
+      } else {
+        if (result.files.single.bytes != null) {
+          Message newMessage = await postFile(bytes: result.files.single.bytes, desc: result.files.single.name);
+        }
+      }
+    } else {
+      // User canceled the picker
+    }
+  }
+
   Future<void> _pickImage({imageSource}) async {
     var pickedFile;
     if (imageSource != null)
@@ -609,17 +674,17 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         if (data.description != null && data.description == '')
           data.description = null;
         file = File(data.filePath);
-        Message newMessage = await postImage(file, data.description);
+        Message newMessage = await postFile(file: file, desc: data.description);
       }
     } else {
       print('No image selected.');
     }
   }
 
-  Future<Message> postImage(File file, String desc) {
+  Future<Message> postFile({File file, Uint8List bytes, String desc, String mimeType}) {
     final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
     MessageService messageService = MessageService(rocketHttpService);
-    return messageService.roomImageUpload(widget.room.id, widget.authRC, file, desc: desc);
+    return messageService.roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, desc: desc, mimeType: mimeType);
   }
 
   Future<void> _takePhoto() async {

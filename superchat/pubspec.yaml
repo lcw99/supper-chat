@@ -60,6 +60,7 @@ dependencies:
   image: ^3.0.2
   universal_io: ^2.0.4
   file_picker: ^3.0.1
+  flutter_dropzone: ^2.0.1
   emoji_picker_flutter:
     path: ../emoji_picker_flutter
   ss_image_editor:

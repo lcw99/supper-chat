@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:universal_io/io.dart';
 
 import 'package:http/http.dart' as http;
@@ -88,14 +89,16 @@ class MessageService {
     throw RocketChatException(response.body);
   }
 
-  Future<Message> roomImageUpload(String? roomId, Authentication? authentication, File? file, {String? desc}) async {
+  Future<Message> roomImageUpload(String? roomId, Authentication? authentication, {File? file, Uint8List? bytes, String? desc, String? mimeType}) async {
     var uri = _httpService.getUri()!.replace(path: '/api/v1/rooms.upload/$roomId');
     var request = http.MultipartRequest('POST', uri)
       ..headers['X-Auth-Token'] = authentication!.data!.authToken!
       ..headers['X-User-Id'] = authentication.data!.userId!
-      ..files.add(await http.MultipartFile.fromPath(
-          'file', file!.path,
-          contentType: MediaType.parse(lookupMimeType(file.path)!)));
+      ..files.add(file != null ? await http.MultipartFile.fromPath(
+          'file', file.path,
+          contentType: MediaType.parse(lookupMimeType(file.path)!)) :
+          http.MultipartFile.fromBytes('file', bytes!.toList(), filename: desc!, contentType: MediaType.parse(mimeType!.isNotEmpty ? mimeType : 'application/octet-stream'))
+      );
 
     if (desc != null && desc != '')
       request.fields["description"] = desc;
