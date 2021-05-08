@@ -446,7 +446,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         child:
         Container(color: onDropFile ? Colors.purpleAccent.shade100 : Colors.blue.shade100,
           child: Stack(children: [
-            DropzoneView(
+            kIsWeb ? DropzoneView(
               operation: DragOperation.copy,
               cursor: CursorType.grab,
               onCreated: (ctrl) => dropzoneViewController = ctrl,
@@ -479,7 +479,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                   onDropFile = false;
                 });
               },
-            ),
+            ) : SizedBox(),
             ScrollablePositionedList.builder(
               //child: ListView.builder(
               itemScrollController: itemScrollController,
@@ -594,10 +594,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           Expanded(child:
           Form(
             child: TextFormField(
+              textInputAction: TextInputAction.send,
+              onFieldSubmitted: () {_postMessage(_teController.text);} (),
               autofocus: false,
               focusNode: myFocusNode,
               controller: _teController,
-              keyboardType: TextInputType.multiline,
+              keyboardType: TextInputType.text,
               maxLines: null,
               decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
             ),
