@@ -17,6 +17,7 @@ public final class GeneratedPluginRegistrant {
     ShimPluginRegistry shimPluginRegistry = new ShimPluginRegistry(flutterEngine);
     flutterEngine.getPlugins().add(new io.flutter.plugins.connectivity.ConnectivityPlugin());
     flutterEngine.getPlugins().add(new com.fintays.emoji_picker_flutter.EmojiPickerFlutterPlugin());
+    flutterEngine.getPlugins().add(new com.mr.flutter.plugin.filepicker.FilePickerPlugin());
     flutterEngine.getPlugins().add(new io.flutter.plugins.firebase.auth.FlutterFirebaseAuthPlugin());
     flutterEngine.getPlugins().add(new io.flutter.plugins.firebase.core.FlutterFirebaseCorePlugin());
     flutterEngine.getPlugins().add(new io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingPlugin());

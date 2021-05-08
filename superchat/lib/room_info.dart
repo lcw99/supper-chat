@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:universal_io/io.dart' as uio;
 
 import 'package:decorated_icon/decorated_icon.dart';
@@ -78,15 +80,8 @@ class _RoomInfoState extends State<RoomInfo> {
     double imageHeight = imageWidth * 0.6;
     Widget avatar = Icon(Icons.no_photography_outlined, size: 100, color: Colors.blueAccent,);
     if (newAvatar != null) {
-      // Web support problem
-      avatar = Image.file(uio.File(newAvatar.path),
-        fit: BoxFit.contain,
-        width: imageWidth,
-        height: imageHeight,
-        cacheWidth: 800,
-      );
-    }
-    else if (room.avatarETag != null)
+      avatar = pickedImage(newAvatar.path, imageHeight: imageHeight, imageWidth: imageWidth, cacheWidth: 800);
+    } else if (room.avatarETag != null)
       avatar = Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(),
         fit: BoxFit.contain,
         width: imageWidth,

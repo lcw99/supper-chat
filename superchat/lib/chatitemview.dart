@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:universal_io/io.dart' as uio;
 import 'dart:typed_data';
 
@@ -555,9 +556,12 @@ class ChatItemViewState extends State<ChatItemView> {
           'X-User-Id': widget.authRC.data.userId
         };
         // Web support problem
+        shareFile(serverUri.replace(path: imagePath).toString(), header);
+/*
         DefaultCacheManager manager = new DefaultCacheManager();
         uio.File f = await manager.getSingleFile(serverUri.replace(path: imagePath).toString(), headers: header);
         Share.shareFiles([f.path]);
+*/
 /*
         http.Response r = await getNetworkImageData(imagePath);
         if (r.statusCode == 200) {

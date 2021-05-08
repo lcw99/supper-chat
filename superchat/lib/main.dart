@@ -36,7 +36,7 @@ final String password = "enter99!";
 final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(Uri.parse(serverUrl));
 
 final authFirebase = FBA.FirebaseAuth.instance;
-final googleSignIn = GoogleSignIn();
+final googleSignIn = GoogleSignIn(scopes: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']);
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 final navGlobalKey = new GlobalKey<NavigatorState>();
 String notificationPayload;
@@ -60,7 +60,7 @@ void main() async {
     await _initNotification();
   } else {
     googleSignInMode = false;
-    //googleSignInMode = true;
+    googleSignInMode = true;
   }
   await packageInfo();
   runApp(MainHome());
