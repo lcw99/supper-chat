@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
+import 'package:universal_io/io.dart' as uio;
+import 'dart:typed_data';
 
-import 'package:extended_image/extended_image.dart';
+import 'package:extended_image/extended_image.dart' as ei;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:intl/intl.dart';
@@ -388,6 +390,11 @@ class ChatItemViewState extends State<ChatItemView> {
       'X-User-Id': widget.authRC.data.userId
     };
 
+    Map<String, String> query = {
+      'rc_token': widget.authRC.data.authToken,
+      'rc_uid': widget.authRC.data.userId
+    };
+
     var dpr = MediaQuery.of(context).devicePixelRatio;
     var imageWidth = MediaQuery.of(context).size.width - 150;
     var imageWidthInDevice = imageWidth * dpr;
@@ -395,16 +402,19 @@ class ChatItemViewState extends State<ChatItemView> {
     double r = imageWidthInDevice / attachment.imageDimensions.width;
     double imageHeightInDevice = attachment.imageDimensions.height * r;
 
-    var image = ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
+    var uri = serverUri.replace(path: imagePath, queryParameters: query);
+    print('@@@ image url=${uri.toString()}');
+    //var image = ei.ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
+    var image = ei.ExtendedImage.network(uri.toString(),
       width: imageWidthInDevice / dpr,
       height: imageHeightInDevice / dpr,
-      cache: true,
       cacheWidth: 800,
       fit: BoxFit.contain,
       headers: header,
-      mode: ExtendedImageMode.gesture,
+      cache: true,
+      mode: ei.ExtendedImageMode.gesture,
       initGestureConfigHandler: (state) {
-        return GestureConfig(
+        return ei.GestureConfig(
           minScale: 0.9,
           animationMinScale: 0.7,
           maxScale: 3.0,
@@ -413,7 +423,7 @@ class ChatItemViewState extends State<ChatItemView> {
           inertialSpeed: 100.0,
           initialScale: 1.0,
           inPageView: false,
-          initialAlignment: InitialAlignment.center,
+          initialAlignment: ei.InitialAlignment.center,
         );
       },
     );
@@ -544,9 +554,24 @@ class ChatItemViewState extends State<ChatItemView> {
           'X-Auth-Token': widget.authRC.data.authToken,
           'X-User-Id': widget.authRC.data.userId
         };
+        // Web support problem
         DefaultCacheManager manager = new DefaultCacheManager();
-        File f = await manager.getSingleFile(serverUri.replace(path: imagePath).toString(), headers: header);
+        uio.File f = await manager.getSingleFile(serverUri.replace(path: imagePath).toString(), headers: header);
         Share.shareFiles([f.path]);
+/*
+        http.Response r = await getNetworkImageData(imagePath);
+        if (r.statusCode == 200) {
+          Uint8List data = r.bodyBytes;
+          String contentType = r.headers['content-type'];
+          MediaType mt = MediaType.parse(contentType);
+          print('---content type=$contentType');
+          uio.Directory tempDir = await getTemporaryDirectory();
+          tempDir = await tempDir.createTemp();
+          uio.File f = uio.File(tempDir.path + '/temp_shared_file.' + mt.subtype);
+          print('---shared file=${f.path}');
+          f.writeAsBytes(data);
+        }
+*/
       } else {
         String share = message.msg;
         if (share == null || share.isEmpty)

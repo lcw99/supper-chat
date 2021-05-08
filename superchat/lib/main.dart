@@ -48,27 +48,40 @@ double textScaleFactor = 1.0;
 String version;
 String buildNumber;
 
+bool googleSignInMode;
+
 void main() async {
   //emojiConvert();
   print('***** main start');
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
-  await _initNotification();
+  if (!kIsWeb) {
+    googleSignInMode = true;
+    await _initNotification();
+  } else {
+    googleSignInMode = false;
+    //googleSignInMode = true;
+  }
   await packageInfo();
   runApp(MainHome());
 }
 
 packageInfo() async {
-  PackageInfo packageInfo = await PackageInfo.fromPlatform();
-
-  String appName = packageInfo.appName;
-  String packageName = packageInfo.packageName;
-  version = packageInfo.version;
-  buildNumber = packageInfo.buildNumber;
+  if (kIsWeb) {
+    version = 'web';
+    buildNumber = '1';
+  } else {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    String appName = packageInfo.appName;
+    String packageName = packageInfo.packageName;
+    version = packageInfo.version;
+    buildNumber = packageInfo.buildNumber;
+  }
 }
 
 Future setupLocator() async {
-  locator.registerSingleton(ChatDatabase());
+  //locator.registerSingleton(ChatDatabase());
+  locator.registerSingleton(constructDb());
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -76,7 +89,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // make sure you call `initializeApp` before using other Firebase services.
   await Firebase.initializeApp();
 
-  androidNotification(message);
+  if (!kIsWeb)
+    androidNotification(message);
 
   print("Handling a background message: ${message.data}");
 }
@@ -92,8 +106,9 @@ androidNotification(RemoteMessage message) async {
   String _payload;
   if (message.data['ejson'] != null)
     _payload = message.data['ejson'];
-  await flutterLocalNotificationsPlugin.show(
-      0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: _payload);
+  if (flutterLocalNotificationsPlugin != null)
+    await flutterLocalNotificationsPlugin.show(
+        0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: _payload);
 }
 
 GlobalKey<ChatHomeState> chatHomeStateKey = GlobalKey();
@@ -309,12 +324,15 @@ class _LoginHomeState extends State<LoginHome> {
   Future<Authentication> getAuthentication() async {
     final AuthenticationService authenticationService = AuthenticationService(rocketHttpService);
     print('getAuthentication1');
-    final GoogleSignInAccount googleSignInAccount = await googleSignIn.signInSilently();
-    print('getAuthentication2');
-    GoogleSignInAuthentication acc = await googleSignInAccount.authentication;
-    print('getAuthentication3');
-    return await authenticationService.loginGoogle(acc.accessToken, acc.idToken);
-    //return await authenticationService.login(username, password);
+    if (googleSignInMode) {
+      final GoogleSignInAccount googleSignInAccount = await googleSignIn.signInSilently();
+      print('getAuthentication2');
+      GoogleSignInAuthentication acc = await googleSignInAccount.authentication;
+      print('getAuthentication3');
+      return await authenticationService.loginGoogle(acc.accessToken, acc.idToken);
+    } else {
+      return await authenticationService.login(username, password);
+    }
   }
 
   registerToken(Authentication _auth) async {
@@ -367,7 +385,7 @@ class _LoginHomeState extends State<LoginHome> {
       return Container(color: Colors.white);
     }
 
-    if (triedSilentLogin == false) {
+    if (googleSignInMode && triedSilentLogin == false) {
       silentLogin(context);
     }
 
@@ -378,8 +396,9 @@ class _LoginHomeState extends State<LoginHome> {
       }
     });
 
-    if (triedSilentLogin && firebaseInitialized && googleSignIn.currentUser != null) {
-      print("******************googleid=" + googleSignIn.currentUser.id);
+    if (firebaseInitialized && (!googleSignInMode || (triedSilentLogin && googleSignIn.currentUser != null))) {
+      if (googleSignInMode)
+        print("******************googleid=" + googleSignIn.currentUser.id);
       showLoginStatus('google login complete');
       return Scaffold(body:
         FutureBuilder<Authentication>(
@@ -389,9 +408,11 @@ class _LoginHomeState extends State<LoginHome> {
               showLoginStatus('waiting chat server login');
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
-              String avatarUrl = googleSignIn.currentUser.photoUrl;
-              print("avatarUrl=" + avatarUrl);
-              UserService(rocketHttpService).setAvatar(avatarUrl, auth);
+              if (googleSignInMode) {
+                String avatarUrl = googleSignIn.currentUser.photoUrl;
+                print("avatarUrl=" + avatarUrl);
+                UserService(rocketHttpService).setAvatar(avatarUrl, auth);
+              }
               user = auth.data.me;
 
               registerToken(auth);

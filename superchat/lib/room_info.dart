@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:universal_io/io.dart' as uio;
 
 import 'package:decorated_icon/decorated_icon.dart';
 import 'package:flutter/material.dart';
@@ -77,13 +77,15 @@ class _RoomInfoState extends State<RoomInfo> {
     double imageWidth = MediaQuery.of(context).size.width;
     double imageHeight = imageWidth * 0.6;
     Widget avatar = Icon(Icons.no_photography_outlined, size: 100, color: Colors.blueAccent,);
-    if (newAvatar != null)
-      avatar = Image.file(File(newAvatar.path),
+    if (newAvatar != null) {
+      // Web support problem
+      avatar = Image.file(uio.File(newAvatar.path),
         fit: BoxFit.contain,
         width: imageWidth,
         height: imageHeight,
         cacheWidth: 800,
       );
+    }
     else if (room.avatarETag != null)
       avatar = Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(),
         fit: BoxFit.contain,

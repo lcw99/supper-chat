@@ -1,7 +1,7 @@
-import 'dart:io';
+import 'package:universal_io/io.dart';
 import 'dart:typed_data';
 
-import 'package:extended_image/extended_image.dart';
+import 'package:extended_image/extended_image.dart' as ei;
 import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
@@ -89,7 +89,7 @@ class _ImageFileDescriptionState extends State<ImageFileDescription> {
       body:
       SingleChildScrollView(child:
       Column(children: <Widget>[
-      ExtendedImage.memory(_memoryImage),
+      ei.ExtendedImage.memory(_memoryImage),
       Container(
           child:
           Row(children: <Widget>[

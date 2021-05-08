@@ -2,16 +2,14 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
+import 'package:universal_io/io.dart';
 import 'dart:ui';
 
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
-import 'package:extended_image/extended_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
@@ -264,7 +262,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           _postMessage(widget.sharedObject);
         else if (widget.sharedObject is List<SharedMediaFile>) {
           List<SharedMediaFile> mediaFiles = widget.sharedObject;
-          if (mediaFiles.isNotEmpty) {
+          if (mediaFiles.isNotEmpty && !kIsWeb) {
             File f = File(mediaFiles.first.path);
             postImage(f, null);
           }
@@ -601,7 +599,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     if (imageSource != null)
       pickedFile = await picker.getImage(source: imageSource);
     else
-      pickedFile = await pickImage(context, fileResult: true);
+      //pickedFile = await pickImage(context, fileResult: true);
+      pickedFile = await picker.getImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
       File file = File(pickedFile.path);
