@@ -304,6 +304,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => UpdateRoom(chatHomeState: this, user: widget.user)));
               },
             ),
+            ListTile(
+              title: Text('Delete Local Data'),
+              onTap: deleteAllTables,
+            ),
           ],
         ),
       ),
@@ -332,6 +336,36 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     );
   }
 
+  void deleteAllTables() async {
+    var result = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+              title: Text('Delete Local Data'),
+              content: Text('Are you sure?'),
+              actions: [
+                TextButton(
+                  child: Text("Cancel"),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                TextButton(
+                  child: Text("OK"),
+                  onPressed: () {
+                    locator<db.ChatDatabase>().deleteAllTables();
+                    Navigator.pop(context, 'OK');
+                  },
+                ),
+              ]
+          );
+        }
+    );
+    if (result == 'OK') {
+      googleSignIn.signOut();
+      navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
+    }
+  }
 
   _buildPage() {
     debugPrint("_buildPage=" + selectedPage.toString());
