@@ -31,6 +31,8 @@ dependencies:
   url_launcher: any
   vm_service: any
   wechat_assets_picker: any
+  universal_io: ^2.0.4
+
 
 
 dev_dependencies:

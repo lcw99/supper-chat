@@ -42,7 +42,7 @@ dependencies:
   intl: ^0.17.0
   pinch_zoom: ^0.1.0
   linkable: ^1.0.9
-  flutter_link_previewer: ^1.0.4
+  flutter_link_previewer: ^2.0.0
   url_launcher: ^6.0.3
   extended_image: ^4.0.1
   oktoast: any
@@ -58,6 +58,7 @@ dependencies:
   toggle_switch: ^0.1.9
   decorated_icon: ^1.2.0
   image: ^3.0.2
+  universal_io: ^2.0.4
   emoji_picker_flutter:
     path: ../emoji_picker_flutter
   ss_image_editor:

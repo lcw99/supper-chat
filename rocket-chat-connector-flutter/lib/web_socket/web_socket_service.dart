@@ -37,6 +37,7 @@ class WebSocketService {
   factory WebSocketService({String? url, Authentication? authentication}) {
     _singleton.url = url;
     _singleton.authentication = authentication;
+    _singleton.streamController = new StreamController();
     return _singleton;
   }
 

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
+import 'package:universal_io/io.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -95,7 +95,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.connect();
   }
 
-  void unsubscribeAndClose() {
+  Future<void> unsubscribeAndClose() async {
     print('_+_+_+_+_+_ disconnecting web socket');
     webSocketService.sendUserPresence("offline");
     if (bChatScreenOpen && selectedRoom != null)
@@ -114,11 +114,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
   }
 
-  StreamSubscription subscription;
+  StreamSubscription subscriptionWebSocketStream;
   attachWebSocketHandler() {
-    if (subscription != null)
+    if (subscriptionWebSocketStream != null)
       return;
-    subscription = webSocketService.getStreamController().stream.listen((e) async {
+    subscriptionWebSocketStream = webSocketService.getStreamController().stream.listen((e) async {
       var json = jsonDecode(e);
       print('event=$e');
       rocket_notification.Notification event = rocket_notification.Notification.fromMap(json);
@@ -155,7 +155,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 var payload = arg['payload'] != null ? jsonEncode(arg['payload']) : null;
                 if (payload != null && !(bChatScreenOpen && selectedRoom != null && selectedRoom.id == arg['payload']['rid'])) {
                   RemoteMessage message = RemoteMessage(data: {'title': arg['title'], 'message': arg['text'], 'ejson': payload});
-                  androidNotification(message);
+                  if (!kIsWeb)
+                    androidNotification(message);
                 }
               }
             } else if (eventName.endsWith('rooms-changed')) {
@@ -260,7 +261,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addObserver(this);
 
-    handleSharedData();
+    if (!kIsWeb)
+      handleSharedData();
 
     print('**** payload= ${widget.payload}');
     if (widget.payload != null) {
