@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/email.dart';
 import 'package:rocket_chat_connector_flutter/models/preferences.dart';
 
@@ -19,6 +20,8 @@ class User {
   Map<String, String>? customFields;
   bool? success;
   dynamic? services;
+  DateTime? lastLogin;
+  String? avatarETag;
 
   User({
     this.id,
@@ -35,6 +38,8 @@ class User {
     this.customFields,
     this.success = false,
     this.services,
+    this.lastLogin,
+    this.avatarETag,
   });
 
   User.fromMap(Map<String, dynamic>? json) {
@@ -91,6 +96,9 @@ class User {
         customFields = Map<String, String>.from(json['customFields']);
       }
       success = json['success'];
+
+      lastLogin = jsonToDateTime(json['lastLogin']);
+      avatarETag = json['avatarETag'];
     }
   }
 
@@ -143,6 +151,14 @@ class User {
     }
     if (success != null) {
       map['success'] = success;
+    }
+
+    if (lastLogin != null) {
+      map['lastLogin'] = lastLogin;
+    }
+
+    if (avatarETag != null) {
+      map['avatarETag'] = avatarETag;
     }
 
     return map;

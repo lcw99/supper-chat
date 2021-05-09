@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:typed_data';
 import 'package:universal_io/io.dart';
 
 import 'package:http/http.dart' as http;
@@ -48,8 +49,9 @@ class UserService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         String res = utf8.decode(response.bodyBytes);
-        log('getUserInfo=$res');
-        return User.fromMap(jsonDecode(res)['user']);
+        var user = User.fromMap(jsonDecode(res)['user']);
+        log('getUserInfo=${user.username}');
+        return user;
       } else {
         return User();
       }
@@ -77,21 +79,16 @@ class UserService {
     return User();
   }
 
-  Future<dynamic> avatarImageUpload(Authentication? authentication, File? file) async {
-    String filename = path.basename(file!.path);
-
-    Map<String, String> headers = {
-      'X-Auth-Token': authentication!.data!.authToken!,
-      'X-User-Id': authentication.data!.userId!,
-    };
-
+  Future<dynamic> avatarImageUpload(Authentication? authentication, {File? file, Uint8List? bytes, String? mimeType}) async {
     var uri = _httpService.getUri()!.replace(path: '/api/v1/users.setAvatar');
     var request = http.MultipartRequest('POST', uri)
-      ..headers['X-Auth-Token'] = authentication.data!.authToken!
+      ..headers['X-Auth-Token'] = authentication!.data!.authToken!
       ..headers['X-User-Id'] = authentication.data!.userId!
-      ..files.add(await http.MultipartFile.fromPath(
+      ..files.add(file != null ? await http.MultipartFile.fromPath(
           'image', file.path,
-          contentType: MediaType.parse(lookupMimeType(file.path)!)));
+          contentType: MediaType.parse(lookupMimeType(file.path)!)) :
+          http.MultipartFile.fromBytes('image', bytes!.toList(), filename: 'file.name', contentType: MediaType.parse(mimeType!.isNotEmpty ? mimeType : 'application/octet-stream'))
+      );
 
     var response = await request.send();
 

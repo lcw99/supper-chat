@@ -14,6 +14,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logger/logger.dart';
 import 'package:package_info/package_info.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/new/user_new.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart' as rocket_user;
 import 'package:rocket_chat_connector_flutter/services/authentication_service.dart';
@@ -25,6 +26,7 @@ import 'package:rocket_chat_connector_flutter/services/push_service.dart';
 import 'package:rocket_chat_connector_flutter/models/new/token_new.dart';
 
 import 'chathome.dart';
+import 'constants/constants.dart';
 import 'database/chatdb.dart';
 
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
@@ -53,6 +55,7 @@ bool googleSignInMode;
 void main() async {
   //emojiConvert();
   print('***** main start');
+  setServerUri(serverUri);
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb) {
@@ -408,12 +411,13 @@ class _LoginHomeState extends State<LoginHome> {
               showLoginStatus('waiting chat server login');
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
-              if (googleSignInMode) {
-                String avatarUrl = googleSignIn.currentUser.photoUrl;
-                print("avatarUrl=" + avatarUrl);
-                UserService(rocketHttpService).setAvatar(avatarUrl, auth);
-              }
               user = auth.data.me;
+              if (googleSignInMode) {
+                if (user.avatarETag == null) {
+                  String avatarUrl = googleSignIn.currentUser.photoUrl;
+                  UserService(rocketHttpService).setAvatar(avatarUrl, auth);
+                }
+              }
 
               registerToken(auth);
               var _np = notificationPayload;

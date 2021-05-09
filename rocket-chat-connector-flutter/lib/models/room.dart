@@ -60,6 +60,7 @@ class Room {
   String? announcement;
   List<String>? usernames;
   List<String>? uids;
+  String? roomAvatarUrl;
 
   factory Room.fromMap(Map<String, dynamic> json) => Room(
     id: json["_id"] == null ? null : json["_id"],

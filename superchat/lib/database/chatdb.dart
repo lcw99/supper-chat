@@ -78,7 +78,7 @@ class ChatDatabase extends _$ChatDatabase {
 
   deleteAllTables() {
     for (final table in allTables) {
-      delete(table);
+      delete(table).go();
     }
   }
 
