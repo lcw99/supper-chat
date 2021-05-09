@@ -797,7 +797,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         if (!chatDataStore.containsMessage(rm.mid)) {
           //print('@@@@ add new message=${rm.info}');
           Message m = Message.fromMap(jsonDecode(rm.info));
-          await Utils.getUserInfo(widget.authRC, userId: m.user.id);
+          Utils.getUserInfo(widget.authRC, userId: m.user.id);
           chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, rm.info, rm.ts));
         }
       }

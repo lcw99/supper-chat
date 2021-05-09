@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Super Chat.">
+  <meta name="description" content="Super Chat">
   <meta name="google-signin-client_id" content="1018422454473-b13472mituo8180iog5huq06sl95i5jh.apps.googleusercontent.com" />
 
   <!-- iOS meta tags & icons -->
@@ -15,7 +15,7 @@
   <!-- Favicon -->
   <link rel="shortcut icon" type="image/png" href="favicon.png"/>
 
-  <title>example</title>
+  <title>Super Chat</title>
   <link rel="manifest" href="manifest.json">
 
   <link rel="stylesheet" type="text/css" href="splash/style.css">
@@ -46,11 +46,12 @@
   firebase.initializeApp(firebaseConfig);
   firebase.analytics();
 </script>
-<script>
+  <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
         //navigator.serviceWorker.register('flutter_service_worker.js');
-        navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        navigator.serviceWorker.register('./firebase-messaging-sw.js');
+        });
       });
     }
   </script>
@@ -60,7 +61,7 @@
     <img class="center" src="splash/img/light-1x.png" />
   </picture>
   <script type="text/javascript">
-    let useHtml = true;
+    let useHtml = false;
     if(useHtml) {
       window.flutterWebRenderer = "html";
     } else {
