@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -428,20 +429,19 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               onTap: () {
                 _setChannel(room);
               },
+              leading: Container(
+                  child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain,)),
               title: Row(children: [
                 room.t == 'p' ? Icon(Icons.lock, color: Colors.blueAccent, size: 17,) : Icon(Icons.public, color: Colors.blueAccent, size: 17),
                 SizedBox(width: 3,),
                 Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
               ]),
               subtitle: buildSubTitle(room),
-              leading: Container(
-                  width: 80,
-                  height: 80,
-                  child: room.avatarETag != null ?
-                  Image.network(serverUri.replace(path: '/avatar/room/${room.id}').toString(), fit: BoxFit.fitWidth,) :
-                  room.t == 'd' ? const Icon(Icons.chat) : const Icon(Icons.group)),
               trailing: UnreadCounter(unreadCount: unreadCount),
               dense: true,
+              visualDensity: VisualDensity.compact,
+              selectedTileColor: Colors.yellow.shade200,
+              horizontalTitleGap: 15,
               selected: selectedRoom != null ? selectedRoom.id == room.id : false,
             );
           }, childCount: roomList.length,
@@ -581,8 +581,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         //print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
         totalUnread += room.subscription.unread;
       }
-      if (roomType== null || (roomType != null && room.t == roomType))
+      if (roomType == null || (roomType != null && room.t == roomType)) {
+        room.roomAvatarUrl = await Utils.getRoomAvatarUrl(room, widget.authRC);
         roomList.add(room);
+      }
     }
     roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
     return RoomSnapshotInfo(roomList,

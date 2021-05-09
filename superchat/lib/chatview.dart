@@ -48,6 +48,7 @@ import 'package:rocket_chat_connector_flutter/services/http_service.dart' as roc
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
 import 'database/chatdb.dart' as db;
+import 'utils/utils.dart';
 
 class ChatView extends StatefulWidget {
   final StreamController<rocket_notification.Notification> notificationController;
@@ -276,10 +277,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   clearImageCacheAndUpdateAll() async {
-    print('@@@@@ avatar changed deleteing cache');
+    print('@@@@@ avatar changed, deleting cache');
+    Utils.clearCache();
     imageCache.clear();
     imageCache.clearLiveImages();
-    print('@@@@@ avatar changed deleteing cache done~~~~~');
+    print('@@@@@ avatar changed deleting cache done~~~~~');
     setState(() {});
     chatViewKey.currentContext ?? Phoenix.rebirth(chatViewKey.currentContext);
   }
@@ -444,7 +446,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           return true;
         },
         child:
-        Container(color: onDropFile ? Colors.purpleAccent.shade100 : Colors.blue.shade100,
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.blue.shade100,
+            border: !onDropFile ? Border.all(width: 0) : Border.all(color: Colors.purpleAccent, width: 8),
+          ),
           child: Stack(children: [
             kIsWeb ? DropzoneView(
               operation: DragOperation.copy,
@@ -453,12 +459,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               onLoaded: () => print('Zone loaded'),
               onError: (ev) => print('Error: $ev'),
               onHover: () {
-/*
-                if (chatListKey.currentState != null)
-                  chatListKey.currentState.setState(() {
-                    onDropFile = true;
-                  });
-*/
                 setState(() {
                   onDropFile = true;
                 });
@@ -595,7 +595,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           Form(
             child: TextFormField(
               textInputAction: TextInputAction.send,
-              onFieldSubmitted: () {_postMessage(_teController.text);} (),
+              onFieldSubmitted: (value) {
+                _postMessage(_teController.text);
+                myFocusNode.requestFocus();
+              },
               autofocus: false,
               focusNode: myFocusNode,
               controller: _teController,
@@ -766,7 +769,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
       for (var rm in roomMessages) {
         if (!chatDataStore.containsMessage(rm.mid)) {
-          print('@@@@ add new message=${rm.info}');
+          //print('@@@@ add new message=${rm.info}');
+          Message m = Message.fromMap(jsonDecode(rm.info));
+          await Utils.getUserInfo(widget.authRC, userId: m.user.id);
           chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, rm.info, rm.ts));
         }
       }

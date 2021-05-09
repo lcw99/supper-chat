@@ -31,12 +31,12 @@ import 'package:http_parser/http_parser.dart';
 import 'chathome.dart';
 import 'constants/constants.dart';
 import 'main.dart';
+import 'utils/utils.dart';
 import 'wigets/full_screen_image.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 import 'database/chatdb.dart' as db;
 
 class ChatItemView extends StatefulWidget {
-  final String messageId;
   final User me;
   final Authentication authRC;
   final ChatHomeState chatHomeState;
@@ -44,7 +44,7 @@ class ChatItemView extends StatefulWidget {
   final Message message;
   final int index;
 
-  ChatItemView({Key key, @required this.chatHomeState, this.messageId, @required this.me, @required this.authRC,
+  ChatItemView({Key key, @required this.chatHomeState, @required this.me, @required this.authRC,
     this.onTapExit = false, this.message, this.index = 0,
   }) : super(key: key);
 
@@ -54,24 +54,24 @@ class ChatItemView extends StatefulWidget {
 
 class ChatItemViewState extends State<ChatItemView> {
   Message message;
+  User messageUser;
   GlobalKey<_ReactionViewState> keyReactionView = GlobalKey();
   @override
   Widget build(BuildContext context) {
-    if (message != null || widget.message != null) {
-      if (message == null)
-        message = widget.message;
-      return _buildChatItem(message);
-    } else {
-      return FutureBuilder<Message>(
-          future: getMessage(widget.messageId),
-          builder: (context, AsyncSnapshot<Message> snapshot) {
-            if (snapshot.hasData) {
-              message = snapshot.data;
-              return _buildChatItem(message);
-            } else
-              return SizedBox();
-          });
-    }
+    if (message == null)
+      message = widget.message;
+    messageUser = Utils.getCachedUser(message.user.id);
+    if (messageUser != null)
+      return _buildChatItem(messageUser, message);
+    return FutureBuilder<User>(
+        future: Utils.getUserInfo(widget.authRC, userId: message.user.id),
+        builder: (context, AsyncSnapshot<User> snapshot) {
+          if (snapshot.hasData) {
+            messageUser = snapshot.data;
+            return _buildChatItem(messageUser, message);
+          } else
+            return SizedBox();
+        });
   }
 
   Future<Message> getMessage(messageId) async {
@@ -99,16 +99,15 @@ class ChatItemViewState extends State<ChatItemView> {
   bool _messageStarred(Message message) {
     return message.starred != null && message.starred.length > 0;
   }
-  _buildChatItem(Message message, {String messageText, String avatarPath}) {
+  Widget _buildChatItem(User user, Message message, {String messageText, String avatarPath, String userName}) {
     // if (message.starred != null && message.starred.length > 0)
     //   log('@@@ starred message=' + message.toString());
     // if (message.pinned != null && message.pinned)
     //   log('@@@ pinned message=' + message.toString());
 
-    if (avatarPath == null)
-      avatarPath  = '/avatar/${message.user.username}';
     bool specialMessage = message.t != null;
-    String userName = _getUserName(message);
+    if (userName == null)
+      userName = Utils.getUserNameByUser(messageUser);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
@@ -119,7 +118,7 @@ class ChatItemViewState extends State<ChatItemView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
-        _buildUserAvatar(specialMessage, avatarPath),
+        _buildUserAvatar(specialMessage, messageUser),
         SizedBox(width: 5,),
         // user name
         Expanded(child: Column(
@@ -154,8 +153,12 @@ class ChatItemViewState extends State<ChatItemView> {
       ],);
   }
 
-  _buildUserAvatar(bool specialMessage, String avatarPath) {
-    String url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
+  _buildUserAvatar(bool specialMessage, User user, {String avatarPath}) {
+    String url;
+    if (avatarPath != null )
+      url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
+    else
+      url = Utils.getAvatarUrl(user);
     return Container(
         padding: EdgeInsets.all(2),
         alignment: Alignment.topLeft,
@@ -265,7 +268,7 @@ class ChatItemViewState extends State<ChatItemView> {
         //log(message.toString());
         attachmentBody = Expanded(child:
           attachment.authorIcon != null && attachment.text != null
-              ? _buildChatItem(message, messageText: attachment.text, avatarPath: attachment.authorIcon)
+              ? _buildChatItem(messageUser, message, messageText: attachment.text, avatarPath: attachment.authorIcon, userName: attachment.authorName)
               : SizedBox(),
           );
       }
@@ -373,15 +376,6 @@ class ChatItemViewState extends State<ChatItemView> {
             ])
                 : SizedBox()
         ));
-  }
-
-  Future<http.Response> getNetworkImageData(String imagePath) async {
-    Map<String, String> header = {
-      'X-Auth-Token': widget.authRC.data.authToken,
-      'X-User-Id': widget.authRC.data.userId
-    };
-    var resp = await http.get(serverUri.replace(path: imagePath), headers: header);
-    return resp;
   }
 
   Widget getImage(Message message, MessageAttachment attachment) {
@@ -525,6 +519,8 @@ class ChatItemViewState extends State<ChatItemView> {
     items.add(PopupMenuItem(child: Text('Reaction...'), value: 'reaction'));
     if (downloadPath != null)
       items.add(PopupMenuItem(child: Text('Download...'), value: 'download'));
+    if (imagePath != null && !kIsWeb)
+      items.add(PopupMenuItem(child: Text('Set as Profile...'), value: 'set_profile'));
     if (message.user.id == widget.me.id) {
       items.add(PopupMenuItem(child: Text('Delete...'), value: 'delete'));
       items.add(PopupMenuItem(child: Text('Edit...'), value: 'edit'));
@@ -549,6 +545,8 @@ class ChatItemViewState extends State<ChatItemView> {
       handleUpdateMessage(message);
     } else if (value == 'download') {
       downloadByUrlLaunch(downloadPath);
+    } else if (value == 'set_profile') {
+      setProfilePicture(imagePath);
     } else if (value == 'share') {
       if (imagePath != null) {
         Map<String, String> header = {
@@ -561,8 +559,7 @@ class ChatItemViewState extends State<ChatItemView> {
         DefaultCacheManager manager = new DefaultCacheManager();
         uio.File f = await manager.getSingleFile(serverUri.replace(path: imagePath).toString(), headers: header);
         Share.shareFiles([f.path]);
-*/
-/*
+
         http.Response r = await getNetworkImageData(imagePath);
         if (r.statusCode == 200) {
           Uint8List data = r.bodyBytes;
@@ -620,6 +617,10 @@ class ChatItemViewState extends State<ChatItemView> {
         ]),
       )));
     });
+  }
+
+  void setProfilePicture(String imagePath) {
+    Utils.setAvatarImage(imagePath, widget.authRC);
   }
 }
 

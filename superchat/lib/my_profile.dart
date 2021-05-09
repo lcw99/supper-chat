@@ -1,3 +1,6 @@
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
+import 'package:superchat/database/chatdb.dart';
+import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:flutter/material.dart';
@@ -5,7 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:superchat/constants/constants.dart';
-import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
 import 'package:superchat/main.dart';
@@ -20,8 +22,6 @@ class MyProfile extends StatefulWidget {
 }
 
 class _MyProfileState extends State<MyProfile> {
-  final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-
   @override
   void initState() {
     super.initState();
@@ -33,29 +33,23 @@ class _MyProfileState extends State<MyProfile> {
       appBar: AppBar(title: Text('My Profile')),
       body:
         FutureBuilder<User>(
-          future: _getUserInfo(),
+          future: Utils.getUserInfo(widget.authRC, userId: widget.user.id, foreRefresh: true),
           builder: (context, AsyncSnapshot<User> snapshot) {
             if (!snapshot.hasData)
               return Center(child: CircularProgressIndicator());
             User userInfo = snapshot.data;
-            String url = userInfo.avatarUrl == null ?
-            serverUri.replace(path: '/avatar/${userInfo.username}', query: 'format=png').toString() :
-            serverUri.replace(path: Uri.parse(userInfo.avatarUrl).path).toString();
             bool googleProfile = userInfo.services != null && userInfo.services['google'] != null;
             return Column(
                 children: [
-                  Image.network(url),
-                  googleProfile
-                    ? Text('Google Profile')
-                    : InkWell(
+                  SizedBox(height: 15,),
+                  Image.network(Utils.getAvatarUrl(userInfo)),
+                  TextButton(
                     child: Text('Change Avatar'),
-                    onTap: () async {
+                    onPressed: () async {
                       final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
                       File file = File(pickedFile.path);
-                      final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-                      await UserService(rocketHttpService).avatarImageUpload(widget.authRC, file);
-                      userInfo = await UserService(rocketHttpService).getUserInfo(UserIdFilter(userInfo.id), widget.authRC);
-                      setState(() {});
+                      await getUserService().avatarImageUpload(widget.authRC, file: file);
+                      Future.delayed(Duration(seconds: 1), () { setState(() {}); });
                     },
                   ),
                   ListTile(
@@ -72,7 +66,7 @@ class _MyProfileState extends State<MyProfile> {
                   ),
                   ListTile(
                     title: Text('email'),
-                    subtitle: Text(userInfo.emails.toString()),
+                    subtitle: userInfo.emails.first != null ? Text(userInfo.emails.first.address.toString()) : SizedBox(),
                   ),
                   Container(
                     padding: EdgeInsets.only(top: 20),
@@ -89,14 +83,9 @@ class _MyProfileState extends State<MyProfile> {
     );
   }
 
-  Future<User> _getUserInfo() async {
-    return UserService(rocketHttpService).getUserInfo(UserIdFilter(widget.user.id), widget.authRC);
-  }
-
-  void _logout(googleProfile) {
-    if (!googleProfile)
-      Navigator.pop(context);
-    googleSignIn.signOut();
+  Future<void> _logout(googleProfile) async {
+    await googleSignIn.signOut();
+    locator<ChatDatabase>().deleteAllTables();
     navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
   }
 }
