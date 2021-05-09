@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
 import 'package:moor/moor.dart' as moor;
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:universal_io/io.dart';
 import 'dart:ui';
 
@@ -431,6 +432,23 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       });
     }
 
+    var listView = ScrollablePositionedList.builder(
+      //child: ListView.builder(
+        itemScrollController: itemScrollController,
+        reverse: true,
+        itemCount: chatDataStore.length,
+        //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        itemBuilder: (context, index) {
+          Message message = chatDataStore.getMessageAt(index);
+          // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+          // messageId: messageId, me: widget.me, authRC: widget.authRC, );
+          return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
+            message: message, me: widget.me, authRC: widget.authRC, index: index,);
+        }
+    );
+
+    final FocusNode _focusNode = FocusNode();
+
     return NotificationListener<ScrollEndNotification>(
         onNotification: (notification) {
           if (notification.metrics.atEdge) {
@@ -480,23 +498,33 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 });
               },
             ) : SizedBox(),
-            ScrollablePositionedList.builder(
-              //child: ListView.builder(
-              itemScrollController: itemScrollController,
-              reverse: true,
-              itemCount: chatDataStore.length,
-              //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              itemBuilder: (context, index) {
-                Message message = chatDataStore.getMessageAt(index);
-                // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-                // messageId: messageId, me: widget.me, authRC: widget.authRC, );
-                return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-                  message: message, me: widget.me, authRC: widget.authRC, index: index,);
-              }
+            RawKeyboardListener(
+              onKey: _handleKeyEvent,
+              focusNode: _focusNode,
+              child: Scrollbar(
+                controller: listView.itemScrollController.scrollController,
+                thickness: 10,
+                showTrackOnHover: true,
+                child: listView,
+              )
             ),
           ])
         )
     );
+  }
+
+  void _handleKeyEvent(RawKeyEvent event) {
+    ScrollController _controller = itemScrollController.scrollController;
+    var offset =  _controller.offset;
+    print('key = ${event.logicalKey}');
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown)
+      _controller.animateTo(offset - 200, duration: Duration(milliseconds: 30), curve: Curves.ease);
+    else if (event.logicalKey == LogicalKeyboardKey.arrowUp)
+      _controller.animateTo(offset + 200, duration: Duration(milliseconds: 30), curve: Curves.ease);
+    else if (event.logicalKey == LogicalKeyboardKey.pageDown)
+      _controller.animateTo(offset - 1000, duration: Duration(milliseconds: 30), curve: Curves.ease);
+    else if (event.logicalKey == LogicalKeyboardKey.pageUp)
+      _controller.animateTo(offset + 1000, duration: Duration(milliseconds: 30), curve: Curves.ease);
   }
 
   final ItemScrollController itemScrollController = ItemScrollController();
@@ -687,9 +715,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   Future<Message> postFile({File file, Uint8List bytes, String desc, String mimeType}) {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    MessageService messageService = MessageService(rocketHttpService);
-    return messageService.roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, desc: desc, mimeType: mimeType);
+    return getMessageService().roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, desc: desc, mimeType: mimeType);
   }
 
   Future<void> _takePhoto() async {
