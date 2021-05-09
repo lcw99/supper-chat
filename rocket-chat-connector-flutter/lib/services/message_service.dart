@@ -101,7 +101,7 @@ class MessageService {
           'file', file.path,
           contentType: MediaType.parse(lookupMimeType(file.path)!)) :
           http.MultipartFile.fromBytes('file', bytes!.toList(), filename: desc!,
-              contentType: MediaType.parse(mimeType != null && mimeType!.isNotEmpty ? mimeType : 'application/octet-stream'))
+              contentType: MediaType.parse(mimeType != null && mimeType.isNotEmpty ? mimeType : 'application/octet-stream'))
       );
 
     if (desc != null && desc != '')

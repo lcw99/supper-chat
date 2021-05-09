@@ -34,9 +34,16 @@ class Utils {
       if (user != null)
         return user;
     }
-    print('++++++ call getUserInfo=$userId, $userName');
-    user = await getUserService().getUserInfo(UserIdFilter(userId: userId, username: userName), authentication);
-    userCache.addUser(user);
+
+    bool working = await userCache.addJob(userId, userName, authentication);
+    int count = 0;
+    do {
+      user = await Future.delayed(Duration(milliseconds: 500), () {
+        count ++;
+        return userCache.getUser(userName: userName, userId: userId);
+      });
+    } while(user == null && count < 100);
+    print('@@ job wait count=$count');
     return user;
   }
 
@@ -96,9 +103,23 @@ class UserCache {
 
   static Map<String, User> userCache = Map<String, User>();
   static Map<String, String> userCacheByUserName = Map<String, String>();
+  static List<String> jobList = [];
 
   factory UserCache() {
     return _singleton;
+  }
+
+  Future<bool> addJob(String userId, userName, Authentication authentication) async {
+    String jobCode= '$userId+$userName';
+    if (jobList.contains(jobCode))
+      return true;
+    print('new jobCode=$jobCode');
+    jobList.add(jobCode);
+    User user = await getUserService().getUserInfo(UserIdFilter(userId: userId, username: userName), authentication);
+    print('++++++ get getUserInfo done=${user.username}');
+    addUser(user);
+    jobList.remove(jobCode);
+    return false;
   }
 
   void clear() {
@@ -114,9 +135,9 @@ class UserCache {
   }
 
   void addUser(User user) {
-    print('~~~~~~~~~~~~~~~~~~~~~~~~~++++++++++ adduser=${user.username}');
     userCache[user.id] = user;
     userCacheByUserName[user.username] = user.id;
+    print('~~~~~~~~~~~~~~~~~~~~~~~~~++++++++++ added user=${user.username}');
   }
 
   void clearUser(String userId) {

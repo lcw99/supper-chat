@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
+import 'package:logger/logger.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:http/http.dart' as http;
@@ -39,6 +40,7 @@ class UserService {
     throw RocketChatException(response.body);
   }
 
+  static int count = 0;
   Future<User> getUserInfo(UserIdFilter userIdFilter, Authentication authentication) async {
     http.Response response = await _httpService.getWithFilter(
       '/api/v1/users.info',
@@ -50,14 +52,13 @@ class UserService {
       if (response.body.isNotEmpty == true) {
         String res = utf8.decode(response.bodyBytes);
         var user = User.fromMap(jsonDecode(res)['user']);
-        log('getUserInfo=${user.username}');
+        count++;
+        log('****http call return getUserInfo=${user.username}, count=${count}');
         return user;
-      } else {
-        return User();
       }
     }
-    throw RocketChatException(response.body);
-
+    Logger().e('getUserInfo', response);
+    return User();
   }
 
   Future<User> register(UserNew userNew) async {
