@@ -243,6 +243,8 @@ class ItemScrollController {
   void _detach() {
     _scrollableListState = null;
   }
+
+  ScrollController? scrollController;
 }
 
 class _ScrollablePositionedListState extends State<ScrollablePositionedList>
@@ -273,6 +275,8 @@ class _ScrollablePositionedListState extends State<ScrollablePositionedList>
     widget.itemScrollController?._attach(this);
     primary.itemPositionsNotifier.itemPositions.addListener(_updatePositions);
     secondary.itemPositionsNotifier.itemPositions.addListener(_updatePositions);
+
+    widget.itemScrollController!.scrollController = primary.scrollController;
   }
 
   @override

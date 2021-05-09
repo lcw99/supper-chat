@@ -1,3 +1,4 @@
+import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rc;
 
@@ -17,5 +18,10 @@ DateTime? jsonToDateTime(json) => json != null
 UserService getUserService() {
       final rc.HttpService rocketHttpService = rc.HttpService(rocketServerUri);
       return UserService(rocketHttpService);
+}
+
+MessageService getMessageService() {
+      final rc.HttpService rocketHttpService = rc.HttpService(rocketServerUri);
+      return MessageService(rocketHttpService);
 }
 

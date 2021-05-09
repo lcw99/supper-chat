@@ -19,7 +19,7 @@ class Utils {
       uri = uri.replace(path: Uri.parse(userInfo.avatarUrl).path);
     else if (userInfo.avatarETag != null)
       uri = uri.replace(query: 'avatarETag=${userInfo.avatarETag}');
-    print('avatar url=$uri');
+    //print('avatar url=$uri');
     return uri.toString();
   }
 
