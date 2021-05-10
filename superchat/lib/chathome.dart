@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
+import 'package:rocket_chat_connector_flutter/models/response/response.dart';
+
 import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
 
@@ -147,7 +150,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           }
         } else if (event.msg == 'changed') {
           notificationController.add(event);
-          if (event.collection == 'stream-notify-user' &&event.notificationFields != null) {
+          if (event.collection == 'stream-notify-user' && event.notificationFields != null) {
             String eventName = event.notificationFields.eventName;
             if (eventName.endsWith('notification')) {
               if (event.notificationFields.notificationArgs != null &&
@@ -178,6 +181,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               }
             } else {
               print('**************** unknown eventName=$eventName');
+            }
+          }
+          else if (event.collection == 'stream-notify-logged' && event.notificationFields != null) {
+            String eventName = event.notificationFields.eventName;
+            if (eventName == 'updateAvatar') {
+              setState(() {
+              });
             }
           }
         }
@@ -379,13 +389,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         break;
       case 1:
         return FutureBuilder<RoomSnapshotInfo>(
-            future: _getPublicRoomList(),
+            future: _getMyRoomList(roomType: 'c', titleText: 'PUBLIC', imagePath: 'assets/images/sunrise-1634197_1920.jpg'),
             builder: roomBuilder,
         );
         break;
       case 2:
         return FutureBuilder<RoomSnapshotInfo>(
-          future: _getMyRoomList(roomType: 'd', titleText: 'Direct', imagePath: 'assets/images/maldives-3220702_1920.jpg'),
+          future: _getMyRoomList(roomType: 'd', titleText: 'DIRECT', imagePath: 'assets/images/mountains-1158269_1920.jpg'),
           builder: roomBuilder,
         );
         break;
@@ -425,6 +435,17 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 roomName = room.usernames.toString();
               }
             }
+
+            Widget roomType;
+            if (room.t == 'c')
+              roomType = Icon(Icons.public, color: Colors.blueAccent, size: 17,);
+            else if (room.t == 'p')
+              roomType = Icon(Icons.lock, color: Colors.blueAccent, size: 17);
+            else if (room.t == 'd')
+              roomType = Icon(Icons.chat, color: Colors.blueAccent, size: 17);
+            else
+              roomType = Icon(Icons.device_unknown, color: Colors.yellow, size: 17);
+
             return ListTile(
               onTap: () {
                 _setChannel(room);
@@ -432,9 +453,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               leading: Container(
                   child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain,)),
               title: Row(children: [
-                room.t == 'p' ? Icon(Icons.lock, color: Colors.blueAccent, size: 17,) : Icon(Icons.public, color: Colors.blueAccent, size: 17),
+                roomType,
                 SizedBox(width: 3,),
                 Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+                room.u != null && room.u.id == widget.user.id ?
+                  Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
               ]),
               subtitle: buildSubTitle(room),
               trailing: UnreadCounter(unreadCount: unreadCount),
@@ -451,6 +474,29 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     } else {
       return Container(color: Colors.white, child: Center(child: CircularProgressIndicator(strokeWidth: 1,)));
     }
+  }
+
+  buildSubTitle(model.Room room) {
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          //Text(room.id, style: TextStyle(color: Colors.grey)),
+          room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          getLastMessage(room) != null ? Text(getLastMessage(room), maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
+          room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
+        ]
+    );
+  }
+
+  String getLastMessage(model.Room room) {
+    String lm;
+    if (room.lastMessage != null && room.lastMessage.msg != null)
+      lm = room.lastMessage.msg;
+    if ((lm == null || lm.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
+      lm = room.lastMessage.attachments.first.title;
+    return lm;
   }
 
   void _onBottomNaviTapped(int index) {
@@ -497,12 +543,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       setState(() {});
   }
 
-  ChannelService getChannelService() {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    return ChannelService(rocketHttpService);
-  }
-
-  Future<RoomSnapshotInfo> _getPublicRoomList() async {
+  Future<RoomSnapshotInfo> _getChannelList() async {
     ChannelListResponse rep = await getChannelService().getChannelList(widget.authRC);
     return RoomSnapshotInfo(rep.channelList, 'assets/images/sunrise-1634197_1920.jpg', 'PUBLIC ROOMS');
   }
@@ -516,10 +557,19 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     print('updateSince = ${updateSince}');
 
     ChannelService channelService = getChannelService();
+    List<model.Room> allPublicRoom = (await channelService.getChannelList(widget.authRC)).channelList;
+    print('allPublicRoom.length = ${allPublicRoom.length}');
+
     UpdatedSinceFilter filter = UpdatedSinceFilter(updateSince);
     RoomUpdate roomUpdate = await channelService.getRooms(widget.authRC, filter);
     List<model.Room> updatedRoom = roomUpdate.update;
     print('updatedRoom.length = ${updatedRoom.length}');
+
+    for(model.Room r in allPublicRoom) {
+      int findIndex = updatedRoom.indexWhere((element) => element.id == r.id);
+      if (findIndex < 0)
+        updatedRoom.add(r);
+    }
 
     SubscriptionUpdate subsUpdate = await channelService.getSubscriptions(widget.authRC, filter);
     print('updatedSubs.update.length=${subsUpdate.update.length}');
@@ -614,29 +664,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
   }
 
-  buildSubTitle(model.Room room) {
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          //Text(room.id, style: TextStyle(color: Colors.grey)),
-          room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          getLastMessage(room) != null ? Text(getLastMessage(room), maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
-          room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
-        ]
-    );
-  }
-
-  String getLastMessage(model.Room room) {
-    String lm;
-    if (room.lastMessage != null && room.lastMessage.msg != null)
-      lm = room.lastMessage.msg;
-    if ((lm == null || lm.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
-      lm = room.lastMessage.attachments.first.title;
-    return lm;
-  }
-
   deleteMessage(messageId) {
     webSocketService.deleteMessage(messageId);
   }
@@ -650,15 +677,21 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   updateRoom(String roomId, {String roomName, String roomDescription,
-      String roomTopic, String roomType, String announcement, String roomAvatar}) {
+      String roomTopic, String roomType, String roomAvatar,
+      bool readOnly, bool systemMessages, bool defaultRoom, String joinCode}) {
     webSocketService.updateRoom(roomId, roomName: roomName, roomDescription: roomDescription,
-        roomTopic: roomTopic, roomType: roomType, announcement: announcement, roomAvatar: roomAvatar);
+        roomTopic: roomTopic, roomType: roomType, roomAvatar: roomAvatar,
+        readOnly: readOnly, systemMessages: systemMessages, defaultRoom: defaultRoom, joinCode: joinCode
+    );
   }
 
   deleteRoom(String roomId) {
     webSocketService.eraseRoom(roomId);
   }
 
+  Future<Response> roomAnnouncement(model.Room room, String announcement) async {
+    return await getChannelService().roomAnnouncement(room, announcement, widget.authRC);
+  }
 }
 
 class RoomSnapshotInfo {

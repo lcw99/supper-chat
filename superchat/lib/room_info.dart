@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:universal_io/io.dart' as uio;
 
@@ -16,7 +17,8 @@ import 'package:superchat/update_room.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rc;
 
 import 'constants/constants.dart';
-
+import 'chatview.dart';
+import 'utils/utils.dart';
 
 class RoomInfo extends StatefulWidget {
   final ChatHomeState chatHomeState;
@@ -30,6 +32,7 @@ class RoomInfo extends StatefulWidget {
 
 class _RoomInfoState extends State<RoomInfo> {
   PickedFile newAvatar;
+  TextEditingController _tecRoomAnnouncement = TextEditingController();
 
   @override
   void initState() {
@@ -43,19 +46,11 @@ class _RoomInfoState extends State<RoomInfo> {
     if (event.id == '16') { // 16: update room
       String msg;
       if (event.result != null && event.result['result']) {
-        msg = "Room avatar updated.";
+        msg = "Room updated.";
       } else {
-        msg = "Room avatar update error";
+        msg = "Room update error";
       }
-      Fluttertoast.showToast(
-          msg: msg,
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0
-      );
+      Utils.showToast(msg);
     }
   }
 
@@ -72,10 +67,12 @@ class _RoomInfoState extends State<RoomInfo> {
   }
 
   Future<model.Room> getRoom(String roomId) {
-    return widget.chatHomeState.getChannelService().getRoomInfo(roomId, widget.chatHomeState.widget.authRC);
+    return getChannelService().getRoomInfo(roomId, widget.chatHomeState.widget.authRC);
   }
 
   Widget buildPage(context, model.Room room) {
+    _tecRoomAnnouncement.text = room.announcement;
+
     double imageWidth = MediaQuery.of(context).size.width;
     double imageHeight = imageWidth * 0.6;
     Widget avatar = Icon(Icons.no_photography_outlined, size: 100, color: Colors.blueAccent,);
@@ -89,9 +86,11 @@ class _RoomInfoState extends State<RoomInfo> {
         cacheWidth: 800,
       );
 
+    bool roomOwner = room.u.id == widget.user.id;
     return Scaffold(
         appBar: AppBar(
-          title: Text('Room Information'),
+          leadingWidth: 25,
+          title: Utils.getRoomTitle(room, widget.user.id),
         ),
         body: SingleChildScrollView(child: Container(
             padding: EdgeInsets.all(30),
@@ -159,6 +158,31 @@ class _RoomInfoState extends State<RoomInfo> {
                       border: UnderlineInputBorder(),
                     ),
                   ),
+                  Row(children: [
+                    Expanded(child: TextFormField(
+                      controller: _tecRoomAnnouncement,
+                      maxLines: null,
+                      readOnly: !roomOwner,
+                      keyboardType: TextInputType.text,
+                      decoration: InputDecoration(
+                        labelText: 'Room announcement',
+                        border: UnderlineInputBorder(),
+                      ),
+                    )),
+                    roomOwner ?
+                    InkWell(
+                      onTap: () async {
+                        if (_tecRoomAnnouncement.text.isNotEmpty) {
+                          var ret = await widget.chatHomeState.roomAnnouncement(room, _tecRoomAnnouncement.text);
+                          if (ret.success)
+                            Utils.showToast('Announcement updated');
+                          else
+                            Utils.showToast('Announcement update error');
+                        }
+                      },
+                      child: Icon(Icons.announcement, color: Colors.blueAccent,)) :
+                    SizedBox(),
+                  ],),
                   SizedBox(height: 10,),
                   Row(children: [
                     TextButton(

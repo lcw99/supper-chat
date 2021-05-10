@@ -23,12 +23,16 @@ class UpdateRoomState extends State<UpdateRoom> {
   TextEditingController _tecRoomName = TextEditingController();
   TextEditingController _tecRoomDescription = TextEditingController();
   TextEditingController _tecRoomTopic = TextEditingController();
+  TextEditingController _tecJoinCode = TextEditingController();
   String errorText;
   String hintText = 'Room_Name';
   String helperText = 'alphanumeric, no space';
   bool roomCreated = false;
 
   bool isPrivate = true;
+  bool readOnly = false;
+  bool systemMessages = false;
+  bool defaultRoom = false;
 
   static const String createRoomText = "Create Room";
   static const String updateRoomText = "Update Room";
@@ -38,6 +42,7 @@ class UpdateRoomState extends State<UpdateRoom> {
   int updateCallCount;
 
   String errorTextRoomTopic;
+  String errorTextJoinCode;
 
   bool editMode = false;
 
@@ -104,13 +109,14 @@ class UpdateRoomState extends State<UpdateRoom> {
           },
         ),
         roomCreated || editMode ? Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
           SizedBox(height: 10,),
           TextFormField(
             autofocus: true,
             controller: _tecRoomDescription,
             keyboardType: TextInputType.text,
-            maxLines: 3,
+            maxLines: 2,
             decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),
                 helperText: 'Room description', ),
           ),
@@ -119,10 +125,40 @@ class UpdateRoomState extends State<UpdateRoom> {
             autofocus: true,
             controller: _tecRoomTopic,
             keyboardType: TextInputType.text,
-            maxLines: 3,
+            maxLines: 2,
             decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),
                 helperText: 'Room topic', errorText: errorTextRoomTopic),
           ),
+          SizedBox(height: 10,),
+          TextFormField(
+            autofocus: true,
+            controller: _tecJoinCode,
+            keyboardType: TextInputType.text,
+            maxLines: 1,
+            decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),
+                helperText: 'Join code', errorText: errorTextJoinCode),
+          ),
+          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Switch(
+              onChanged: (change) { setState(() { readOnly = change;}); },
+              value: readOnly,
+            ),
+            Text('Read only', style: TextStyle(color: Colors.black54, fontSize: 12),),
+          ],),
+          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Switch(
+              onChanged: (change) { setState(() { systemMessages = change;}); },
+              value: systemMessages,
+            ),
+            Text('System messages', style: TextStyle(color: Colors.black54, fontSize: 12),),
+          ],),
+          Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Switch(
+              onChanged: (change) { setState(() { defaultRoom = change;}); },
+              value: defaultRoom,
+            ),
+            Text('Default', style: TextStyle(color: Colors.black54, fontSize: 12),),
+          ],),
         ]) : SizedBox(),
         TextButton(
           onPressed: () {

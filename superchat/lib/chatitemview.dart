@@ -398,7 +398,7 @@ class ChatItemViewState extends State<ChatItemView> {
     double imageHeightInDevice = attachment.imageDimensions.height * r;
 
     var uri = serverUri.replace(path: imagePath, queryParameters: query);
-    print('@@@ image url=${uri.toString()}');
+    //print('@@@ image url=${uri.toString()}');
     //var image = ei.ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
     var image = ei.ExtendedImage.network(uri.toString(),
       width: imageWidthInDevice / dpr,

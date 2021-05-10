@@ -105,6 +105,28 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
+  Future<Response> roomAnnouncement(model.Room? room, String? announcement, Authentication authentication) async {
+    String path = '/api/v1/channels.setAnnouncement';
+    if (room!.t == 'p')
+      path = '/api/v1/groups.setAnnouncement';
+
+    Map<String, String?> body = {"roomId": room.id, "announcement": announcement};
+
+    http.Response response = await _httpService.post(
+      path,
+      jsonEncode(body),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return Response.fromMap(jsonDecode(response.body));
+      }
+    }
+    return Response(success: false);
+  }
+
+
   Future<ChannelMessages> getStarredMessages(String roomId, Authentication authentication) async {
     String path = '/api/v1/chat.getStarredMessages';
     http.Response response = await _httpService.getWithQuery(
@@ -196,11 +218,9 @@ class ChannelService {
         var resp = utf8.decode(response.bodyBytes);
         log("@@@@@@@ channels.list resp=$resp");
         return ChannelListResponse.fromMap(jsonDecode(resp));
-      } else {
-        return ChannelListResponse();
       }
     }
-    throw RocketChatException(response.body);
+    return ChannelListResponse();
   }
 
   Future<SubscriptionUpdate> getSubscriptions(Authentication authentication, UpdatedSinceFilter updateSinceFilter) async {

@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Super Chat">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" href="myicons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="shortcut icon" type="image/png" href="favicon.png"/>
@@ -51,7 +51,6 @@
       window.addEventListener('load', function () {
         //navigator.serviceWorker.register('flutter_service_worker.js');
         navigator.serviceWorker.register('./firebase-messaging-sw.js');
-        });
       });
     }
   </script>
@@ -61,7 +60,7 @@
     <img class="center" src="splash/img/light-1x.png" />
   </picture>
   <script type="text/javascript">
-    let useHtml = false;
+    let useHtml = true;
     if(useHtml) {
       window.flutterWebRenderer = "html";
     } else {
