@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
@@ -94,6 +96,35 @@ class Utils {
     }
   }
 
+  static Widget getRoomTitle(Room r, String ownerId) {
+    Widget roomType;
+    if (r.t == 'c')
+      roomType = Icon(Icons.public, color: Colors.white);
+    else if (r.t == 'p')
+      roomType = Icon(Icons.lock, color: Colors.white);
+    else if (r.t == 'd')
+      roomType = Icon(Icons.chat, color: Colors.white);
+    else
+      roomType = Icon(Icons.device_unknown, color: Colors.yellow);
+
+    return Row(children: [
+      roomType,
+      r.u != null && r.u.id == ownerId ? Icon(Icons.perm_identity, color: Colors.white) : SizedBox(),
+      Text(r.name),
+    ],);
+  }
+
+  static showToast(String msg) {
+    Fluttertoast.showToast(
+        msg: msg,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+    );
+  }
 }
 
 class UserCache {

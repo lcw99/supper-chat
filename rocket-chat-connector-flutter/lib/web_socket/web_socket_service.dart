@@ -286,7 +286,8 @@ class WebSocketService {
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 
-  void updateRoom(String roomId, {String? roomName, String? roomDescription, String? roomTopic, String? roomType, String? announcement, String? roomAvatar}) {
+  void updateRoom(String roomId, {String? roomName, String? roomDescription, String? roomTopic, String? roomType, String? roomAvatar,
+                  bool? readOnly, bool? systemMessages, bool? defaultRoom, String? joinCode }) {
     if (roomName != null)
       updateRoomParam(roomId, "roomName", roomName);
     if (roomDescription != null)
@@ -295,13 +296,19 @@ class WebSocketService {
       updateRoomParam(roomId, "roomTopic", roomTopic);
     if (roomType != null)
       updateRoomParam(roomId, "roomType", roomType);
-    if (announcement != null)
-      updateRoomParam(roomId, "announcement", announcement);
     if (roomAvatar != null)
       updateRoomParam(roomId, "roomAvatar", roomAvatar);
+    if (roomAvatar != null)
+      updateRoomParam(roomId, "readOnly", readOnly);
+    if (roomAvatar != null)
+      updateRoomParam(roomId, "systemMessages", systemMessages);
+    if (roomAvatar != null)
+      updateRoomParam(roomId, "default", defaultRoom);
+    if (roomAvatar != null)
+      updateRoomParam(roomId, "joinCode", joinCode);
   }
 
-  void updateRoomParam(String roomId, String setting, String? value) {
+  void updateRoomParam(String roomId, String setting, dynamic? value) {
     Map msg = {
       "msg": "method",
       "method": "saveRoomSettings",

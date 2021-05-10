@@ -204,6 +204,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             print('+++++stream-room-messages:' + jsonEncode(arg));
             Message roomMessage = Message.fromMap(arg);
             //print(jsonEncode(roomMessage));
+            if (roomMessage.t == 'room_changed_announcement') {
+              widget.room.announcement = roomMessage.msg;
+            }
             int i = chatDataStore.findIndexByMessageId(roomMessage.id);
             if (i >= 0) {
               GlobalKey<ChatItemViewState> keyChatItem = chatDataStore.getGlobalKey(i);
@@ -299,6 +302,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   DropzoneViewController dropzoneViewController;
   String droppedFile;
+  bool announcementExpand = false;
+
   @override
   Widget build(BuildContext context) {
     var markAsReadJob = RepeatedJobWaiter(markAsRead);
@@ -309,7 +314,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     else if (widget.room.usernames != null)
       title = widget.room.usernames.toString();
 
-    print('~~~ chatview building=$title');
     return Phoenix(child: Scaffold(
       floatingActionButton: Visibility(
         child: ScaleTransition(
@@ -319,7 +323,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       key: chatViewKey,
       appBar: AppBar(
-        title: Text(title),
+        leadingWidth: 25,
+        title: Utils.getRoomTitle(widget.room, widget.me.id),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.star_border_outlined),
@@ -383,9 +388,31 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           )
           : SizedBox(height: 0,),
         ])),
-      body:
-        !getMoreMessages && (chatDataStore.length > 0) ? buildChatList() :
-        FutureBuilder(
+      body: Column(children: [
+        Container(
+          child: widget.room.announcement != null && widget.room.announcement.isNotEmpty ?
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(left: 15, top: 5, bottom: 5, right: 20),
+            color: Colors.yellow.shade300,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  announcementExpand = !announcementExpand;
+                });
+              },
+              child: AnimatedCrossFade(
+                  duration: Duration(milliseconds: 200),
+                  crossFadeState: !announcementExpand ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                  firstChild: Text(widget.room.announcement, style: TextStyle(fontSize: 12), maxLines: 2, overflow: TextOverflow.fade,),
+                  secondChild: Text(widget.room.announcement, style: TextStyle(fontSize: 12), maxLines: 100, overflow: TextOverflow.fade,),
+              )
+            )) : SizedBox()
+        ),
+        Expanded(child:
+          !getMoreMessages && (chatDataStore.length > 0) ?
+          buildChatList() :
+          FutureBuilder(
         future: () {
           print('@@@@@@ call future _getChannelMessages @@@@@@ updateAll=$getMoreMessages');
           var ua = getMoreMessages;
@@ -411,6 +438,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           }
         }
       )
+        )
+      ],)
     ));
   }
 
@@ -436,6 +465,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       //child: ListView.builder(
         itemScrollController: itemScrollController,
         reverse: true,
+        physics: BouncingScrollPhysics(),
         itemCount: chatDataStore.length,
         //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         itemBuilder: (context, index) {
@@ -720,11 +750,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   Future<void> _takePhoto() async {
     _pickImage(imageSource: ImageSource.camera);
-  }
-
-  ChannelService getChannelService() {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    return ChannelService(rocketHttpService);
   }
 
   RoomMessage messageToRoomMessage(Message m) {
