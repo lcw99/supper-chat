@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 import 'package:logger/logger.dart';
+import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:universal_io/io.dart';
 
 import 'package:http/http.dart' as http;
@@ -39,6 +40,41 @@ class UserService {
     }
     throw RocketChatException(response.body);
   }
+
+  Future<Room> useInviteToken(String token, Authentication authentication) async {
+    Map<String, dynamic> body = {'token': token};
+    http.Response response = await _httpService.post(
+      '/api/v1/useInviteToken',
+      jsonEncode(body),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        print("resp useInviteToken=" + response.body);
+        return Room.fromMap(jsonDecode(response.body)['room']);
+      }
+    }
+    return Room();
+  }
+
+  Future<Room> channelsInvite(String roomId, String userId, Authentication authentication) async {
+    Map<String, dynamic> body = {'roomId': roomId, 'userId': userId};
+    http.Response response = await _httpService.post(
+      '/api/v1/channels.invite',
+      jsonEncode(body),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        print("resp useInviteToken=" + response.body);
+        return Room.fromMap(jsonDecode(response.body)['channel']);
+      }
+    }
+    return Room();
+  }
+
 
   static int count = 0;
   Future<User> getUserInfo(UserIdFilter userIdFilter, Authentication authentication) async {
