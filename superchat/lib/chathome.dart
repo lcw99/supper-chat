@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 
+import 'model/join_info.dart';
 import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
 
@@ -46,8 +47,8 @@ import 'update_room.dart';
 final String webSocketUrl = "wss://chat.smallet.co/websocket";
 
 class ChatHome extends StatefulWidget {
-  ChatHome({Key key, @required this.title, @required this.user, @required this.authRC, this.payload}) : super(key: key);
-  final String title;
+  ChatHome({Key key, @required this.joinInfo, @required this.user, @required this.authRC, this.payload}) : super(key: key);
+  final JoinInfo joinInfo;
   final User user;
   final Authentication authRC;
   final String payload;
@@ -93,6 +94,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   bool isWebSocketClosed() => webSocketService.socketClosed;
 
+  void joinRoomRequest(String joinToken) {
+    Utils.showToast(joinToken);
+  }
+
   void subscribeAndConnect() {
     print('_+_+_+_+_+_ connecting web socket');
     attachWebSocketHandler();
@@ -135,7 +140,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         return;
       }
       if (event.msg == WebSocketService.networkErrorMessage){
-        showAlertDialog();
+        showNetworkAlertDialog();
         return;
       }
       print('collection=${event.collection}');
@@ -200,12 +205,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       print('!#!#!#!#!#!#!# Socket onDone!!!!! = ${webSocketService.webSocketChannel.closeCode}, appState=$appState');
       if (appState == AppLifecycleState.resumed) {
         Logger().e('!#!#!#!#!#!#!# huh... network dead appState=$appState');
-        Future.delayed(Duration.zero, () { showAlertDialog(); });
+        Future.delayed(Duration.zero, () { showNetworkAlertDialog(); });
       }
     }, cancelOnError: false);
   }
 
-  showAlertDialog() async {
+  showNetworkAlertDialog() async {
     await showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -217,6 +222,33 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                   child: Text("OK"),
                   onPressed: () {
                     subscribeAndConnect();
+                    Navigator.pop(context);
+                  },
+                ),
+              ]
+          );
+        }
+    );
+  }
+
+  showJoinAlertDialog(String roomName) async {
+    model.Room room = await getUserService().useInviteToken(widget.joinInfo.inviteToken, widget.authRC);
+    await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+              title: Text('Join room'),
+              content: Text('Join to ${room.name}?'),
+              actions: [
+                TextButton(
+                  child: Text("Cancel"),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                TextButton(
+                  child: Text("OK"),
+                  onPressed: () {
                     Navigator.pop(context);
                   },
                 ),
@@ -289,6 +321,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    print('#######-------------------######### joinInfo=${widget.joinInfo}');
     return Scaffold(
       body: _buildPage(),
       drawer: Drawer(
@@ -404,6 +437,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   Widget roomBuilder(context, AsyncSnapshot<RoomSnapshotInfo> snapshot) {
     if (snapshot.hasData) {
+      if (snapshot.connectionState == ConnectionState.done && widget.joinInfo != null) {
+        Future.delayed(Duration.zero, () {
+          showJoinAlertDialog(widget.joinInfo.inviteToken);
+        });
+      }
       List<model.Room> roomList = snapshot.data.roomList;
       return CustomScrollView(
         slivers: <Widget>[

@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FBA;
+import 'package:fluro/fluro.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -12,7 +13,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get_it/get_it.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logger/logger.dart';
-import 'package:package_info/package_info.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/new/user_new.dart';
@@ -30,6 +31,8 @@ import 'constants/constants.dart';
 import 'database/chatdb.dart';
 
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
+
+import 'model/join_info.dart';
 
 final String serverUrl = "https://chat.smallet.co";
 final String username = "support@semaphore.kr";
@@ -63,23 +66,17 @@ void main() async {
     await _initNotification();
   } else {
     googleSignInMode = false;
-    googleSignInMode = true;
   }
   await packageInfo();
   runApp(MainHome());
 }
 
 packageInfo() async {
-  if (kIsWeb) {
-    version = 'web';
-    buildNumber = '1';
-  } else {
-    PackageInfo packageInfo = await PackageInfo.fromPlatform();
-    String appName = packageInfo.appName;
-    String packageName = packageInfo.packageName;
-    version = packageInfo.version;
-    buildNumber = packageInfo.buildNumber;
-  }
+  PackageInfo packageInfo = await PackageInfo.fromPlatform();
+  String appName = packageInfo.appName;
+  String packageName = packageInfo.packageName;
+  version = packageInfo.version;
+  buildNumber = packageInfo.buildNumber;
 }
 
 Future setupLocator() async {
@@ -161,17 +158,62 @@ _initNotification() async {
   }
 }
 
+class Application {
+  static FluroRouter router;
+}
+
+// http://localhost:5000/#/join?invite=5nKTZG&joincode=bbbb
+class Routes {
+  static String root = "/";
+  static String demoSimple = "/join";
+  static String demoSimpleFixedTrans = "/demo/fixedtrans";
+  static String demoFunc = "/demo/func";
+  static String deepLink = "/message";
+
+  static void configureRoutes(FluroRouter router) {
+    router.notFoundHandler = Handler(
+        handlerFunc: (BuildContext context, Map<String, List<String>> params) {
+          print("ROUTE WAS NOT FOUND !!!");
+          return;
+        });
+    router.define(root, handler: rootHandler);
+    router.define(demoSimple, handler: joinRoomHandler);
+    router.define(demoSimpleFixedTrans,
+        handler: joinRoomHandler, transitionType: TransitionType.inFromLeft);
+  }
+}
+
+var rootHandler = Handler(
+    handlerFunc: (BuildContext context, Map<String, List<String>> params) {
+      return LoginHome(title: 'from root');
+    });
+
+var joinRoomHandler = Handler(
+    handlerFunc: (BuildContext context, Map<String, List<String>> params) {
+      String invite = params["invite"]?.first;
+      String joincode = params["joincode"]?.first;
+      //Navigator.of(context).pushNamedAndRemoveUntil(Routes.demoSimple, (Route<dynamic> route) => false);
+      //Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome(title: invite +':'+ joincode)), (route) => false);
+      return Empty(JoinInfo(invite, joincode));
+    });
+
 class MainHome extends StatefulWidget {
   const MainHome({Key key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
     print('***** MainHome start');
-    return _MainHome();
+    return MainHomeState();
   }
 }
 
-class _MainHome extends State<MainHome> {
+class MainHomeState extends State<MainHome> {
+  MainHomeState() {
+    final router = FluroRouter();
+    Routes.configureRoutes(router);
+    Application.router = router;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -179,24 +221,38 @@ class _MainHome extends State<MainHome> {
       debugShowCheckedModeBanner: false,
       navigatorKey: navGlobalKey,
       theme: ThemeData.light(),
-      home: LoginHome(title: 'Super Chat'),
-      //home: Empty(),
+      //home: LoginHome(title: 'Super Chat'),
+      onGenerateRoute: Application.router.generator,
+      //onGenerateRoute: (settings) => NavigatorRoute.route(settings.name),
     );
   }
 }
 
 class Empty extends StatefulWidget {
+  final JoinInfo joinInfo;
+  Empty(this.joinInfo);
+
   @override
   _EmptyState createState() => _EmptyState();
 }
 
+JoinInfo joinInfo;
 class _EmptyState extends State<Empty> {
   @override
+  void initState() {
+    joinInfo = widget.joinInfo;
+    super.initState();
+  }
+  @override
   Widget build(BuildContext context) {
-    return Container(color: Colors.white,);
+    print('+++++++@@@@@@@@@@@@@++++++++Empty title=${widget.joinInfo}');
+    return SizedBox();
   }
 }
 
+Future<String> waitMount(String title) {
+  return Future.delayed(Duration(seconds: 10), () => title);
+}
 
 class LoginHome extends StatefulWidget {
   final String notificationPayloadLocal;
@@ -206,7 +262,7 @@ class LoginHome extends StatefulWidget {
 
   @override
   _LoginHomeState createState() {
-    Logger().i('_LoginHomeState createState payload=$notificationPayload, payloadlocal=$notificationPayloadLocal');
+    //Logger().i('_LoginHomeState createState payload=$notificationPayload, payloadlocal=$notificationPayloadLocal');
     if (notificationPayload == null)
       notificationPayload = notificationPayloadLocal;
     return _LoginHomeState();
@@ -222,6 +278,7 @@ class _LoginHomeState extends State<LoginHome> {
 
   @override
   void initState() {
+    Logger().w('+++++++++++@@@@@@+++++++++LoginHome title=${widget.title}');
     super.initState();
     initializeFlutterFire().then((_) {
       setState(() {
@@ -423,8 +480,10 @@ class _LoginHomeState extends State<LoginHome> {
               var _np = notificationPayload;
               notificationPayload = null;
               Future.delayed(Duration.zero, () {
+                if (chatHomeStateKey.currentState != null && chatHomeStateKey.currentState.mounted)
+                  return SizedBox();
                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) =>
-                    ChatHome(key: chatHomeStateKey, title: 'Super Chat', user: user, authRC: auth, payload: _np,)));
+                    ChatHome(key: chatHomeStateKey, joinInfo: joinInfo, user: user, authRC: auth, payload: _np,)));
               });
               return SizedBox();
             } else {
