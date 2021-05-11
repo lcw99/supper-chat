@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:universal_io/io.dart' as uio;
 import 'dart:typed_data';
@@ -43,9 +44,10 @@ class ChatItemView extends StatefulWidget {
   final bool onTapExit;
   final Message message;
   final int index;
+  final Room room;
 
   ChatItemView({Key key, @required this.chatHomeState, @required this.me, @required this.authRC,
-    this.onTapExit = false, this.message, this.index = 0,
+    this.onTapExit = false, this.message, this.index = 0, this.room,
   }) : super(key: key);
 
   @override
@@ -604,9 +606,7 @@ class ChatItemViewState extends State<ChatItemView> {
           ),
           InkWell(
             onTap: () {
-              Message editedMessage = Message(id: message.id, msg: _teController.text);
-              //log('@@@@@@edited message=' + jsonEncode(editedMessage.toMap()));
-              widget.chatHomeState.editMessage(editedMessage);
+              widget.chatHomeState.editMessage(widget.room.id, message.id, _teController.text);
               Navigator.pop(context);
             },
             child: Container(

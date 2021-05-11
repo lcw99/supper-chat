@@ -324,7 +324,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       key: chatViewKey,
       appBar: AppBar(
         leadingWidth: 25,
-        title: Utils.getRoomTitle(widget.room, widget.me.id),
+        title: Utils.getRoomTitle(context, widget.room, widget.me.id),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.star_border_outlined),
@@ -337,13 +337,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               if (value == 'room_info')
                 roomInformation();
               else if (value == 'pin_message') {}
-              else if (value == 'invite_user') {
+              else if (value == 'add_user') {
+
               }
             },
             itemBuilder: (context){
               return [
                 PopupMenuItem(child: Text("Pin Message..."), value: 'pin_message',),
-                PopupMenuItem(child: Text("Invite User..."), value: 'invite_user',),
+                PopupMenuItem(child: Text("Add User..."), value: 'add_user',),
                 PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
               ];
               }),
@@ -476,7 +477,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
           // messageId: messageId, me: widget.me, authRC: widget.authRC, );
           return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-            message: message, me: widget.me, authRC: widget.authRC, index: index,);
+            message: message, me: widget.me, authRC: widget.authRC, index: index, room: widget.room);
         }
     );
 
@@ -618,7 +619,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             itemCount: snapshot.data.messages.length,
             itemBuilder: (BuildContext c, int index) {
               var message = snapshot.data.messages[index];
-              return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true,);
+              return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: widget.room,);
             });
         } else {
           return Center(child: CircularProgressIndicator());
@@ -861,7 +862,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   Future<void> roomInformation() async {
     var ret = await Navigator.push(context, MaterialPageRoute(builder: (context) =>
-        RoomInfo(chatHomeState: widget.chatHomeState, user: widget.me, roomId: widget.room.id,)));
+        RoomInfo(chatHomeState: widget.chatHomeState, user: widget.me, room: widget.room,)));
     if (ret == 'room deleted')
         Navigator.pop(context);
   }

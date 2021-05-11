@@ -95,6 +95,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   bool isWebSocketClosed() => webSocketService.socketClosed;
 
+  Authentication getAuthentication() => widget.authRC;
+
   @override
   void initState() {
     super.initState();
@@ -759,8 +761,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.deleteMessage(messageId);
   }
 
-  editMessage(Message message) {
-    webSocketService.updateMessage(message);
+  editMessage(String roomId, String msgId, String text) {
+    getUserService().chatUpdate(roomId, msgId, text, widget.authRC);
   }
 
   createRoom(String roomName, List<String> users, bool private) {

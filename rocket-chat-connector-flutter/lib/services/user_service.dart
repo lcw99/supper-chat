@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 import 'package:logger/logger.dart';
+import 'package:rocket_chat_connector_flutter/models/message.dart';
+import 'package:rocket_chat_connector_flutter/models/response/find_or_create_invite.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:universal_io/io.dart';
 
@@ -68,11 +70,45 @@ class UserService {
 
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        print("resp useInviteToken=" + response.body);
+        print("resp channelsInvite=" + response.body);
         return Room.fromMap(jsonDecode(response.body)['channel']);
       }
     }
     return Room();
+  }
+
+  Future<Message> chatUpdate(String roomId, String msgId, String text, Authentication authentication) async {
+    Map<String, dynamic> payload = {'roomId': roomId, 'msgId': msgId, 'text': text};
+    http.Response response = await _httpService.post(
+      '/api/v1/chat.update',
+      jsonEncode(payload),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        print("resp useInviteToken=" + response.body);
+        return Message.fromMap(jsonDecode(response.body)['channel']);
+      }
+    }
+    return Message();
+  }
+
+  Future<FindOrCreateInviteResponse> findOrCreateInvite(String roomId, int days, int maxUses, Authentication authentication) async {
+    Map<String, dynamic> payload = {'rid': roomId, 'days': days, 'maxUses': maxUses};
+    http.Response response = await _httpService.post(
+      '/api/v1/findOrCreateInvite',
+      jsonEncode(payload),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        print("resp useInviteToken=" + response.body);
+        return FindOrCreateInviteResponse.fromMap(jsonDecode(response.body));
+      }
+    }
+    return FindOrCreateInviteResponse();
   }
 
   Future<Room> channelsJoin(String roomId, Authentication authentication, {String? joinCode}) async {
@@ -120,6 +156,25 @@ class UserService {
     }
     Logger().e('getUserInfo', response);
     return User();
+  }
+
+  Future<List<User>> usersPresence(DateTime from, Authentication authentication) async {
+    http.Response response = await _httpService.getWithQuery(
+      '/api/v1/users.presence',
+      {'from': from.toIso8601String()},
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        String res = utf8.decode(response.bodyBytes);
+        var jsonUsers = jsonDecode(res)['users'];
+        log('usersPresence=$res');
+        var userList = jsonUsers.where((json) => json != null).map((json) => User.fromMap(json)).toList();
+        return userList;
+      }
+    }
+    return [];
   }
 
   Future<User> register(UserNew userNew) async {
