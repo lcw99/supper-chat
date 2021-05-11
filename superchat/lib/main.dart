@@ -68,7 +68,7 @@ void main() async {
     googleSignInMode = true;
     await _initNotification();
   } else {
-    googleSignInMode = true;
+    googleSignInMode = false;
   }
   await packageInfo();
   runApp(MainHome());

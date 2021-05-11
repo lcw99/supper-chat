@@ -96,7 +96,7 @@ class Utils {
     }
   }
 
-  static Widget getRoomTitle(Room r, String ownerId) {
+  static Widget getRoomTitle(context, Room r, String ownerId) {
     Widget roomType;
     if (r.t == 'c')
       roomType = Icon(Icons.public, color: Colors.white);
@@ -110,7 +110,7 @@ class Utils {
     return Row(children: [
       roomType,
       r.u != null && r.u.id == ownerId ? Icon(Icons.perm_identity, color: Colors.white) : SizedBox(),
-      Text(r.name),
+      Expanded(child: Text(r.name, overflow: TextOverflow.fade,)),
     ],);
   }
 

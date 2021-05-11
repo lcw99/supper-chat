@@ -129,7 +129,7 @@ class WebSocketService {
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 
-  void updateMessage(Message message) {
+  void updateMessage(Message message) {   // need edit-message permission???
     Map msg = {
       "msg": "method",
       "method": "updateMessage",
