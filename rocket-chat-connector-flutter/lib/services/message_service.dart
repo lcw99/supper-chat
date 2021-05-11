@@ -91,8 +91,8 @@ class MessageService {
 
   Future<Message> roomImageUpload(String? roomId, Authentication? authentication, {File? file, Uint8List? bytes, String? desc, String? mimeType}) async {
     var uri = _httpService.getUri()!.replace(path: '/api/v1/rooms.upload/$roomId');
-    if (mimeType == null) {
-      mimeType = lookupMimeType(desc!, headerBytes: bytes);
+    if (mimeType == null && desc!= null && bytes != null) {
+      mimeType = lookupMimeType(desc, headerBytes: bytes);
     }
     var request = http.MultipartRequest('POST', uri)
       ..headers['X-Auth-Token'] = authentication!.data!.authToken!

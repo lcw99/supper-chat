@@ -107,10 +107,15 @@ class Utils {
     else
       roomType = Icon(Icons.device_unknown, color: Colors.yellow);
 
+    String roomName = r.name;
+    if (r.name == null && r.t == 'd') {
+      roomName = r.usernames.toString();
+    }
+
     return Row(children: [
       roomType,
       r.u != null && r.u.id == ownerId ? Icon(Icons.perm_identity, color: Colors.white) : SizedBox(),
-      Expanded(child: Text(r.name, overflow: TextOverflow.fade,)),
+      Expanded(child: Text(roomName, overflow: TextOverflow.fade,)),
     ],);
   }
 

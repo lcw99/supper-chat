@@ -337,14 +337,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             onSelected: (value) {
               if (value == 'room_info')
                 roomInformation();
-              else if (value == 'pin_message') {}
+              else if (value == 'pinned_messages') {}
               else if (value == 'add_user') {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => AddUser(authRC: widget.authRC,)));
               }
             },
             itemBuilder: (context){
               return [
-                PopupMenuItem(child: Text("Pin Message..."), value: 'pin_message',),
+                PopupMenuItem(child: Text("Pinned Messages..."), value: 'pinned_messages',),
                 PopupMenuItem(child: Text("Add User..."), value: 'add_user',),
                 PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
               ];
