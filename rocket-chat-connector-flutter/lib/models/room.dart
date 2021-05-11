@@ -16,6 +16,7 @@ String roomToMap(Room data) => json.encode(data.toMap());
 class Room {
   Room({
     this.id,
+    this.rid,
     this.name,
     this.fname,
     this.t,
@@ -36,11 +37,14 @@ class Room {
     this.usernames,
     this.uids,
     this.subscription,
+    this.joinCodeRequired,
+    this.error,
   });
 
   Subscription? subscription;
 
   String? id;
+  String? rid;
   String? name;
   String? fname;
   String? t;
@@ -61,9 +65,13 @@ class Room {
   List<String>? usernames;
   List<String>? uids;
   String? roomAvatarUrl;
+  bool? joinCodeRequired;
+  String? error;
 
   factory Room.fromMap(Map<String, dynamic> json) => Room(
     id: json["_id"] == null ? null : json["_id"],
+    rid: json["rid"] == null ? null : json["rid"],
+    error: json["error"] == null ? null : json["error"],
     name: json["name"] == null ? null : json["name"],
     fname: json["fname"] == null ? null : json["fname"],
     t: json["t"] == null ? null : json["t"],
@@ -72,6 +80,7 @@ class Room {
     customFields: json["customFields"] == null ? null : CustomFields.fromMap(json["customFields"]),
     broadcast: json["broadcast"] == null ? null : json["broadcast"],
     encrypted: json["encrypted"] == null ? null : json["encrypted"],
+    joinCodeRequired: json["joinCodeRequired"] == null ? null : json["joinCodeRequired"],
     ro: json["ro"] == null ? null : json["ro"],
     roomDefault: json["default"] == null ? null : json["default"],
     updatedAt: jsonToDateTime(json["_updatedAt"]),
@@ -88,6 +97,7 @@ class Room {
 
   Map<String, dynamic> toMap() => {
     "_id": id == null ? null : id,
+    "rid": rid == null ? null : rid,
     "name": name == null ? null : name,
     "fname": fname == null ? null : fname,
     "t": t == null ? null : t,
@@ -96,6 +106,7 @@ class Room {
     "customFields": customFields == null ? null : customFields!.toMap(),
     "broadcast": broadcast == null ? null : broadcast,
     "encrypted": encrypted == null ? null : encrypted,
+    "joinCodeRequired": joinCodeRequired == null ? null : joinCodeRequired,
     "ro": ro == null ? null : ro,
     "default": roomDefault == null ? null : roomDefault,
     "_updatedAt": updatedAt == null ? null : updatedAt!.toIso8601String(),

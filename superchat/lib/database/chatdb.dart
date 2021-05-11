@@ -46,9 +46,18 @@ class RoomMessages extends Table {
   Set<Column> get primaryKey => {mid};
 }
 
+class ChatUsers extends Table {
+  TextColumn get uid => text()();
+  TextColumn get uname => text()();
+
+  @override
+  Set<Column> get primaryKey => {uid};
+}
+
+
 // this annotation tells moor to prepare a database class that uses both of the
 // tables we just defined. We'll see how to use that database class in a moment.
-@UseMoor(tables: [Rooms, Subscriptions, KeyValues, RoomMessages])
+@UseMoor(tables: [Rooms, Subscriptions, KeyValues, RoomMessages, ChatUsers])
 class ChatDatabase extends _$ChatDatabase {
   // we tell the database where to store the data with this constructor
   //ChatDatabase() : super(_openConnection());
@@ -56,7 +65,7 @@ class ChatDatabase extends _$ChatDatabase {
   // you should bump this number whenever you change or add a table definition. Migrations
   // are covered later in this readme.
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -67,7 +76,7 @@ class ChatDatabase extends _$ChatDatabase {
         print('migration from=$from, to=$to');
         if (from == 1) {
           await m.alterTable(TableMigration(rooms));
-        } else if (from == 8) {
+        } else if (from == 10) {
           for (final table in allTables) {
             await m.deleteTable(table.actualTableName);
             await m.createTable(table);
@@ -110,4 +119,9 @@ class ChatDatabase extends _$ChatDatabase {
   Future<RoomMessage> getMessage(String _mid) => (select(roomMessages)..where((t) => t.mid.equals(_mid))).getSingleOrNull();
   Future deleteMessage(String _mid) => (delete(roomMessages)..where((t) => t.mid.equals(_mid))).go();
 
+  Future<List<ChatUser>> get getAllChatUsers => select(chatUsers).get();
+  Future upsertChatUser(ChatUser chatUser) => into(chatUsers).insertOnConflictUpdate(chatUser);
+  Future deleteChatUser(String _uid) => (delete(chatUsers)..where((t) => t.uid.equals(_uid))).go();
+  Future<ChatUser> getChatUser(String _uid) => (select(chatUsers)..where((t) => t.uid.equals(_uid))).getSingleOrNull();
+  
 }

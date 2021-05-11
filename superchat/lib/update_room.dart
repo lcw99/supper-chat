@@ -180,6 +180,8 @@ class UpdateRoomState extends State<UpdateRoom> {
               updateCallCount++;
               widget.chatHomeState.updateRoom(createdRoomId, roomDescription: _tecRoomDescription.text);
               updateCallCount++;
+              widget.chatHomeState.updateRoom(createdRoomId, joinCode: _tecJoinCode.text);
+              updateCallCount++;
             }
             //Navigator.pop(context);
           },

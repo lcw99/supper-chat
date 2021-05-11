@@ -81,6 +81,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   int selectedPage = 0;
   int totalUnread = 0;
   model.Room selectedRoom;
+  JoinInfo joinInfo;
 
   bool firebaseInitialized = false;
 
@@ -93,6 +94,29 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   String _sharedText;
 
   bool isWebSocketClosed() => webSocketService.socketClosed;
+
+  @override
+  void initState() {
+    super.initState();
+    joinInfo = widget.joinInfo;
+    webSocketService = WebSocketService(url: webSocketUrl, authentication: widget.authRC);
+    subscribeAndConnect();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    if (!kIsWeb)
+      handleSharedData();
+
+    print('**** payload= ${widget.payload}');
+    if (widget.payload != null) {
+      var json = jsonDecode(widget.payload);
+      String _rid = json['rid'];
+      if (_rid != null) {
+        print('**** rid= $_rid');
+        setChannelById(_rid);
+      }
+    }
+  }
 
   void joinRoomRequest(String joinToken) {
     Utils.showToast(joinToken);
@@ -231,14 +255,41 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     );
   }
 
-  showJoinAlertDialog(String roomName) async {
-    model.Room room = await getUserService().useInviteToken(widget.joinInfo.inviteToken, widget.authRC);
-    await showDialog(
+  showJoinAlertDialog() async {
+    String content;
+    bool needJoinCode = false;
+    TextEditingController _tecJoinCode = TextEditingController();
+    String errorText;
+
+    model.Room joinRoom = await getUserService().useInviteToken(joinInfo.inviteToken, widget.authRC);
+    model.Room room = await getUserService().channelsJoin(joinRoom.rid, widget.authRC);   // rid is valid, no id in this case;
+    if (room.id == null) {
+      if (room.error != null && room.error.contains('Password')) {
+        content = 'Room(${joinRoom.name}) need join code.';
+        needJoinCode = true;
+      } else
+        content = 'Room(${joinRoom.name}) is not allowed to join';
+    } else
+      content =  'Join to ${room.name}?';
+    var rid = await showDialog(
         context: context,
         builder: (BuildContext context) {
-          return AlertDialog(
+          return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
               title: Text('Join room'),
-              content: Text('Join to ${room.name}?'),
+              content: Column(children: [
+                Text(content),
+                SizedBox(height: 15,),
+                TextFormField(
+                  autofocus: true,
+                  controller: _tecJoinCode,
+                  keyboardType: TextInputType.text,
+                  maxLines: 1,
+                  decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),
+                      helperText: 'Join code', errorText: errorText),
+                ),
+              ],),
               actions: [
                 TextButton(
                   child: Text("Cancel"),
@@ -248,14 +299,34 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 ),
                 TextButton(
                   child: Text("OK"),
-                  onPressed: () {
-                    Navigator.pop(context);
+                  onPressed: () async {
+                    if (needJoinCode) {
+                      if (_tecJoinCode.text.isEmpty)
+                        setState(() {
+                          errorText = 'Join code required.';
+                        });
+                      else {
+                        room = await getUserService().channelsJoin(joinRoom.rid,  widget.authRC, joinCode: _tecJoinCode.text);   // rid is valid, no id in this case;
+                        if (room.error == null && room.id != null)
+                          Navigator.pop(context, room.id);
+                        else
+                          setState(() {
+                            errorText = 'Join code not matched.';
+                          });
+                      }
+                    } else
+                      Navigator.pop(context, room.id);
                   },
                 ),
               ]
-          );
+          );});
         }
     );
+    joinInfo = null;
+    print('dialog ret=$rid');
+    if (rid != null) {
+      setChannelById(rid);
+    }
   }
 
   handleSharedData() {
@@ -297,31 +368,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
 
   @override
-  void initState() {
-    super.initState();
-    webSocketService = WebSocketService(url: webSocketUrl, authentication: widget.authRC);
-    subscribeAndConnect();
-
-    WidgetsBinding.instance.addObserver(this);
-
-    if (!kIsWeb)
-      handleSharedData();
-
-    print('**** payload= ${widget.payload}');
-    if (widget.payload != null) {
-      var json = jsonDecode(widget.payload);
-      String _rid = json['rid'];
-      if (_rid != null) {
-        print('**** rid= $_rid');
-        setChannelById(_rid);
-      }
-    }
-
-  }
-
-  @override
   Widget build(BuildContext context) {
-    print('#######-------------------######### joinInfo=${widget.joinInfo}');
+    print('#######-------------------######### joinInfo=$joinInfo');
     return Scaffold(
       body: _buildPage(),
       drawer: Drawer(
@@ -416,7 +464,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     switch(selectedPage) {
       case 0:
         return FutureBuilder<RoomSnapshotInfo>(
-            future: _getMyRoomList(),
+            future: _getMyRoomList(titleText: 'MY ROOMS', imagePath: 'assets/images/nepal-2184940_1920.jpg'),
             builder: roomBuilder
         );
         break;
@@ -437,9 +485,9 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   Widget roomBuilder(context, AsyncSnapshot<RoomSnapshotInfo> snapshot) {
     if (snapshot.hasData) {
-      if (snapshot.connectionState == ConnectionState.done && widget.joinInfo != null) {
+      if (snapshot.connectionState == ConnectionState.done && joinInfo != null) {
         Future.delayed(Duration.zero, () {
-          showJoinAlertDialog(widget.joinInfo.inviteToken);
+          showJoinAlertDialog();
         });
       }
       List<model.Room> roomList = snapshot.data.roomList;
@@ -545,6 +593,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   setChannelById(String rid) async {
+    print('**** setChannelById=$rid');
     db.Room dbRoom = await locator<db.ChatDatabase>().getRoom(rid);
     model.Room room = model.Room.fromMap(jsonDecode(dbRoom.info));
     _setChannel(room);
@@ -554,10 +603,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     print('**** setChannel=${room.id}');
     selectedRoom = room;
     bool refresh = false;
+/*
     if (room.subscription != null && room.subscription.unread > 0) {
       clearUnreadOnDB(room);
       refresh = true;
     }
+*/
     var sharedObj;
     if (_sharedText != null) {
       sharedObj = _sharedText;
@@ -592,21 +643,22 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     if (lastUpdate != null)
       updateSince = DateTime.tryParse(lastUpdate.value);
 
-    print('updateSince = ${updateSince}');
+    print('updateSince = $updateSince');
 
     ChannelService channelService = getChannelService();
-    List<model.Room> allPublicRoom = (await channelService.getChannelList(widget.authRC)).channelList;
-    print('allPublicRoom.length = ${allPublicRoom.length}');
-
     UpdatedSinceFilter filter = UpdatedSinceFilter(updateSince);
     RoomUpdate roomUpdate = await channelService.getRooms(widget.authRC, filter);
     List<model.Room> updatedRoom = roomUpdate.update;
     print('updatedRoom.length = ${updatedRoom.length}');
 
-    for(model.Room r in allPublicRoom) {
-      int findIndex = updatedRoom.indexWhere((element) => element.id == r.id);
-      if (findIndex < 0)
-        updatedRoom.add(r);
+    if (roomType == 'c') {
+      List<model.Room> allPublicRoom = (await channelService.getChannelList(widget.authRC)).channelList;
+      print('allPublicRoom.length = ${allPublicRoom.length}');
+      for (model.Room r in allPublicRoom) {
+        r.roomAvatarUrl = await Utils.getRoomAvatarUrl(r, widget.authRC);
+      }
+      allPublicRoom.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
+      return RoomSnapshotInfo(allPublicRoom, imagePath, titleText);
     }
 
     SubscriptionUpdate subsUpdate = await channelService.getSubscriptions(widget.authRC, filter);
@@ -675,9 +727,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       }
     }
     roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
-    return RoomSnapshotInfo(roomList,
-        imagePath != null ? imagePath : 'assets/images/nepal-2184940_1920.jpg',
-        titleText != null ? titleText : 'MY ROOMS');
+    return RoomSnapshotInfo(roomList,  imagePath, titleText);
   }
 
   @override
@@ -685,10 +735,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.sendUserPresence("offline");
     print('_+_+_+_+_+_dispose disconnecting web socket');
     unsubscribeAndClose();
-    _intentDataStreamSubscription.cancel();
+    if (_intentDataStreamSubscription != null)
+      _intentDataStreamSubscription.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    notificationController.close();
-    resultMessageController.close();
+    if (notificationController != null)
+      notificationController.close();
+    if (resultMessageController != null)
+      resultMessageController.close();
     super.dispose();
   }
 

@@ -67,7 +67,7 @@ class _RoomInfoState extends State<RoomInfo> {
   }
 
   Future<model.Room> getRoom(String roomId) {
-    return getChannelService().getRoomInfo(roomId, widget.chatHomeState.widget.authRC);
+    return getChannelService().getRoomInfo(widget.chatHomeState.widget.authRC, roomId: roomId);
   }
 
   Widget buildPage(context, model.Room room) {

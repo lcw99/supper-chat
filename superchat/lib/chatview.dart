@@ -337,10 +337,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               if (value == 'room_info')
                 roomInformation();
               else if (value == 'pin_message') {}
+              else if (value == 'invite_user') {
+              }
             },
             itemBuilder: (context){
               return [
                 PopupMenuItem(child: Text("Pin Message..."), value: 'pin_message',),
+                PopupMenuItem(child: Text("Invite User..."), value: 'invite_user',),
                 PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
               ];
               }),

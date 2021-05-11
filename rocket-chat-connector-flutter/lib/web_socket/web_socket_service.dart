@@ -91,7 +91,7 @@ class WebSocketService {
   void close() {
     connectionCount--;
     Logger().i("****** Websocket connection count=$connectionCount *****");
-    webSocketChannel!.sink.close(1010, 'by_me');
+    webSocketChannel!.sink.close();
   }
 
   void _sendConnectRequest() {
@@ -298,23 +298,28 @@ class WebSocketService {
       updateRoomParam(roomId, "roomType", roomType);
     if (roomAvatar != null)
       updateRoomParam(roomId, "roomAvatar", roomAvatar);
-    if (roomAvatar != null)
+    if (readOnly != null)
       updateRoomParam(roomId, "readOnly", readOnly);
-    if (roomAvatar != null)
+    if (systemMessages != null)
       updateRoomParam(roomId, "systemMessages", systemMessages);
-    if (roomAvatar != null)
+    if (defaultRoom != null)
       updateRoomParam(roomId, "default", defaultRoom);
-    if (roomAvatar != null)
+    if (joinCode != null)
       updateRoomParam(roomId, "joinCode", joinCode);
   }
 
   void updateRoomParam(String roomId, String setting, dynamic? value) {
+    if (value is String && value.isEmpty) {
+      print('empty string value');
+      return;
+    }
     Map msg = {
       "msg": "method",
       "method": "saveRoomSettings",
       "id": "16",
       "params": ["$roomId", "$setting", "$value"]
     };
+    print('updateRoomParam=$msg');
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 

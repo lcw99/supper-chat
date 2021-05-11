@@ -49,9 +49,9 @@ class UserService {
       authentication,
     );
 
+    print("resp useInviteToken=" + response.body);
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        print("resp useInviteToken=" + response.body);
         return Room.fromMap(jsonDecode(response.body)['room']);
       }
     }
@@ -71,6 +71,31 @@ class UserService {
         print("resp useInviteToken=" + response.body);
         return Room.fromMap(jsonDecode(response.body)['channel']);
       }
+    }
+    return Room();
+  }
+
+  Future<Room> channelsJoin(String roomId, Authentication authentication, {String? joinCode}) async {
+    Map<String, dynamic> payload;
+    if (joinCode == null)
+      payload = {'roomId': roomId};
+    else
+      payload = {'roomId': roomId, 'joinCode': joinCode};
+    http.Response response = await _httpService.post(
+      '/api/v1/channels.join',
+      jsonEncode(payload),
+      authentication,
+    );
+
+    var body = utf8.decode(response.bodyBytes);
+    print("resp channelsJoin=" + body);
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty) {
+        return Room.fromMap(jsonDecode(body)['channel']);
+      }
+    }
+    if (response.body.isNotEmpty && jsonDecode(body)['success'] == false) {
+      return(Room(error: jsonDecode(body)['error']));
     }
     return Room();
   }

@@ -55,6 +55,9 @@ String buildNumber;
 
 bool googleSignInMode;
 
+JoinInfo joinInfo;
+//JoinInfo joinInfo = JoinInfo('yzYen4', null);
+
 void main() async {
   //emojiConvert();
   print('***** main start');
@@ -65,7 +68,7 @@ void main() async {
     googleSignInMode = true;
     await _initNotification();
   } else {
-    googleSignInMode = false;
+    googleSignInMode = true;
   }
   await packageInfo();
   runApp(MainHome());
@@ -162,13 +165,10 @@ class Application {
   static FluroRouter router;
 }
 
-// http://localhost:5000/#/join?invite=5nKTZG&joincode=bbbb
+// http://localhost:5000/#/join?invite=T23NSG&joincode=bbbb
 class Routes {
   static String root = "/";
-  static String demoSimple = "/join";
-  static String demoSimpleFixedTrans = "/demo/fixedtrans";
-  static String demoFunc = "/demo/func";
-  static String deepLink = "/message";
+  static String joinRoom = "/join";
 
   static void configureRoutes(FluroRouter router) {
     router.notFoundHandler = Handler(
@@ -177,9 +177,7 @@ class Routes {
           return;
         });
     router.define(root, handler: rootHandler);
-    router.define(demoSimple, handler: joinRoomHandler);
-    router.define(demoSimpleFixedTrans,
-        handler: joinRoomHandler, transitionType: TransitionType.inFromLeft);
+    router.define(joinRoom, handler: joinRoomHandler);
   }
 }
 
@@ -236,7 +234,6 @@ class Empty extends StatefulWidget {
   _EmptyState createState() => _EmptyState();
 }
 
-JoinInfo joinInfo;
 class _EmptyState extends State<Empty> {
   @override
   void initState() {
@@ -482,8 +479,10 @@ class _LoginHomeState extends State<LoginHome> {
               Future.delayed(Duration.zero, () {
                 if (chatHomeStateKey.currentState != null && chatHomeStateKey.currentState.mounted)
                   return SizedBox();
+                var ji = joinInfo;
+                joinInfo = null;
                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) =>
-                    ChatHome(key: chatHomeStateKey, joinInfo: joinInfo, user: user, authRC: auth, payload: _np,)));
+                    ChatHome(key: chatHomeStateKey, joinInfo: ji, user: user, authRC: auth, payload: _np,)));
               });
               return SizedBox();
             } else {

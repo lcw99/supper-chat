@@ -86,6 +86,8 @@ class _MyProfileState extends State<MyProfile> {
   Future<void> _logout(googleProfile) async {
     await googleSignIn.signOut();
     locator<ChatDatabase>().deleteAllTables();
-    navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
+    //Navigator.of(context).pushNamedAndRemoveUntil(Routes.demoSimple, (Route<dynamic> route) => false);
+    navGlobalKey.currentState.pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+    //navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
   }
 }
