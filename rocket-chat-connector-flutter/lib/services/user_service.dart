@@ -170,7 +170,14 @@ class UserService {
         String res = utf8.decode(response.bodyBytes);
         var jsonUsers = jsonDecode(res)['users'];
         log('usersPresence=$res');
-        var userList = jsonUsers.where((json) => json != null).map((json) => User.fromMap(json)).toList();
+        List<dynamic> jsonList = jsonUsers.runtimeType == String //
+            ? jsonDecode(jsonUsers)
+            : jsonUsers;
+        var userList = jsonList
+            .where((json) => json != null)
+            .map((json) => User.fromMap(json))
+            .toList();
+
         return userList;
       }
     }

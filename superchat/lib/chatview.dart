@@ -40,6 +40,7 @@ import 'package:superchat/database/chatdb.dart';
 import 'package:superchat/main.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
+import 'invite_user.dart';
 import 'room_info.dart';
 import 'update_room.dart';
 import 'image_file_desc.dart';
@@ -338,7 +339,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 roomInformation();
               else if (value == 'pin_message') {}
               else if (value == 'add_user') {
-
+                Navigator.push(context, MaterialPageRoute(builder: (context) => AddUser(authRC: widget.authRC,)));
               }
             },
             itemBuilder: (context){

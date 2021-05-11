@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:flutter/services.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:universal_io/io.dart' as uio;
@@ -120,7 +121,7 @@ class ChatItemViewState extends State<ChatItemView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
-        _buildUserAvatar(specialMessage, messageUser),
+        Utils.buildUserAvatar(specialMessage ? 20 : 40, messageUser),
         SizedBox(width: 5,),
         // user name
         Expanded(child: Column(
@@ -153,23 +154,6 @@ class ChatItemViewState extends State<ChatItemView> {
           ],)),
         SizedBox(width: 40,),
       ],);
-  }
-
-  _buildUserAvatar(bool specialMessage, User user, {String avatarPath}) {
-    String url;
-    if (avatarPath != null )
-      url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
-    else
-      url = Utils.getAvatarUrl(user);
-    return Container(
-        padding: EdgeInsets.all(2),
-        alignment: Alignment.topLeft,
-        width: specialMessage ? 20 : 40,
-        height: specialMessage ? 20 : 40,
-        child: ClipRRect(
-            borderRadius: BorderRadius.circular(8.0),
-            child: Image.network(url, key: UniqueKey()))
-    );
   }
 
   _getUserName(Message message) {
@@ -513,6 +497,7 @@ class ChatItemViewState extends State<ChatItemView> {
         downloadPath = message.attachments.first.titleLink;
     }
     List<PopupMenuEntry<String>> items = [];
+    items.add(PopupMenuItem(child: Text('Copy...'), value: 'copy'));
     items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
     if (_messageStarred(message))
       items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
@@ -537,6 +522,8 @@ class ChatItemViewState extends State<ChatItemView> {
     );
     if (value == 'delete') {
       widget.chatHomeState.deleteMessage(message.id);
+    } else if (value == 'copy') {
+      Clipboard.setData(ClipboardData(text: message.msg));
     } else if (value == 'star') {
       getMessageService().starMessage(message.id, widget.authRC);
     } else if (value == 'unstar') {
