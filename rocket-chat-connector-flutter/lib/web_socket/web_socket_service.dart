@@ -276,6 +276,20 @@ class WebSocketService {
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 
+  void addUsersToRoom(String rid, List<String> users) {
+    Map msg = {
+      "msg": "method",
+      "method": "addUsersToRoom",
+      "params": [{
+        "rid": rid,
+        "users": [
+          '"' + users.join('","') + '"'
+        ]}
+      ]
+    };
+    webSocketChannel!.sink.add(jsonEncode(msg));
+  }
+
   void eraseRoom(String roomId) {
     Map msg = {
       "msg": "method",
