@@ -911,6 +911,200 @@ class $RoomMessagesTable extends RoomMessages
   }
 }
 
+class ChatUser extends DataClass implements Insertable<ChatUser> {
+  final String uid;
+  final String uname;
+  ChatUser({@required this.uid, @required this.uname});
+  factory ChatUser.fromData(Map<String, dynamic> data, GeneratedDatabase db,
+      {String prefix}) {
+    final effectivePrefix = prefix ?? '';
+    final stringType = db.typeSystem.forDartType<String>();
+    return ChatUser(
+      uid: stringType.mapFromDatabaseResponse(data['${effectivePrefix}uid']),
+      uname:
+          stringType.mapFromDatabaseResponse(data['${effectivePrefix}uname']),
+    );
+  }
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || uid != null) {
+      map['uid'] = Variable<String>(uid);
+    }
+    if (!nullToAbsent || uname != null) {
+      map['uname'] = Variable<String>(uname);
+    }
+    return map;
+  }
+
+  ChatUsersCompanion toCompanion(bool nullToAbsent) {
+    return ChatUsersCompanion(
+      uid: uid == null && nullToAbsent ? const Value.absent() : Value(uid),
+      uname:
+          uname == null && nullToAbsent ? const Value.absent() : Value(uname),
+    );
+  }
+
+  factory ChatUser.fromJson(Map<String, dynamic> json,
+      {ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return ChatUser(
+      uid: serializer.fromJson<String>(json['uid']),
+      uname: serializer.fromJson<String>(json['uname']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer serializer}) {
+    serializer ??= moorRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'uid': serializer.toJson<String>(uid),
+      'uname': serializer.toJson<String>(uname),
+    };
+  }
+
+  ChatUser copyWith({String uid, String uname}) => ChatUser(
+        uid: uid ?? this.uid,
+        uname: uname ?? this.uname,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('ChatUser(')
+          ..write('uid: $uid, ')
+          ..write('uname: $uname')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => $mrjf($mrjc(uid.hashCode, uname.hashCode));
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      (other is ChatUser && other.uid == this.uid && other.uname == this.uname);
+}
+
+class ChatUsersCompanion extends UpdateCompanion<ChatUser> {
+  final Value<String> uid;
+  final Value<String> uname;
+  const ChatUsersCompanion({
+    this.uid = const Value.absent(),
+    this.uname = const Value.absent(),
+  });
+  ChatUsersCompanion.insert({
+    @required String uid,
+    @required String uname,
+  })  : uid = Value(uid),
+        uname = Value(uname);
+  static Insertable<ChatUser> custom({
+    Expression<String> uid,
+    Expression<String> uname,
+  }) {
+    return RawValuesInsertable({
+      if (uid != null) 'uid': uid,
+      if (uname != null) 'uname': uname,
+    });
+  }
+
+  ChatUsersCompanion copyWith({Value<String> uid, Value<String> uname}) {
+    return ChatUsersCompanion(
+      uid: uid ?? this.uid,
+      uname: uname ?? this.uname,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (uid.present) {
+      map['uid'] = Variable<String>(uid.value);
+    }
+    if (uname.present) {
+      map['uname'] = Variable<String>(uname.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChatUsersCompanion(')
+          ..write('uid: $uid, ')
+          ..write('uname: $uname')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ChatUsersTable extends ChatUsers
+    with TableInfo<$ChatUsersTable, ChatUser> {
+  final GeneratedDatabase _db;
+  final String _alias;
+  $ChatUsersTable(this._db, [this._alias]);
+  final VerificationMeta _uidMeta = const VerificationMeta('uid');
+  GeneratedTextColumn _uid;
+  @override
+  GeneratedTextColumn get uid => _uid ??= _constructUid();
+  GeneratedTextColumn _constructUid() {
+    return GeneratedTextColumn(
+      'uid',
+      $tableName,
+      false,
+    );
+  }
+
+  final VerificationMeta _unameMeta = const VerificationMeta('uname');
+  GeneratedTextColumn _uname;
+  @override
+  GeneratedTextColumn get uname => _uname ??= _constructUname();
+  GeneratedTextColumn _constructUname() {
+    return GeneratedTextColumn(
+      'uname',
+      $tableName,
+      false,
+    );
+  }
+
+  @override
+  List<GeneratedColumn> get $columns => [uid, uname];
+  @override
+  $ChatUsersTable get asDslTable => this;
+  @override
+  String get $tableName => _alias ?? 'chat_users';
+  @override
+  final String actualTableName = 'chat_users';
+  @override
+  VerificationContext validateIntegrity(Insertable<ChatUser> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('uid')) {
+      context.handle(
+          _uidMeta, uid.isAcceptableOrUnknown(data['uid'], _uidMeta));
+    } else if (isInserting) {
+      context.missing(_uidMeta);
+    }
+    if (data.containsKey('uname')) {
+      context.handle(
+          _unameMeta, uname.isAcceptableOrUnknown(data['uname'], _unameMeta));
+    } else if (isInserting) {
+      context.missing(_unameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {uid};
+  @override
+  ChatUser map(Map<String, dynamic> data, {String tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
+    return ChatUser.fromData(data, _db, prefix: effectivePrefix);
+  }
+
+  @override
+  $ChatUsersTable createAlias(String alias) {
+    return $ChatUsersTable(_db, alias);
+  }
+}
+
 abstract class _$ChatDatabase extends GeneratedDatabase {
   _$ChatDatabase(QueryExecutor e) : super(SqlTypeSystem.defaultInstance, e);
   $RoomsTable _rooms;
@@ -923,9 +1117,11 @@ abstract class _$ChatDatabase extends GeneratedDatabase {
   $RoomMessagesTable _roomMessages;
   $RoomMessagesTable get roomMessages =>
       _roomMessages ??= $RoomMessagesTable(this);
+  $ChatUsersTable _chatUsers;
+  $ChatUsersTable get chatUsers => _chatUsers ??= $ChatUsersTable(this);
   @override
   Iterable<TableInfo> get allTables => allSchemaEntities.whereType<TableInfo>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [rooms, subscriptions, keyValues, roomMessages];
+      [rooms, subscriptions, keyValues, roomMessages, chatUsers];
 }

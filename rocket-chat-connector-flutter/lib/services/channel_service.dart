@@ -147,11 +147,18 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<model.Room> getRoomInfo(String roomId, Authentication authentication) async {
+  Future<model.Room> getRoomInfo(Authentication authentication, {String? roomId, String? roomName}) async {
     String path = '/api/v1/rooms.info';
+    var payLoad;
+    if (roomId != null)
+      payLoad = {'roomId': roomId};
+    else if (roomName != null)
+      payLoad = {'roomName': roomName};
+    if (payLoad == null)
+      return model.Room();
     http.Response response = await _httpService.getWithQuery(
       path,
-      {'roomId': roomId},
+      payLoad,
       authentication,
     );
 
@@ -160,11 +167,9 @@ class ChannelService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty) {
         return model.Room.fromMap(jsonDecode(resp)['room']);
-      } else {
-        return model.Room();
       }
     }
-    throw RocketChatException(response.body);
+    return model.Room();
   }
 
   Future<SyncMessages> syncMessages(String roomId, DateTime lastUpdate, Authentication authentication) async {
