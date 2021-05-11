@@ -125,6 +125,24 @@ class Utils {
         fontSize: 16.0
     );
   }
+
+  static Widget buildUserAvatar(double size, User user, {String avatarPath}) {
+    String url;
+    if (avatarPath != null )
+      url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
+    else
+      url = Utils.getAvatarUrl(user);
+    return Container(
+        padding: EdgeInsets.all(2),
+        alignment: Alignment.topLeft,
+        width: size ,
+        height: size,
+        child: ClipRRect(
+            borderRadius: BorderRadius.circular(8.0),
+            child: Image.network(url, key: UniqueKey()))
+    );
+  }
+
 }
 
 class UserCache {
@@ -177,5 +195,6 @@ class UserCache {
       userCache.remove(userId);
     }
   }
+
 }
 
