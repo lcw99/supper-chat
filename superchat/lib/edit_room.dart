@@ -6,20 +6,21 @@ import 'package:rocket_chat_connector_flutter/web_socket/notification.dart';
 import 'package:toggle_switch/toggle_switch.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
 import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
+import 'package:rocket_chat_connector_flutter/models/constants/message_id.dart';
 
 import 'chathome.dart';
 
-class UpdateRoom extends StatefulWidget {
+class EditRoom extends StatefulWidget {
   final ChatHomeState chatHomeState;
   final User user;
   final model.Room room;
-  const UpdateRoom({Key key, this.chatHomeState, this.user, this.room}) : super(key: key);
+  const EditRoom({Key key, this.chatHomeState, this.user, this.room}) : super(key: key);
 
   @override
-  UpdateRoomState createState() => UpdateRoomState();
+  EditRoomState createState() => EditRoomState();
 }
 
-class UpdateRoomState extends State<UpdateRoom> {
+class EditRoomState extends State<EditRoom> {
   TextEditingController _tecRoomName = TextEditingController();
   TextEditingController _tecRoomDescription = TextEditingController();
   TextEditingController _tecRoomTopic = TextEditingController();
@@ -195,7 +196,7 @@ class UpdateRoomState extends State<UpdateRoom> {
   }
 
   onEvent(rocket_notification.Notification event) {
-    if (event.id == '85' || event.id == '89') { // 85: createChannel, 89: createPrivateGroup,
+    if (event.id == createChannelId || event.id == createPrivateGroupId) {
       if (event.error != null) {
         setState(() {
           errorText = event.error.reason;
@@ -210,7 +211,7 @@ class UpdateRoomState extends State<UpdateRoom> {
           buttonText = updateRoomText;
         });
       }
-    } else if (event.id == '16') { // 16: update room
+    } else if (event.id == updateRoomParamId) {
       if (event.result != null && event.result['result']) {
         updateCallCount--;
         if (updateCallCount == 0) {

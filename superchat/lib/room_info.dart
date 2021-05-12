@@ -15,8 +15,9 @@ import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:superchat/chathome.dart';
 import 'package:superchat/main.dart';
-import 'package:superchat/update_room.dart';
+import 'edit_room.dart';
 import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rc;
+import 'package:rocket_chat_connector_flutter/models/constants/message_id.dart';
 
 import 'constants/constants.dart';
 import 'chatview.dart';
@@ -51,7 +52,7 @@ class _RoomInfoState extends State<RoomInfo> {
   }
 
   onEvent(rc.Notification event) {
-    if (event.id == '16') { // 16: update room
+    if (event.id == updateRoomParamId) {
       String msg;
       if (event.result != null && event.result['result']) {
         msg = "Room updated.";
@@ -217,7 +218,7 @@ class _RoomInfoState extends State<RoomInfo> {
 
   Future<void> editRoom(context, room) async {
     await Navigator.push(context, MaterialPageRoute(builder: (context) =>
-        UpdateRoom(chatHomeState: widget.chatHomeState, user: widget.user, room: room,)));
+        EditRoom(chatHomeState: widget.chatHomeState, user: widget.user, room: room,)));
     setState(() {});
   }
 

@@ -20,7 +20,7 @@ class HttpService {
               as Future<Map<String, String>?>));
 
   Future<http.Response> getWithQuery(
-      String uri, Map<String, String> query, Authentication authentication) async =>
+      String uri, Map<String, dynamic> query, Authentication authentication) async =>
       await http.get(
           Uri.parse(
               _apiUrl.toString() + uri + '?' + _urlEncode(query)),
@@ -78,9 +78,10 @@ String _urlEncode(Map object) {
         value = "&";
       }
       index++;
-      return "$value${Uri.encodeComponent(key)}=${Uri.encodeComponent(object[key].toString())}";
+      return "$value${Uri.encodeComponent(key)}=${Uri.encodeComponent(object[key] is String ? object[key] : jsonEncode(object[key]))}";
     }
     return "";
   }).join();
+  print('@@@@@@@ url=$url');
   return url;
 }

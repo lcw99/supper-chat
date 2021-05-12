@@ -16,6 +16,8 @@ import 'package:rocket_chat_connector_flutter/models/new/channel_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_new_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
+import 'package:rocket_chat_connector_flutter/models/response/room_members_response.dart';
+import 'package:rocket_chat_connector_flutter/models/response/spotlight_response.dart';
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
@@ -81,6 +83,35 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
+  Future<String> addUsersToRoom(String rid, List<String> users, Authentication authentication) async {
+    Map msg = {
+      "method": "addUsersToRoom",
+      "params": [{
+        "rid": rid,
+        "users": users
+      }]
+    };
+
+    Map<String, String?> payload = { "message" : "${jsonEncode(msg)}" };
+
+    http.Response response = await _httpService.post(
+      '/api/v1/method.call/addUsersToRoom',
+      jsonEncode(payload),
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("^^^^^^^^^^^^^^^^^^^^^addUsersToRoom^^^^^^^^^^^^ resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return resp;
+      } else {
+        return '';
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
   Future<ChannelMessages> roomHistory(ChannelHistoryFilter filter, Authentication authentication, String roomType) async {
     String path = '/api/v1/channels.history';
     if (roomType == 'd')
@@ -126,6 +157,35 @@ class ChannelService {
     return Response(success: false);
   }
 
+  Future<RoomMembersResponse> getRoomMembers(String roomId, String roomType, Authentication authentication, {int? offset, int? count, Map<String, int>? sort}) async {
+    String path = '/api/v1/groups.members';
+    if (roomType == 'c')
+      path = '/api/v1/channels.members';
+    Map<String, dynamic> payload = {"roomId": roomId};
+    if (offset != null)
+      payload["offset"] = offset;
+    if (count != null)
+      payload["count"] = count;
+    if (sort != null)
+      payload["sort"] = sort;
+
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      payload,
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("groups.members resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return RoomMembersResponse.fromMap(jsonDecode(resp));
+      } else {
+        return RoomMembersResponse();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
 
   Future<ChannelMessages> getStarredMessages(String roomId, Authentication authentication) async {
     String path = '/api/v1/chat.getStarredMessages';
@@ -142,6 +202,26 @@ class ChannelService {
         return ChannelMessages.fromMap(jsonDecode(resp));
       } else {
         return ChannelMessages();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<SpotlightResponse> spotlight(String query, Authentication authentication) async {  // @ user, #channel
+    String path = '/api/v1/spotlight';
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      {'query': query},
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("chat.spotlight resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return SpotlightResponse.fromMap(jsonDecode(resp));
+      } else {
+        return SpotlightResponse();
       }
     }
     throw RocketChatException(response.body);
