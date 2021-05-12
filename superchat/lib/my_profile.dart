@@ -58,7 +58,7 @@ class _MyProfileState extends State<MyProfile> {
                   ),
                   ListTile(
                     title: Text('user name'),
-                    subtitle: Text(userInfo.username),
+                    subtitle: Text(userInfo.username == null ? '' : userInfo.username),
                   ),
                   ListTile(
                     title: Text('display name'),

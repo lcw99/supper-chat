@@ -469,7 +469,10 @@ class _LoginHomeState extends State<LoginHome> {
               if (googleSignInMode) {
                 if (user.avatarETag == null) {
                   String avatarUrl = googleSignIn.currentUser.photoUrl;
-                  UserService(rocketHttpService).setAvatar(avatarUrl, auth);
+                  getUserService().setAvatar(avatarUrl, auth);
+                }
+                if (user.username == null || user.username.isEmpty) { // some case username == null, and it's problem.
+                  getUserService().usersUpdate(user.id, auth, username: user.id);
                 }
               }
 

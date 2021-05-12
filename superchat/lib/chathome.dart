@@ -184,8 +184,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         } else if (event.msg == 'result') {
           if (event.id == getPermissionsId)
             parsePermissions(event);
-          else
-            resultMessageController.add(event);
+          else {
+            try {
+              resultMessageController.add(event);
+            } catch (e) {
+              print('resultMessageController.add error=$e');
+            }
+          }
           notificationController.add(event);
         } else if (event.msg == 'changed') {
           notificationController.add(event);

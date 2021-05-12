@@ -77,6 +77,40 @@ class UserService {
     return Room();
   }
 
+  Future<User> usersUpdate(String userId, Authentication authentication,
+    { String? email, String? name, String? password, String? username, bool? active, List<String>? roles,
+      bool? joinDefaultChannels, bool? requirePasswordChange, bool? sendWelcomeEmail, bool? verified, Map<String, String>? customFields }) async {
+    Map<String, dynamic> payload = {'userId': userId};
+    Map<String, dynamic> data = Map<String, dynamic>();
+    if (email != null) data['email'] = email;
+    if (name != null) data['name'] = name;
+    if (password != null) data['password'] = password;
+    if (username != null) data['username'] = username;
+    if (active != null) data['active'] = active;
+    if (roles != null) data['roles'] = roles;
+    if (joinDefaultChannels != null) data['joinDefaultChannels'] = joinDefaultChannels;
+    if (requirePasswordChange != null) data['requirePasswordChange'] = requirePasswordChange;
+    if (sendWelcomeEmail != null) data['sendWelcomeEmail'] = sendWelcomeEmail;
+    if (verified != null) data['verified'] = verified;
+    if (customFields != null) data['customFields'] = customFields;
+
+    payload['data'] = data;
+    http.Response response = await _httpService.post(
+      '/api/v1/users.update',
+      jsonEncode(payload),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        print("resp usersUpdate=" + response.body);
+        return User.fromMap(jsonDecode(response.body)['user']);
+      }
+    }
+    return User();
+  }
+
+
   Future<Message> chatUpdate(String roomId, String msgId, String text, Authentication authentication) async {
     Map<String, dynamic> payload = {'roomId': roomId, 'msgId': msgId, 'text': text};
     http.Response response = await _httpService.post(
