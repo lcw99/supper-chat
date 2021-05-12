@@ -218,6 +218,9 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 if (this.mounted)
                   setState(() {});
               }
+            } else if (eventName.endsWith('/message')) {
+              if (event.notificationFields.notificationArgs[0]['msg'] != null)
+              Utils.showToast(event.notificationFields.notificationArgs[0]['msg']);
             } else {
               print('**************** unknown eventName=$eventName');
             }

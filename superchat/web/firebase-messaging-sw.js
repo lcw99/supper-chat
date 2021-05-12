@@ -26,7 +26,8 @@ messaging.setBackgroundMessageHandler(function(payload) {
     icon: payload.data.image,
   };
 
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+  //return self.registration.showNotification(notificationTitle, notificationOptions);
+  return null;
 });
 
 /*

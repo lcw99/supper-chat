@@ -260,9 +260,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           }
         } else if (event.collection == 'stream-notify-user') {
           if (event.notificationFields.notificationArgs.length > 0) {
-            var arg = event.notificationFields.notificationArgs[1];
             if (event.notificationFields.eventName.endsWith('rooms-changed')) {
             } else if (event.notificationFields.eventName.endsWith('subscriptions-changed')) {
+              var arg = event.notificationFields.notificationArgs[1];
               RC.Subscription sub = RC.Subscription.fromMap(arg);
               permissions = widget.chatHomeState.getPermissionsForRoles(sub.roles);
               print('++@@++permissions=$permissions');
