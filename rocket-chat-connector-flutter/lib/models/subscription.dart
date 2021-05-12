@@ -28,6 +28,7 @@ class Subscription {
     this.updatedAt,
     this.ls,
     this.blocked,
+    this.roles,
   });
 
   String? id;
@@ -46,6 +47,7 @@ class Subscription {
   DateTime? updatedAt;
   DateTime? ls;
   bool? blocked;
+  List<String>? roles;
 
   factory Subscription.fromMap(Map<String, dynamic> json) => Subscription(
     id: json["_id"] == null ? null : json["_id"],
@@ -64,6 +66,7 @@ class Subscription {
     updatedAt: jsonToDateTime(json['_updatedAt']),
     ls: jsonToDateTime(json['ls']),
     blocked: json["blocked"] == null ? null : json["blocked"],
+    roles: json["roles"] == null ? null : List<String>.from(json["roles"]),
   );
 
   Map<String, dynamic> toMap() => {
@@ -83,6 +86,7 @@ class Subscription {
     "_updatedAt": updatedAt == null ? null : updatedAt!.toIso8601String(),
     "ls": ls == null ? null : ls!.toIso8601String(),
     "blocked": blocked == null ? null : blocked,
+    "roles": roles == null ? null : roles,
   };
 
   @override

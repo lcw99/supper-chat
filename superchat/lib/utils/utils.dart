@@ -131,6 +131,24 @@ class Utils {
     );
   }
 
+  static buildUser(user, double size) {
+    return ListTile(
+      dense: true,
+      leading: Utils.buildUserAvatar(size, user),
+      title: Text(
+        Utils.getUserNameByUser(user) ,
+        style: TextStyle(fontSize: 15, color: Colors.black),
+        textAlign: TextAlign.left,
+      ),
+      subtitle: Text(
+        user.username ,
+        style: TextStyle(fontSize: 12, color: Colors.black54),
+        textAlign: TextAlign.left,
+      ),
+    );
+  }
+
+
   static Widget buildUserAvatar(double size, User user, {String avatarPath}) {
     String url;
     if (avatarPath != null )

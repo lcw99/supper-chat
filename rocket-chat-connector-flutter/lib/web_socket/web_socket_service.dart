@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/message_id.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
@@ -56,7 +57,7 @@ class WebSocketService {
     webSocketChannel = WebSocketChannel.connect(Uri.parse(url!));
     socketClosed = false;
     _sendConnectRequest();
-    _sendLoginRequest(authentication!);
+    sendLoginRequest(authentication!);
     streamController.add(jsonEncode(rocket_notification.Notification(msg: connectedMessage).toMap()));
     webSocketChannel!.stream.listen((event) {
       socketClosed = false;
@@ -103,11 +104,11 @@ class WebSocketService {
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 
-  void _sendLoginRequest(Authentication authentication) {
+  void sendLoginRequest(Authentication authentication) {
     Map msg = {
       "msg": "method",
       "method": "login",
-      "id": "42",
+      "id": sendLoginRequestId,
       "params": [
         {"resume": authentication.data!.authToken}
       ]
@@ -120,7 +121,7 @@ class WebSocketService {
     Map msg = {
       "msg": "method",
       "method": "deleteMessage",
-      "id": "42",
+      "id": deleteMessageId,
       "params": [
         { "_id": messageId }
       ]
@@ -133,7 +134,7 @@ class WebSocketService {
     Map msg = {
       "msg": "method",
       "method": "updateMessage",
-      "id": "42",
+      "id": updateMessageId,
       "params": [ message.toMap() ]
     };
 
@@ -196,7 +197,7 @@ class WebSocketService {
     Map msg = {
       "msg": "method",
       "method": "UserPresence:setDefaultStatus",
-      "id": "42",
+      "id": sendUserPresenceId,
       "params": [status]
     };
     webSocketChannel!.sink.add(jsonEncode(msg));
@@ -206,7 +207,7 @@ class WebSocketService {
     Map msg = {
       "msg": "method",
       "method": "stream-notify-room",
-      "id": "42",
+      "id": sendUserTypingId,
       "params": ["$roomId/typing", "$userName", typing]
     };
     webSocketChannel!.sink.add(jsonEncode(msg));
@@ -262,30 +263,26 @@ class WebSocketService {
 
   void createRoom(String roomName, List<String> users, bool private, { bool readOnly = false, bool broadcast = false }) {
     String method = 'createChannel';
-    String id = "85";
+    String id = createChannelId;
     if (private) {
       method = 'createPrivateGroup';
-      id = "89";
+      id = createPrivateGroupId;
     }
     Map msg = {
       "msg": "method",
       "method": "$method",
-      "id": "$id",
+      "id": id,
       "params": ["$roomName", [users.toString()], readOnly, {}, { "broadcast":broadcast, "encrypted":false }]
     };
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 
-  void addUsersToRoom(String rid, List<String> users) {
+  void getPermissions() {
     Map msg = {
       "msg": "method",
-      "method": "addUsersToRoom",
-      "params": [{
-        "rid": rid,
-        "users": [
-          '"' + users.join('","') + '"'
-        ]}
-      ]
+      "method": "permissions/get",
+      "id": getPermissionsId,
+      "params": []
     };
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
@@ -294,8 +291,18 @@ class WebSocketService {
     Map msg = {
       "msg": "method",
       "method": "eraseRoom",
-      "id": "92",
+      "id": eraseRoomId,
       "params": ["$roomId"]
+    };
+    webSocketChannel!.sink.add(jsonEncode(msg));
+  }
+
+  void getRoomRoles(String roomId) {
+    Map msg = {
+      "msg": "method",
+      "method": "getRoomRoles",
+      "id": getRoomRolesId,
+      "params": [roomId]
     };
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
@@ -330,7 +337,7 @@ class WebSocketService {
     Map msg = {
       "msg": "method",
       "method": "saveRoomSettings",
-      "id": "16",
+      "id": updateRoomParamId,
       "params": ["$roomId", "$setting", "$value"]
     };
     print('updateRoomParam=$msg');

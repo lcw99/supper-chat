@@ -11,6 +11,7 @@ import 'package:universal_io/io.dart';
 import 'dart:ui';
 
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
+import 'package:rocket_chat_connector_flutter/models/subscription.dart' as RC;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,7 @@ import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel_messages.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/channel_history_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/message_id.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/new/message_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/message_new_response.dart';
@@ -38,16 +40,17 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:ss_image_editor/common/image_picker/image_picker.dart';
 import 'package:superchat/database/chatdb.dart';
 import 'package:superchat/main.dart';
+import 'add_user_to_room.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
-import 'invite_user.dart';
 import 'room_info.dart';
-import 'update_room.dart';
+import 'room_members.dart';
+import 'edit_room.dart';
 import 'image_file_desc.dart';
 import 'constants/constants.dart';
 
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
-import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
+import 'package:rocket_chat_connector_flutter/models/room.dart' as RC;
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
 import 'database/chatdb.dart' as db;
 import 'utils/utils.dart';
@@ -55,7 +58,7 @@ import 'utils/utils.dart';
 class ChatView extends StatefulWidget {
   final StreamController<rocket_notification.Notification> notificationController;
   final Authentication authRC;
-  final model.Room room;
+  final RC.Room room;
   final User me;
   final dynamic sharedObject;
   final ChatHomeState chatHomeState;
@@ -151,6 +154,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   GlobalKey<_UserTypingState> userTypingKey = GlobalKey();
   GlobalKey<ChatViewState> chatViewKey = GlobalKey();
+
+  List<String> permissions;
 
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
@@ -255,9 +260,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           }
         } else if (event.collection == 'stream-notify-user') {
           if (event.notificationFields.notificationArgs.length > 0) {
-            var arg = event.notificationFields.notificationArgs[0];
-            print('+++++stream-notify-user:' + jsonEncode(arg));
+            var arg = event.notificationFields.notificationArgs[1];
             if (event.notificationFields.eventName.endsWith('rooms-changed')) {
+            } else if (event.notificationFields.eventName.endsWith('subscriptions-changed')) {
+              RC.Subscription sub = RC.Subscription.fromMap(arg);
+              permissions = widget.chatHomeState.getPermissionsForRoles(sub.roles);
+              print('++@@++permissions=$permissions');
             }
           }
         }
@@ -338,17 +346,23 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               if (value == 'room_info')
                 roomInformation();
               else if (value == 'pinned_messages') {}
+              else if (value == 'room_members')
+                Navigator.push(context, MaterialPageRoute(builder: (context) => RoomMembers(room: widget.room, authRC: widget.authRC,)));
               else if (value == 'add_user') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => AddUser(authRC: widget.authRC,)));
+                if (permissions.contains('add-user-to-joined-room'))
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => AddUser(room: widget.room, authRC: widget.authRC,)));
+                else
+                  Utils.showToast('You are not allowed to add members');
               }
             },
             itemBuilder: (context){
               return [
                 PopupMenuItem(child: Text("Pinned Messages..."), value: 'pinned_messages',),
+                PopupMenuItem(child: Text("Room Members..."), value: 'room_members',),
                 PopupMenuItem(child: Text("Add User..."), value: 'add_user',),
                 PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
               ];
-              }),
+          }),
         ],
       ),
       resizeToAvoidBottomInset: true,
@@ -682,13 +696,15 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 _pickFile();
             },
             itemBuilder: (context){
-              return [
-                PopupMenuItem(child: Text("Pick Image..."), value: 'pick_image',),
-                PopupMenuItem(child: Text("Pick File..."), value: 'pick_file',),
-                PopupMenuItem(child: Text("Take Photo..."), value: 'take_photo',),
-              ];
-          }),
-          Container(
+              List<PopupMenuEntry<dynamic>> menus = [];
+              menus.add(PopupMenuItem(child: Text("Pick File..."), value: 'pick_file',));
+              if (!kIsWeb) {
+                menus.add(PopupMenuItem(child: Text("Pick Image..."), value: 'pick_image',));
+                menus.add(PopupMenuItem(child: Text("Take Photo..."), value: 'take_photo'));
+              }
+              return menus;
+            }),
+            Container(
               margin: EdgeInsets.only(left: 10),
               child:
               InkWell(

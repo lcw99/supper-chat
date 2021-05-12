@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 
+import 'edit_room.dart';
 import 'model/join_info.dart';
 import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
@@ -20,31 +21,30 @@ import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/channel.dart';
 import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
-import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
-import 'package:rocket_chat_connector_flutter/models/subscription.dart' as model;
+import 'package:rocket_chat_connector_flutter/models/room.dart' as RC;
+import 'package:rocket_chat_connector_flutter/models/subscription.dart' as RC;
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
-import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
+import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as RC;
 import 'package:rocket_chat_connector_flutter/web_socket/web_socket_service.dart';
 import 'package:ss_image_editor/common/data/tu_chong_source.dart';
 import 'package:superchat/chatitemview.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/message_id.dart';
 
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'constants/constants.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
+import 'package:rocket_chat_connector_flutter/models/permission.dart';
 import 'my_profile.dart';
 import 'wigets/unread_counter.dart';
 
 import 'chatview.dart';
 import 'database/chatdb.dart' as db;
 import 'main.dart';
-import 'update_room.dart';
-
-final String webSocketUrl = "wss://chat.smallet.co/websocket";
 
 class ChatHome extends StatefulWidget {
   ChatHome({Key key, @required this.joinInfo, @required this.user, @required this.authRC, this.payload}) : super(key: key);
@@ -59,6 +59,7 @@ class ChatHome extends StatefulWidget {
 
 //WebSocketChannel webSocketChannel;
 WebSocketService webSocketService;
+WebSocketService getWebsocketService() => webSocketService;
 
 subscribeRoomEvent(String roomId) {
   webSocketService.subscribeRoomMessages(roomId);
@@ -75,17 +76,19 @@ unsubscribeRoomEvent(String roomId) {
 }
 
 AppLifecycleState appState = AppLifecycleState.resumed;
-final StreamController<rocket_notification.Notification> resultMessageController = StreamController<rocket_notification.Notification>.broadcast();
+final StreamController<RC.Notification> resultMessageController = StreamController<RC.Notification>.broadcast();
 
 class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
+  Map<String, List<String>> roleToPermissions = Map<String, List<String>>();
+
   int selectedPage = 0;
   int totalUnread = 0;
-  model.Room selectedRoom;
+  RC.Room selectedRoom;
   JoinInfo joinInfo;
 
   bool firebaseInitialized = false;
 
-  final StreamController<rocket_notification.Notification> notificationController = StreamController<rocket_notification.Notification>.broadcast();
+  final StreamController<RC.Notification> notificationController = StreamController<RC.Notification>.broadcast();
 
   static bool bChatScreenOpen = false;
 
@@ -100,6 +103,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+
     joinInfo = widget.joinInfo;
     webSocketService = WebSocketService(url: webSocketUrl, authentication: widget.authRC);
     subscribeAndConnect();
@@ -155,9 +159,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       return;
     subscriptionWebSocketStream = webSocketService.getStreamController().stream.listen((e) async {
       var json = jsonDecode(e);
+      //log('event=$e');
       print('event=$e');
-      rocket_notification.Notification event = rocket_notification.Notification.fromMap(json);
+      RC.Notification event = RC.Notification.fromMap(json);
       if (event.msg == WebSocketService.connectedMessage){
+        webSocketService.getPermissions();
         webSocketService.subscribeNotifyUser(widget.user);
         webSocketService.subscribeStreamNotifyLogged();
         webSocketService.sendUserPresence("online");
@@ -176,9 +182,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       } else {
         if (event.msg == 'updated') {
         } else if (event.msg == 'result') {
-          if (event.id == '85' || event.id == '89' || event.id == '16') {  // 85: createChannel, 89: createPrivateGroup, 16: update room
+          if (event.id == getPermissionsId)
+            parsePermissions(event);
+          else
             resultMessageController.add(event);
-          }
+          notificationController.add(event);
         } else if (event.msg == 'changed') {
           notificationController.add(event);
           if (event.collection == 'stream-notify-user' && event.notificationFields != null) {
@@ -201,7 +209,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
             } else if (eventName.endsWith('subscriptions-changed')) {
               print('!!!!! subscriptions-changed');
               if (event.notificationFields.notificationArgs[0] == 'updated') {
-                model.Subscription sub = model.Subscription.fromMap(event.notificationFields.notificationArgs[1]);
+                RC.Subscription sub = RC.Subscription.fromMap(event.notificationFields.notificationArgs[1]);
                 String info = jsonEncode(sub.toMap());
                 await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: sub.id, info: info));
                 if (this.mounted)
@@ -263,8 +271,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     TextEditingController _tecJoinCode = TextEditingController();
     String errorText;
 
-    model.Room joinRoom = await getUserService().useInviteToken(joinInfo.inviteToken, widget.authRC);
-    model.Room room = await getUserService().channelsJoin(joinRoom.rid, widget.authRC);   // rid is valid, no id in this case;
+    RC.Room joinRoom = await getUserService().useInviteToken(joinInfo.inviteToken, widget.authRC);
+    RC.Room room = await getUserService().channelsJoin(joinRoom.rid, widget.authRC);   // rid is valid, no id in this case;
     if (room.id == null) {
       if (room.error != null && room.error.contains('Password')) {
         content = 'Room(${joinRoom.name}) need join code.';
@@ -338,7 +346,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         ReceiveSharingIntent.getMediaStream().listen((List<SharedMediaFile> value) {
           _sharedFiles = value;
           print("Shared(1)!!!:" + (_sharedFiles?.map((f)=> f.path)?.join(",") ?? ""));
-          notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+          notificationController.add(RC.Notification(msg: 'request_close'));
         }, onError: (err) {
           print("getIntentDataStream error: $err");
         });
@@ -346,7 +354,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     // For sharing images coming from outside the app while the app is closed
     ReceiveSharingIntent.getInitialMedia().then((List<SharedMediaFile> value) {
       _sharedFiles = value;
-      notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+      notificationController.add(RC.Notification(msg: 'request_close'));
       print("Shared(2)!!!!:" + (_sharedFiles?.map((f)=> f.path)?.join(",") ?? ""));
     });
 
@@ -355,7 +363,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         ReceiveSharingIntent.getTextStream().listen((String value) {
           print('shared text!!!(1) = $value');
           _sharedText = value;
-          notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+          notificationController.add(RC.Notification(msg: 'request_close'));
         }, onError: (err) {
           print("getLinkStream error: $err");
         });
@@ -364,7 +372,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     ReceiveSharingIntent.getInitialText().then((String value) {
       print('shared text!!!(2) = $value');
       _sharedText = value;
-      notificationController.add(rocket_notification.Notification(msg: 'request_close'));
+      notificationController.add(RC.Notification(msg: 'request_close'));
     });
   }
 
@@ -395,7 +403,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               title: Text('Create Room'),
               onTap: () async {
                 Navigator.pop(context);
-                await Navigator.push(context, MaterialPageRoute(builder: (context) => UpdateRoom(chatHomeState: this, user: widget.user)));
+                await Navigator.push(context, MaterialPageRoute(builder: (context) => EditRoom(chatHomeState: this, user: widget.user)));
               },
             ),
             ListTile(
@@ -492,7 +500,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           showJoinAlertDialog();
         });
       }
-      List<model.Room> roomList = snapshot.data.roomList;
+      List<RC.Room> roomList = snapshot.data.roomList;
       return CustomScrollView(
         slivers: <Widget>[
         SliverAppBar(
@@ -513,7 +521,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         ),
         SliverList(
           delegate: SliverChildBuilderDelegate((context, index) {
-            model.Room room = roomList[index];
+            RC.Room room = roomList[index];
             String roomName = room.name;
             int unreadCount = 0;
             if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
@@ -564,7 +572,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
   }
 
-  buildSubTitle(model.Room room) {
+  buildSubTitle(RC.Room room) {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -578,7 +586,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     );
   }
 
-  String getLastMessage(model.Room room) {
+  String getLastMessage(RC.Room room) {
     String lm;
     if (room.lastMessage != null && room.lastMessage.msg != null)
       lm = room.lastMessage.msg;
@@ -597,11 +605,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   setChannelById(String rid) async {
     print('**** setChannelById=$rid');
     db.Room dbRoom = await locator<db.ChatDatabase>().getRoom(rid);
-    model.Room room = model.Room.fromMap(jsonDecode(dbRoom.info));
+    RC.Room room = RC.Room.fromMap(jsonDecode(dbRoom.info));
     _setChannel(room);
   }
 
-  _setChannel(model.Room room) async {
+  _setChannel(RC.Room room) async {
     print('**** setChannel=${room.id}');
     selectedRoom = room;
     bool refresh = false;
@@ -650,13 +658,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     ChannelService channelService = getChannelService();
     UpdatedSinceFilter filter = UpdatedSinceFilter(updateSince);
     RoomUpdate roomUpdate = await channelService.getRooms(widget.authRC, filter);
-    List<model.Room> updatedRoom = roomUpdate.update;
+    List<RC.Room> updatedRoom = roomUpdate.update;
     print('updatedRoom.length = ${updatedRoom.length}');
 
     if (roomType == 'c') {
-      List<model.Room> allPublicRoom = (await channelService.getChannelList(widget.authRC)).channelList;
+      List<RC.Room> allPublicRoom = (await channelService.getChannelList(widget.authRC)).channelList;
       print('allPublicRoom.length = ${allPublicRoom.length}');
-      for (model.Room r in allPublicRoom) {
+      for (RC.Room r in allPublicRoom) {
         r.roomAvatarUrl = await Utils.getRoomAvatarUrl(r, widget.authRC);
       }
       allPublicRoom.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
@@ -669,7 +677,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
     if (subsUpdate.update.isNotEmpty) {
       print('subs updated');
-      for (model.Subscription ms in subsUpdate.update) {
+      for (RC.Subscription ms in subsUpdate.update) {
         if (ms.blocked != null && ms.blocked)
           print('blocked!!! = ${ms.rid}');
         String info = jsonEncode(ms.toMap());
@@ -679,10 +687,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
     if (subsUpdate.remove.isNotEmpty) {
       print('subs removed');
-      for (model.Subscription ms in subsUpdate.remove) {
+      for (RC.Subscription ms in subsUpdate.remove) {
         db.Subscription dbSub = await locator<db.ChatDatabase>().getSubscription(ms.id);
         if (dbSub != null) {
-          model.Subscription sub = model.Subscription.fromMap(jsonDecode(dbSub.info));
+          RC.Subscription sub = RC.Subscription.fromMap(jsonDecode(dbSub.info));
           await locator<db.ChatDatabase>().deleteSubscription(ms.id);
           await locator<db.ChatDatabase>().deleteRoom(sub.rid);
         }
@@ -691,20 +699,20 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
     if (updatedRoom.isNotEmpty) {
       print('room updated');
-      for (model.Room mr in updatedRoom) {
-        model.Subscription subscription = subsUpdate.update.firstWhere((e) => e.rid == mr.id, orElse: () => null);
+      for (RC.Room mr in updatedRoom) {
+        RC.Subscription subscription = subsUpdate.update.firstWhere((e) => e.rid == mr.id, orElse: () => null);
         String info = jsonEncode(mr.toMap());
         String sid = subscription == null ? null : subscription.id;
         await locator<db.ChatDatabase>().upsertRoom(db.Room(rid: mr.id, sid: sid, info: info));
       }
     }
 
-    List<model.Room> removedRoom = roomUpdate.remove;
+    List<RC.Room> removedRoom = roomUpdate.remove;
     print('removedRoom.length = ${removedRoom.length}');
 
     if (removedRoom.isNotEmpty) {
       print('room removed');
-      for (model.Room mr in removedRoom) {
+      for (RC.Room mr in removedRoom) {
         await locator<db.ChatDatabase>().deleteRoom(mr.id);
       }
     }
@@ -712,13 +720,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoom, value: DateTime.now().toIso8601String()));
     var dbRooms = await locator<db.ChatDatabase>().getAllRooms;
     print('dbRooms = ${dbRooms.length}');
-    List<model.Room> roomList = [];
+    List<RC.Room> roomList = [];
     totalUnread = 0;
     for (db.Room dr in dbRooms) {
-      model.Room room = model.Room.fromMap(jsonDecode(dr.info));
+      RC.Room room = RC.Room.fromMap(jsonDecode(dr.info));
       if (dr.sid != null) {
         var dbSubscription = await locator<db.ChatDatabase>().getSubscription(dr.sid);
-        room.subscription = model.Subscription.fromMap(jsonDecode(dbSubscription.info));
+        room.subscription = RC.Subscription.fromMap(jsonDecode(dbSubscription.info));
         //print('room unread=${room.subscription.unread}');
         //print('room(${room.id}) subscription blocked=${room.subscription.blocked}');
         totalUnread += room.subscription.unread;
@@ -747,9 +755,9 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  clearUnreadOnDB(model.Room room) async {
+  clearUnreadOnDB(RC.Room room) async {
     db.Room dr = await locator<db.ChatDatabase>().getRoom(room.id);
-    model.Room mr = model.Room.fromMap(jsonDecode(dr.info));
+    RC.Room mr = RC.Room.fromMap(jsonDecode(dr.info));
     if (mr.subscription != null) {
       mr.subscription.unread = 0;
       String info = jsonEncode(mr.toMap());
@@ -782,13 +790,38 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.eraseRoom(roomId);
   }
 
-  Future<Response> roomAnnouncement(model.Room room, String announcement) async {
+  Future<Response> roomAnnouncement(RC.Room room, String announcement) async {
     return await getChannelService().roomAnnouncement(room, announcement, widget.authRC);
+  }
+
+  void parsePermissions(RC.Notification event) {
+    List<dynamic> jsonList = event.result;
+    List<Permission> permissions = jsonList.map((x) => Permission.fromMap(x)).toList();
+    for (Permission p in permissions) {
+      for (String r in p.roles) {
+        if (roleToPermissions[r] == null)
+          roleToPermissions[r] = [];
+        roleToPermissions[r].add(p.id);
+      }
+    }
+    //print("@@ user roles count=${userRoles.length}");
+  }
+
+  List<String> getPermissionsForRoles(List<String> roles) {
+    List<String> permissions = [];
+    if (roles == null)
+      return permissions;
+    for (String r in roles) {
+      for (String p in roleToPermissions[r])
+        if (!permissions.contains(p))
+          permissions.add(p);
+    }
+    return permissions;
   }
 }
 
 class RoomSnapshotInfo {
-  List<model.Room> roomList;
+  List<RC.Room> roomList;
   String titleImagePath;
   String titleText;
 
