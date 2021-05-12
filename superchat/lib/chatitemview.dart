@@ -110,7 +110,7 @@ class ChatItemViewState extends State<ChatItemView> {
 
     bool specialMessage = message.t != null;
     if (userName == null)
-      userName = Utils.getUserNameByUser(messageUser);
+      userName = Utils.getUserNameByUser(user);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
@@ -121,7 +121,7 @@ class ChatItemViewState extends State<ChatItemView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
-        Utils.buildUserAvatar(specialMessage ? 20 : 40, messageUser),
+        Utils.buildUserAvatar(specialMessage ? 20 : 40, user),
         SizedBox(width: 5,),
         // user name
         Expanded(child: Column(

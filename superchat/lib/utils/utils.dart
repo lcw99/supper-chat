@@ -17,10 +17,10 @@ class Utils {
   static UserCache userCache = UserCache();
   static String getAvatarUrl(User userInfo) {
     Uri uri = serverUri.replace(path: '/avatar/${userInfo.username}', query: 'format=png');
-    if (userInfo.avatarUrl != null)
-      uri = uri.replace(path: Uri.parse(userInfo.avatarUrl).path);
-    else if (userInfo.avatarETag != null)
+    if (userInfo.avatarETag != null)
       uri = uri.replace(query: 'avatarETag=${userInfo.avatarETag}');
+    else if (userInfo.avatarUrl != null)
+      uri = uri.replace(path: Uri.parse(userInfo.avatarUrl).path);
     //print('avatar url=$uri');
     return uri.toString();
   }
