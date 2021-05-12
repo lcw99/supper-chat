@@ -393,7 +393,7 @@ class ChatItemViewState extends State<ChatItemView> {
       fit: BoxFit.contain,
       headers: header,
       cache: true,
-      mode: ei.ExtendedImageMode.gesture,
+      mode: kIsWeb ? ei.ExtendedImageMode.none : ei.ExtendedImageMode.gesture,
       initGestureConfigHandler: (state) {
         return ei.GestureConfig(
           minScale: 0.9,
