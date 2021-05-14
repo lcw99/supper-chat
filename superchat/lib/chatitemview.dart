@@ -326,7 +326,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 cursor: SystemMouseCursors.text,
                 child: kIsWeb ? SelectableText(
                   newMessage,
-                  style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
+                  style: TextStyle(fontSize: messageFontSize, color: Colors.black, fontWeight: FontWeight.normal),
                 ) : Linkable(
                   text: newMessage,
                   style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),

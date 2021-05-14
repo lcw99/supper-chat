@@ -18,10 +18,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/new/user_new.dart';
-import 'package:rocket_chat_connector_flutter/models/user.dart' as rocket_user;
+import 'package:rocket_chat_connector_flutter/models/user.dart' as RC;
 import 'package:rocket_chat_connector_flutter/services/authentication_service.dart';
-import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
-import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as rocket_notification;
+import 'package:rocket_chat_connector_flutter/models/notification_payload.dart' as RC;
+import 'package:rocket_chat_connector_flutter/web_socket/notification.dart' as RC;
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/push_service.dart';
@@ -33,13 +33,14 @@ import 'database/chatdb.dart';
 
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
 
+import 'flatform_depended/platform_depended.dart';
 import 'model/join_info.dart';
+import 'utils/utils.dart';
 
 final String serverUrl = "https://chat.smallet.co";
 final String username = "support@semaphore.kr";
 //final String username = "changlee99@gmail.com";
 final String password = "enter99!";
-final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(Uri.parse(serverUrl));
 
 final authFirebase = FBA.FirebaseAuth.instance;
 final googleSignIn = GoogleSignIn(scopes: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']);
@@ -110,24 +111,57 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.data}");
 }
 
+final List<Message> messages = <Message>[];
+
 androidNotification(RemoteMessage message) async {
-  const AndroidNotificationDetails androidPlatformChannelSpecifics =
+  String payloadStr;
+  if (message.data['ejson'] != null)
+    payloadStr = message.data['ejson'];
+  RC.NotificationPayload payload = RC.NotificationPayload.fromMap(jsonDecode(payloadStr));
+
+  String messageStr;
+  if (payload.message != null)
+    messageStr = payload.message.msg;
+  if (messageStr == null) {
+    if (message.data['message'] != null) {
+      String s = message.data['message'];
+      messageStr = s.split(':')[1];
+    }
+  }
+  if (messageStr == null) {
+    messageStr = 'no message';
+  }
+  final String fromAvatar = await downloadAndSaveFile(serverUri.replace(path: '/avatar/${payload.sender.username}', query: 'format=png').toString(), 'largeIcon');
+  //final String fromAvatar = await Utils.downloadAndSaveFile('https://via.placeholder.com/48x48', 'largeIcon');
+
+  final Person from = Person(name: payload.sender.name, icon: BitmapFilePathAndroidIcon(fromAvatar));
+  messages.add(Message(messageStr, DateTime.now(), from));
+  if (messages.length > 5)
+    messages.removeAt(0);
+  final MessagingStyleInformation messagingStyle = MessagingStyleInformation(
+      from,
+      groupConversation: true,
+      conversationTitle: payload.name,
+      htmlFormatContent: true,
+      htmlFormatTitle: true,
+      messages: messages);
+  final AndroidNotificationDetails androidPlatformChannelSpecifics =
   AndroidNotificationDetails(
       'Super Chat', 'Super Chat', 'Super Chat',
+      category: 'msg',
+      styleInformation: messagingStyle,
       importance: Importance.max,
       priority: Priority.high,
       showWhen: false);
-  const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-  String _payload;
-  if (message.data['ejson'] != null)
-    _payload = message.data['ejson'];
+  final NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
   if (flutterLocalNotificationsPlugin != null)
     await flutterLocalNotificationsPlugin.show(
-        0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: _payload);
+        0, message.data['title'], message.data['message'], platformChannelSpecifics, payload: payloadStr);
 }
 
 GlobalKey<ChatHomeState> chatHomeStateKey = GlobalKey();
 Future<void> _onSelectNotification(String payload) async {
+  messages.clear();
   print("onSelectNotification payload=$payload");
   notificationPayload = payload;
   if (!navGlobalKey.currentState.mounted)
@@ -139,7 +173,7 @@ Future<void> _onSelectNotification(String payload) async {
       notificationPayload = null;
       print('**** rid= $_rid');
       if (chatHomeStateKey.currentState != null) {
-        chatHomeStateKey.currentState.notificationController.sink.add(rocket_notification.Notification(msg: 'request_close', collection: _rid));
+        chatHomeStateKey.currentState.notificationController.sink.add(RC.Notification(msg: 'request_close', collection: _rid));
         Future.delayed(Duration(seconds: 1), () { chatHomeStateKey.currentState.setChannelById(_rid);} );
       }
     } else {
@@ -321,7 +355,7 @@ class _LoginHomeState extends State<LoginHome> {
     if (user != null) {
       var ss = user.email.split("@");
       UserNew userNew = UserNew(username: ss[0], name: user.displayName, email: user.email, pass: user.id);
-      rocket_user.User userRC = await UserService(rocketHttpService).register(userNew);
+      RC.User userRC = await UserService(rocketHttpService).register(userNew);
       print("user=" + userRC.toString());
     }
   }
@@ -440,7 +474,7 @@ class _LoginHomeState extends State<LoginHome> {
 
   @override
   Widget build(BuildContext context) {
-    rocket_user.User user;
+    RC.User user;
 
     textScaleFactor = MediaQuery.of(context).textScaleFactor;
     print('===text scale factor = $textScaleFactor');

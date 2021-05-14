@@ -7,3 +7,7 @@ Object shareFile(String url, Map<String, String> header) {
 Widget pickedImage(String path, {double imageWidth, double imageHeight, cacheWidth}) {
   throw UnimplementedError('Unsupported');
 }
+
+Future<String> downloadAndSaveFile(String url, String fileName) async {
+  throw UnimplementedError('Unsupported');
+}

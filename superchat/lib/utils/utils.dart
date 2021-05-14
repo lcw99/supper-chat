@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
@@ -165,7 +166,6 @@ class Utils {
             child: Image.network(url, key: UniqueKey()))
     );
   }
-
 }
 
 class UserCache {
