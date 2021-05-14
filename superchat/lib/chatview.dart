@@ -521,7 +521,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           child: Stack(children: [
             kIsWeb ? DropzoneView(
               operation: DragOperation.copy,
-              cursor: CursorType.grab,
+              cursor: CursorType.Default,
               onCreated: (ctrl) => dropzoneViewController = ctrl,
               onLoaded: () => print('Zone loaded'),
               onError: (ev) => print('Error: $ev'),

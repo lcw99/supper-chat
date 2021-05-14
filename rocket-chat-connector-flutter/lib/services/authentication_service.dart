@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:rocket_chat_connector_flutter/exceptions/exception.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
@@ -14,8 +15,15 @@ class AuthenticationService {
 
   AuthenticationService(this._httpService);
 
-  Future<Authentication> login(String user, String password) async {
-    Map<String, String> body = {'user': user, 'password': password};
+  Future<Authentication> login(String user, {String? password, String? resume}) async {
+    Map<String, String> body;
+    if (password != null)
+      body = {'user': user, 'password': password};
+    else if (resume != null)
+      body = {'user': user, 'resume': resume};
+    else
+      return Authentication();
+
     http.Response response = await _httpService.post(
       '/api/v1/login',
       jsonEncode(body),
@@ -27,6 +35,22 @@ class AuthenticationService {
       log('authentication = $s');
       var json = jsonDecode(s);
       return Authentication.fromMap(json);
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<String> logout(Authentication authentication) async {
+    http.Response response = await _httpService.post(
+      '/api/v1/logout',
+      null,
+      authentication,
+    );
+
+    if (response.statusCode == 200 && response.body.isNotEmpty == true) {
+      var s = utf8.decode(response.bodyBytes);
+      log('logout = $s');
+      var json = jsonDecode(s);
+      return s;
     }
     throw RocketChatException(response.body);
   }

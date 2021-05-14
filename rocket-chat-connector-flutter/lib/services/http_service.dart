@@ -32,10 +32,15 @@ class HttpService {
           headers: await (_getHeaders(authentication)
               as Future<Map<String, String>?>));
 
-  Future<http.Response> post(String uri, String body, Authentication? authentication) async =>
-      await http.post(Uri.parse(_apiUrl.toString() + uri),
+  Future<http.Response> post(String uri, String? body, Authentication? authentication) async {
+    if (body != null)
+      return await http.post(Uri.parse(_apiUrl.toString() + uri),
           headers: await (_getHeaders(authentication) as Future<Map<String, String>?>),
           body: body);
+    else
+      return await http.post(Uri.parse(_apiUrl.toString() + uri),
+        headers: await (_getHeaders(authentication) as Future<Map<String, String>?>));
+  }
 
   Future<http.Response> put(
           String uri, String body, Authentication authentication) async =>

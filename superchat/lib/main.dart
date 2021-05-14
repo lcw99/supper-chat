@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart' as FBA;
 import 'package:fluro/fluro.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -58,6 +59,8 @@ bool googleSignInMode;
 JoinInfo joinInfo;
 //JoinInfo joinInfo = JoinInfo('yzYen4', null);
 
+String authTokenPrevious;
+
 void main() async {
   //emojiConvert();
   print('***** main start');
@@ -70,6 +73,15 @@ void main() async {
   } else {
     googleSignInMode = true;
   }
+
+  authTokenPrevious = null;
+  var keyValue = await locator<ChatDatabase>().getValueByKey('userAuth');
+  print ('@#@# prev auth=$keyValue');
+  if (keyValue != null) {
+    googleSignInMode = false;
+    authTokenPrevious = keyValue.value;
+  }
+
   await packageInfo();
   runApp(MainHome());
 }
@@ -379,8 +391,8 @@ class _LoginHomeState extends State<LoginHome> {
   }
 
   Future<Authentication> getAuthentication() async {
-    final AuthenticationService authenticationService = AuthenticationService(rocketHttpService);
-    print('getAuthentication1');
+    final AuthenticationService authenticationService = getAuthenticationService();
+    print('getAuthentication1=$googleSignInMode, authTokenPrevious=$authTokenPrevious');
     if (googleSignInMode) {
       final GoogleSignInAccount googleSignInAccount = await googleSignIn.signInSilently();
       print('getAuthentication2');
@@ -388,7 +400,10 @@ class _LoginHomeState extends State<LoginHome> {
       print('getAuthentication3');
       return await authenticationService.loginGoogle(acc.accessToken, acc.idToken);
     } else {
-      return await authenticationService.login(username, password);
+      if (authTokenPrevious != null)
+        return await authenticationService.login(username, resume: authTokenPrevious);
+      else
+        return await authenticationService.login(username, password: password);
     }
   }
 
@@ -420,13 +435,6 @@ class _LoginHomeState extends State<LoginHome> {
   String loginStatus = '...';
   GlobalKey loginStatusKey = GlobalKey();
   void showLoginStatus(String s) {
-/*
-    if (loginStatusKey.currentState == null)
-      return;
-    loginStatusKey.currentState.setState(() {
-      loginStatus = s;
-    });
-*/
   }
 
 
@@ -465,6 +473,8 @@ class _LoginHomeState extends State<LoginHome> {
               showLoginStatus('waiting chat server login');
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
+              KeyValue authKeyValue = KeyValue(key: 'userAuth', value: auth.data.authToken);
+              locator<ChatDatabase>().upsertKeyValue(authKeyValue);
               user = auth.data.me;
               if (googleSignInMode) {
                 if (user.avatarETag == null) {
@@ -537,6 +547,19 @@ class _LoginHomeState extends State<LoginHome> {
   }
 
 }
+
+Future<void> logout(googleProfile, Authentication authRC) async {
+  if (googleSignInMode)
+    await googleSignIn.signOut();
+  googleSignInMode = true;
+  authTokenPrevious = null;
+  await getAuthenticationService().logout(authRC);
+  await locator<ChatDatabase>().deleteAllTables();
+  //Navigator.of(context).pushNamedAndRemoveUntil(Routes.demoSimple, (Route<dynamic> route) => false);
+  navGlobalKey.currentState.pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+  //navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
+}
+
 
 
 /*
