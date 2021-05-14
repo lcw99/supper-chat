@@ -446,138 +446,113 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     );
   }
 
-  void deleteAllTables() async {
-    var result = await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-              title: Text('Delete Local Data'),
-              content: Text('Are you sure?'),
-              actions: [
-                TextButton(
-                  child: Text("Cancel"),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                TextButton(
-                  child: Text("OK"),
-                  onPressed: () {
-                    locator<db.ChatDatabase>().deleteAllTables();
-                    Navigator.pop(context, 'OK');
-                  },
-                ),
-              ]
-          );
-        }
-    );
-    if (result == 'OK') {
-      googleSignIn.signOut();
-      navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
-    }
-  }
-
-  _buildPage() {
+  Widget _buildPage() {
     debugPrint("_buildPage=" + selectedPage.toString());
     switch(selectedPage) {
       case 0:
-        return FutureBuilder<RoomSnapshotInfo>(
-            future: _getMyRoomList(titleText: 'MY ROOMS', imagePath: 'assets/images/nepal-2184940_1920.jpg'),
-            builder: roomBuilder
-        );
+        return buildMainScrollView(null, 'MY ROOMS', 'assets/images/nepal-2184940_1920.jpg');
         break;
       case 1:
-        return FutureBuilder<RoomSnapshotInfo>(
-            future: _getMyRoomList(roomType: 'c', titleText: 'PUBLIC', imagePath: 'assets/images/sunrise-1634197_1920.jpg'),
-            builder: roomBuilder,
-        );
+        return buildMainScrollView('c', 'PUBLIC', 'assets/images/sunrise-1634197_1920.jpg');
         break;
       case 2:
-        return FutureBuilder<RoomSnapshotInfo>(
-          future: _getMyRoomList(roomType: 'd', titleText: 'DIRECT', imagePath: 'assets/images/mountains-1158269_1920.jpg'),
-          builder: roomBuilder,
-        );
+        return buildMainScrollView('d', 'DIRECT', 'assets/images/mountains-1158269_1920.jpg');
         break;
     }
   }
 
-  Widget roomBuilder(context, AsyncSnapshot<RoomSnapshotInfo> snapshot) {
+  buildMainScrollView(String roomType, String title, String imagePath) {
+    return CustomScrollView(
+        slivers: <Widget>[
+          buildSilverAppbar(title, imagePath),
+          FutureBuilder<List<RC.Room>>(
+            future: _getMyRoomList(roomType: roomType, titleText: title, imagePath: imagePath),
+            builder: roomBuilder
+          )
+        ]
+    );
+  }
+
+  Widget roomBuilder(context, AsyncSnapshot<List<RC.Room>> snapshot) {
     if (snapshot.hasData) {
       if (snapshot.connectionState == ConnectionState.done && joinInfo != null) {
         Future.delayed(Duration.zero, () {
           showJoinAlertDialog();
         });
       }
-      List<RC.Room> roomList = snapshot.data.roomList;
-      return CustomScrollView(
-        slivers: <Widget>[
-        SliverAppBar(
-          expandedHeight: 200.0,
-          floating: false,
-          pinned: true,
-          systemOverlayStyle: SystemUiOverlayStyle.dark,
-          flexibleSpace: FlexibleSpaceBar(
-              centerTitle: true,
-              title: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(snapshot.data.titleText, style: TextStyle(fontFamily: 'Audiowide', fontSize: 15),),
-                  ]),
-              background: Image.asset(
-                snapshot.data.titleImagePath,
-                fit: BoxFit.cover,
-              )),
-        ),
-        SliverList(
-          delegate: SliverChildBuilderDelegate((context, index) {
-            RC.Room room = roomList[index];
-            String roomName = room.name;
-            int unreadCount = 0;
-            if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
-              unreadCount = room.subscription.unread;
-            if (roomName == null) {
-              if (room.t == 'd') {
-                roomName = room.usernames.toString();
-              }
-            }
-
-            Widget roomType;
-            if (room.t == 'c')
-              roomType = Icon(Icons.public, color: Colors.blueAccent, size: 17,);
-            else if (room.t == 'p')
-              roomType = Icon(Icons.lock, color: Colors.blueAccent, size: 17);
-            else if (room.t == 'd')
-              roomType = Icon(Icons.chat, color: Colors.blueAccent, size: 17);
-            else
-              roomType = Icon(Icons.device_unknown, color: Colors.yellow, size: 17);
-
-            return ListTile(
-              onTap: () {
-                _setChannel(room);
-              },
-              leading: Container(
-                  child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain,)),
-              title: Row(children: [
-                roomType,
-                SizedBox(width: 3,),
-                Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
-                room.u != null && room.u.id == widget.user.id ?
-                  Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
-              ]),
-              subtitle: buildSubTitle(room),
-              trailing: UnreadCounter(unreadCount: unreadCount),
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              selectedTileColor: Colors.yellow.shade200,
-              horizontalTitleGap: 15,
-              selected: selectedRoom != null ? selectedRoom.id == room.id : false,
-            );
-          }, childCount: roomList.length,
-          ),
-        )
-      ]);
+      return buildSilverList(snapshot.data);
     } else {
-      return Container(color: Colors.white, child: Center(child: CircularProgressIndicator(strokeWidth: 1,)));
+      return SliverFillRemaining(child: Center(child: CircularProgressIndicator(strokeWidth: 1,)));
     }
+  }
+
+  buildSilverAppbar(titleText, imagePath) {
+    return SliverAppBar(
+      expandedHeight: 200.0,
+      floating: false,
+      pinned: true,
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      flexibleSpace: FlexibleSpaceBar(
+          centerTitle: true,
+          title: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(titleText, style: TextStyle(fontFamily: 'Audiowide', fontSize: 15),),
+            ]),
+          background: Image.asset(
+            imagePath,
+            fit: BoxFit.cover,
+          )),
+    );
+  }
+
+  buildSilverList(roomList) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        RC.Room room = roomList[index];
+        String roomName = room.name;
+        int unreadCount = 0;
+        if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
+          unreadCount = room.subscription.unread;
+        if (roomName == null) {
+          if (room.t == 'd') {
+            roomName = room.usernames.toString();
+          }
+        }
+
+        Widget roomType;
+        if (room.t == 'c')
+          roomType = Icon(Icons.public, color: Colors.blueAccent, size: 17,);
+        else if (room.t == 'p')
+          roomType = Icon(Icons.lock, color: Colors.blueAccent, size: 17);
+        else if (room.t == 'd')
+          roomType = Icon(Icons.chat, color: Colors.blueAccent, size: 17);
+        else
+          roomType = Icon(Icons.device_unknown, color: Colors.yellow, size: 17);
+
+        return ListTile(
+          onTap: () {
+            _setChannel(room);
+          },
+          leading: Container(
+              child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain,)),
+          title: Row(children: [
+            roomType,
+            SizedBox(width: 3,),
+            Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+            room.u != null && room.u.id == widget.user.id ?
+            Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
+          ]),
+          subtitle: buildSubTitle(room),
+          trailing: UnreadCounter(unreadCount: unreadCount),
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          selectedTileColor: Colors.yellow.shade200,
+          horizontalTitleGap: 15,
+          selected: selectedRoom != null ? selectedRoom.id == room.id : false,
+        );
+      }, childCount: roomList.length,
+      ),
+    );
   }
 
   buildSubTitle(RC.Room room) {
@@ -650,12 +625,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       setState(() {});
   }
 
-  Future<RoomSnapshotInfo> _getChannelList() async {
-    ChannelListResponse rep = await getChannelService().getChannelList(widget.authRC);
-    return RoomSnapshotInfo(rep.channelList, 'assets/images/sunrise-1634197_1920.jpg', 'PUBLIC ROOMS');
-  }
-
-  Future<RoomSnapshotInfo> _getMyRoomList({String roomType, String titleText, String imagePath}) async {
+  Future<List<RC.Room>> _getMyRoomList({String roomType, String titleText, String imagePath}) async {
     var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoom);
     DateTime updateSince;
     if (lastUpdate != null)
@@ -676,7 +646,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         r.roomAvatarUrl = await Utils.getRoomAvatarUrl(r, widget.authRC);
       }
       allPublicRoom.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
-      return RoomSnapshotInfo(allPublicRoom, imagePath, titleText);
+      return allPublicRoom;
     }
 
     SubscriptionUpdate subsUpdate = await channelService.getSubscriptions(widget.authRC, filter);
@@ -745,7 +715,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       }
     }
     roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
-    return RoomSnapshotInfo(roomList,  imagePath, titleText);
+    return roomList;
   }
 
   @override
@@ -826,13 +796,36 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
     return permissions;
   }
-}
 
-class RoomSnapshotInfo {
-  List<RC.Room> roomList;
-  String titleImagePath;
-  String titleText;
-
-  RoomSnapshotInfo(this.roomList, this.titleImagePath, this.titleText);
+  void deleteAllTables() async {
+    var result = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+              title: Text('Delete Local Data'),
+              content: Text('Are you sure?'),
+              actions: [
+                TextButton(
+                  child: Text("Cancel"),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                TextButton(
+                  child: Text("OK"),
+                  onPressed: () {
+                    locator<db.ChatDatabase>().deleteAllTables();
+                    Navigator.pop(context, 'OK');
+                  },
+                ),
+              ]
+          );
+        }
+    );
+    if (result == 'OK') {
+      googleSignIn.signOut();
+      navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
+    }
+  }
 }
 

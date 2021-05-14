@@ -68,6 +68,10 @@ void main() async {
   setServerUri(serverUri);
   await setupLocator();
   WidgetsFlutterBinding.ensureInitialized();
+  if (kReleaseMode) {
+    print ('============= in release mode, using custom cache');
+    MyWidgetsBinding();
+  }
   if (!kIsWeb) {
     googleSignInMode = true;
     await _initNotification();
@@ -85,6 +89,24 @@ void main() async {
 
   await packageInfo();
   runApp(MainHome());
+}
+
+class MyImageCache extends ImageCache {
+  @override
+  void clear() {
+    print("###################Clearing cache!");
+    super.clear();
+  }
+}
+
+class MyWidgetsBinding extends WidgetsFlutterBinding {
+  @override
+  ImageCache createImageCache() {
+    MyImageCache myImageCache = MyImageCache();
+    myImageCache.maximumSize = 1000;
+    myImageCache.maximumSizeBytes = 1024 * 1024 * 1024; // 1 Giga
+    return myImageCache;
+  }
 }
 
 packageInfo() async {
@@ -504,7 +526,7 @@ class _LoginHomeState extends State<LoginHome> {
           future: getAuthentication(),
           builder: (context, AsyncSnapshot<Authentication> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting)
-              showLoginStatus('waiting chat server login');
+              return buildShowVersion('login progress');
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
               KeyValue authKeyValue = KeyValue(key: 'userAuth', value: auth.data.authToken);
@@ -531,9 +553,9 @@ class _LoginHomeState extends State<LoginHome> {
                 Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) =>
                     ChatHome(key: chatHomeStateKey, joinInfo: ji, user: user, authRC: auth, payload: _np,)));
               });
-              return SizedBox();
+              return buildShowVersion('login completed');
             } else {
-              return buildShowVersion();
+              return buildShowVersion('connecting');
             }
         }));
     } else
@@ -545,18 +567,18 @@ class _LoginHomeState extends State<LoginHome> {
           if (snapshot.connectionState == ConnectionState.done)
             return buildOAuthLoginPage();
           else
-            return buildShowVersion();
+            return buildShowVersion('login started');
         }));
   }
 
-  buildShowVersion() {
+  buildShowVersion(String status) {
     return Container(color: Colors.white, child:
       Center(child: Wrap(children: [Column(children: [
         Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
         SizedBox(height: 50,),
         SizedBox(height: 50, child: Column(children: [
-          Text('SuperChat $version($buildNumber)', style: TextStyle(fontSize: 10, color: Colors.blueAccent),),
-          Text('$loginStatus', key: loginStatusKey),
+          Text('SuperChat $version($buildNumber)' + (kDebugMode ? ' - debug' : ''), style: TextStyle(fontSize: 10, color: Colors.blueAccent),),
+          Text('$status', key: loginStatusKey, style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
         ])),
       ])])));
   }
