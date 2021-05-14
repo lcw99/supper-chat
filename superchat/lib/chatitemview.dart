@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
@@ -321,10 +322,15 @@ class ChatItemViewState extends State<ChatItemView> {
               child: Wrap(
                 crossAxisAlignment: WrapCrossAlignment.end,
                 children: [
-                Linkable(
+                MouseRegion(
+                cursor: SystemMouseCursors.text,
+                child: kIsWeb ? SelectableText(
+                  newMessage,
+                  style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
+                ) : Linkable(
                   text: newMessage,
                   style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
-                ),
+                )),
                 message.editedBy != null ?
                   Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
                   SizedBox(),
@@ -357,10 +363,10 @@ class ChatItemViewState extends State<ChatItemView> {
                 ])
                 : urlInMessage.meta != null && urlInMessage.meta['oembedThumbnailUrl'] != null
                 ? Column (children: <Widget> [
-              urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl'], cacheWidth: 500) : SizedBox(),
-              urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
-            ])
-                : SizedBox()
+                  urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl'], cacheWidth: 500) : SizedBox(),
+                  urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
+                ])
+                : Linkable(text: urlInMessage.url),
         ));
   }
 

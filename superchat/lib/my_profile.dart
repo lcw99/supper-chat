@@ -1,3 +1,5 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:superchat/database/chatdb.dart';
 import 'utils/utils.dart';
@@ -46,10 +48,20 @@ class _MyProfileState extends State<MyProfile> {
                   TextButton(
                     child: Text('Change Avatar'),
                     onPressed: () async {
-                      final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
-                      File file = File(pickedFile.path);
-                      await getUserService().avatarImageUpload(widget.authRC, file: file);
-                      Future.delayed(Duration(seconds: 1), () { setState(() {}); });
+                      if (kIsWeb) {
+                        FilePickerResult result = await FilePicker.platform.pickFiles();
+                        if (result != null) {
+                          if (result.files.single.bytes != null) {
+                            await getUserService().avatarImageUpload(widget.authRC, bytes: result.files.single.bytes, fileName: result.files.single.name);
+                            Future.delayed(Duration(seconds: 1), () { setState(() {}); });
+                          }
+                        }
+                      } else {
+                        final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
+                        File file = File(pickedFile.path);
+                        await getUserService().avatarImageUpload(widget.authRC, file: file);
+                        Future.delayed(Duration(seconds: 1), () { setState(() {}); });
+                      }
                     },
                   ),
                   ListTile(
@@ -71,7 +83,7 @@ class _MyProfileState extends State<MyProfile> {
                   Container(
                     padding: EdgeInsets.only(top: 20),
                     child: InkWell(
-                    onTap: () {_logout(googleProfile);},
+                    onTap: () {logout(googleProfile, widget.authRC);},
                     child: Wrap(children: <Widget>[
                       Icon(Icons.logout),
                       Text('Logout'),
@@ -83,11 +95,4 @@ class _MyProfileState extends State<MyProfile> {
     );
   }
 
-  Future<void> _logout(googleProfile) async {
-    await googleSignIn.signOut();
-    locator<ChatDatabase>().deleteAllTables();
-    //Navigator.of(context).pushNamedAndRemoveUntil(Routes.demoSimple, (Route<dynamic> route) => false);
-    navGlobalKey.currentState.pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-    //navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
-  }
 }

@@ -1,3 +1,4 @@
+import 'package:rocket_chat_connector_flutter/services/authentication_service.dart';
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
@@ -27,4 +28,8 @@ MessageService getMessageService() {
 
 ChannelService getChannelService() {
       return ChannelService(rocketHttpService);
+}
+
+AuthenticationService getAuthenticationService() {
+      return AuthenticationService(rocketHttpService);
 }

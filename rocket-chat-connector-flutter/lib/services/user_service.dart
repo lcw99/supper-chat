@@ -237,15 +237,18 @@ class UserService {
     return User();
   }
 
-  Future<dynamic> avatarImageUpload(Authentication? authentication, {File? file, Uint8List? bytes, String? mimeType}) async {
+  Future<dynamic> avatarImageUpload(Authentication? authentication, {File? file, Uint8List? bytes, String? mimeType, String? fileName}) async {
     var uri = _httpService.getUri()!.replace(path: '/api/v1/users.setAvatar');
+    if (mimeType == null && fileName!= null && bytes != null) {
+      mimeType = lookupMimeType(fileName, headerBytes: bytes);
+    }
     var request = http.MultipartRequest('POST', uri)
       ..headers['X-Auth-Token'] = authentication!.data!.authToken!
       ..headers['X-User-Id'] = authentication.data!.userId!
       ..files.add(file != null ? await http.MultipartFile.fromPath(
           'image', file.path,
           contentType: MediaType.parse(lookupMimeType(file.path)!)) :
-          http.MultipartFile.fromBytes('image', bytes!.toList(), filename: 'file.name', contentType: MediaType.parse(mimeType!.isNotEmpty ? mimeType : 'application/octet-stream'))
+          http.MultipartFile.fromBytes('image', bytes!.toList(), filename: 'file.name', contentType: MediaType.parse(mimeType != null && mimeType.isNotEmpty ? mimeType : 'application/octet-stream'))
       );
 
     var response = await request.send();
