@@ -34,6 +34,7 @@ class Message {
   bool? pinned;
   DateTime? pinnedAt;
   User? pinnedBy;
+  bool? isAttachment = false;
 
   Message({
     this.id,
@@ -60,6 +61,7 @@ class Message {
     this.pinnedAt,
     this.pinnedBy,
     this.updatedAt,
+    this.isAttachment,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {
