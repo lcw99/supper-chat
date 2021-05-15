@@ -307,7 +307,7 @@ class ChatItemViewState extends State<ChatItemView> {
         User attachmentAuthor = Utils.getCachedUser(userName: attachment.authorName);
         if (attachmentAuthor == null)
           print('############ attachment.authorName = ${attachment.authorName}');
-        String attachmentText = attachment.text.replaceAll(RegExp(r'\[ \]\(.*\)  '), '');
+        String attachmentText = attachment.text;
 
         Message attachmentMessage = Message(
           id: attachmentMessageId,
@@ -398,10 +398,8 @@ class ChatItemViewState extends State<ChatItemView> {
 
   Widget buildMessageBody(Message message) {
     String userName = _getUserName(message);
-    if (messageHasMessageAttachments(message.attachments)) {
-      message.msg = message.msg.replaceAll(RegExp(r'\[ \]\(.*\)  '), '');
-      message.urls = null;
-    }
+    message.msg = message.msg.replaceAll(RegExp(r'\[ \]\(.*\)[\s]*'), '');
+    message.urls = null;
     String newMessage = message.msg;
     switch (message.t) {
       case 'au': newMessage = '$userName added ${message.msg}'; break;
