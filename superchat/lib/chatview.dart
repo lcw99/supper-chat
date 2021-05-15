@@ -218,7 +218,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         if (event.collection == 'stream-room-messages') {
           if (event.notificationFields.notificationArgs.length > 0) {
             var arg = event.notificationFields.notificationArgs[0];
-            print('+++++stream-room-messages:' + jsonEncode(arg));
+            log('+++++stream-room-messages:' + jsonEncode(arg));
             Message roomMessage = Message.fromMap(arg);
             //print(jsonEncode(roomMessage));
             if (roomMessage.t == 'room_changed_announcement') {
@@ -958,7 +958,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
       for (var rm in roomMessages) {
         if (!chatDataStore.containsMessage(rm.mid)) {
-          //print('@@@@ add new message=${rm.info}');
+          log('@@@@ add new message=${rm.info}');
           Message m = Message.fromMap(jsonDecode(rm.info));
           Utils.getUserInfo(widget.authRC, userId: m.user.id);
           chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, rm.info, rm.ts));
