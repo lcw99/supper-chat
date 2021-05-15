@@ -26,11 +26,13 @@ class Utils {
     return uri.toString();
   }
 
-  static User getCachedUser(String userId) => userCache.getUser(userId: userId);
+  static User getCachedUser({String userId, String userName}) => userCache.getUser(userId: userId, userName: userName);
   static void clearCache() => userCache.clear();
   static void clearUser(String userId) => userCache.clearUser(userId);
 
   static Future<User> getUserInfo(Authentication authentication, {String userId, String userName, bool foreRefresh = false}) async {
+    if (userId == null && userName == null)
+      return null;
     User user;
     if (!foreRefresh) {
       user = userCache.getUser(userName: userName, userId: userId);
@@ -45,8 +47,8 @@ class Utils {
         count ++;
         return userCache.getUser(userName: userName, userId: userId);
       });
-    } while(user == null && count < 100);
-    print('@@ job wait count=$count');
+    } while(user == null && count < 20);
+    print('@@ job wait count=$count, username=$userName, userid=$userId');
     return user;
   }
 
@@ -183,8 +185,10 @@ class UserCache {
 
   Future<bool> addJob(String userId, userName, Authentication authentication) async {
     String jobCode= '$userId+$userName';
-    if (jobList.contains(jobCode))
+    if (jobList.contains(jobCode)) {
+      print('job code $jobCode is in jobList');
       return true;
+    }
     print('new jobCode=$jobCode');
     jobList.add(jobCode);
     User user = await getUserService().getUserInfo(UserIdFilter(userId: userId, username: userName), authentication);

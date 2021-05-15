@@ -13,7 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:linkable/linkable.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart' as pp;
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
@@ -26,12 +26,14 @@ import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 import 'package:share/share.dart';
 import 'package:superchat/constants/types.dart';
+import 'package:universal_io/io.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:http_parser/http_parser.dart';
 
 import 'chathome.dart';
+import 'chatview.dart';
 import 'constants/constants.dart';
 import 'main.dart';
 import 'utils/utils.dart';
@@ -47,9 +49,10 @@ class ChatItemView extends StatefulWidget {
   final Message message;
   final int index;
   final Room room;
+  final ChatViewState chatViewState;
 
   ChatItemView({Key key, @required this.chatHomeState, @required this.me, @required this.authRC,
-    this.onTapExit = false, this.message, this.index = 0, this.room,
+    this.onTapExit = false, this.message, this.index = 0, this.room, this.chatViewState,
   }) : super(key: key);
 
   @override
@@ -58,24 +61,55 @@ class ChatItemView extends StatefulWidget {
 
 class ChatItemViewState extends State<ChatItemView> {
   Message message;
-  User messageUser;
   GlobalKey<_ReactionViewState> keyReactionView = GlobalKey();
   @override
   Widget build(BuildContext context) {
-    if (message == null)
+    User messageUser;
+    if (message == null || widget.onTapExit)
       message = widget.message;
-    messageUser = Utils.getCachedUser(message.user.id);
-    if (messageUser != null)
-      return _buildChatItem(messageUser, message);
+    messageUser = Utils.getCachedUser(userId: message.user.id);
+    bool isAttachmentUserCached = true;
+    if (messageHasMessageAttachments(message.attachments)) {
+        isAttachmentUserCached = testAttachmentUserIsCached(message.attachments[0]);
+        //print('testAttachmentUserIsCached=$isAttachmentUserCached, msg=${message.attachments[0].text}');
+    }
+    if (messageUser != null && isAttachmentUserCached)
+      return buildChatItemMain(message);
     return FutureBuilder<User>(
-        future: Utils.getUserInfo(widget.authRC, userId: message.user.id),
+        future: getUserInfoForMessage(message),
         builder: (context, AsyncSnapshot<User> snapshot) {
-          if (snapshot.hasData) {
+          if (snapshot.hasData && snapshot.connectionState == ConnectionState.done) {
+            //print('building chatitem=${message.msg}');
             messageUser = snapshot.data;
-            return _buildChatItem(messageUser, message);
+            return buildChatItemMain(message);
           } else
             return SizedBox();
         });
+  }
+
+  Widget buildChatItemMain(message) {
+    return Container(child: _buildChatItem(message), margin: EdgeInsets.only(right: 15), width: MediaQuery.of(context).size.width - 15,);
+  }
+
+  bool testAttachmentUserIsCached(MessageAttachment attachment) {
+    User attachmentUser = Utils.getCachedUser(userName: attachment.authorName);
+    if (attachmentUser == null)
+      return false;
+    else if (messageHasMessageAttachments(attachment.attachments))
+      return testAttachmentUserIsCached(attachment.attachments[0]);
+    return true;
+  }
+
+  Future<User> getUserInfoForMessage(Message message) async {
+    if (messageHasMessageAttachments(message.attachments))
+      await getAttachmentUserInfo(message.attachments[0]);
+    return await Utils.getUserInfo(widget.authRC, userId: message.user.id);
+  }
+
+  Future<void> getAttachmentUserInfo(MessageAttachment attachment) async {
+    await Utils.getUserInfo(widget.authRC, userName: attachment.authorName);
+    if (messageHasMessageAttachments(attachment.attachments))
+      await getAttachmentUserInfo(attachment.attachments[0]);
   }
 
   Future<Message> getMessage(messageId) async {
@@ -103,12 +137,14 @@ class ChatItemViewState extends State<ChatItemView> {
   bool _messageStarred(Message message) {
     return message.starred != null && message.starred.length > 0;
   }
-  Widget _buildChatItem(User user, Message message, {String messageText, String avatarPath, String userName}) {
+
+  Widget _buildChatItem(Message message, {String messageText, String avatarPath, String userName, bool attachmentMessage = false}) {
     // if (message.starred != null && message.starred.length > 0)
     //   log('@@@ starred message=' + message.toString());
     // if (message.pinned != null && message.pinned)
     //   log('@@@ pinned message=' + message.toString());
 
+    User user = Utils.getCachedUser(userId: message.user.id);
     bool specialMessage = message.t != null;
     if (userName == null)
       userName = Utils.getUserNameByUser(user);
@@ -117,15 +153,18 @@ class ChatItemViewState extends State<ChatItemView> {
       userNameColor = Colors.green.shade900;
     var usernameFontSize = USERNAME_FONT_SIZE;
     if (messageText != null)
-      usernameFontSize *= 0.7;
-    return Row(
+      usernameFontSize *= 0.8;
+    return LayoutBuilder(builder: (context, boxConstraint) {
+      print('boxConstraint=$boxConstraint');
+      double avatarSize = specialMessage || attachmentMessage ? 20 : 40;
+      return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
-        Utils.buildUserAvatar(specialMessage ? 20 : 40, user),
+        Utils.buildUserAvatar(avatarSize, user, avatarPath: avatarPath),
         SizedBox(width: 5,),
         // user name
-        Expanded(child: Column(
+        Container(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
@@ -149,12 +188,12 @@ class ChatItemViewState extends State<ChatItemView> {
               ]),
             ]),
             messageText != null
-              ? Text(messageText, style: TextStyle(fontSize: MESSAGE_FONT_SIZE * 0.6))
-              : _buildMessage(message, userName),
+              ? Text(messageText, style: TextStyle(fontSize: MESSAGE_FONT_SIZE * 0.8))
+              : _buildMessage(message),
             SizedBox(height: 8,),
-          ],)),
-        SizedBox(width: 40,),
-      ],);
+          ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize),),
+        //SizedBox(width: 40,),
+      ],);});
   }
 
   _getUserName(Message message) {
@@ -167,7 +206,7 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Offset tabPosition;
-  _buildMessage(Message message, String userName) {
+  _buildMessage(Message message) {
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
@@ -191,7 +230,6 @@ class ChatItemViewState extends State<ChatItemView> {
           Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                bAttachments ? Container(child: buildAttachments(message)) : SizedBox(),
                 GestureDetector (
                   onTap: () {
                     if (widget.onTapExit)
@@ -201,6 +239,16 @@ class ChatItemViewState extends State<ChatItemView> {
                   },
                   child: buildMessageBody(message),
                 ),
+                Container(
+                  alignment: Alignment.topRight,
+                  child: Text(dateStr, style: TextStyle(fontSize: 8, color: Colors.black54),)
+                ),
+                bAttachments ?
+                  LayoutBuilder(builder: (context, boxConstraint){
+                    print('bAttachments boxConstraint=$boxConstraint');
+                    return Container(child: buildAttachments(message), width: boxConstraint.maxWidth,);
+                  })
+                  : SizedBox(),
                 Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -210,10 +258,6 @@ class ChatItemViewState extends State<ChatItemView> {
                         width: MediaQuery.of(context).size.width,
                         child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
                       ) : SizedBox()),
-                      Expanded(flex: 1, child: Container(
-                          alignment: Alignment.topRight,
-                          child: Text(dateStr, style: TextStyle(fontSize: 8, color: Colors.black54),)
-                      )),
                     ]),
               ]));
   }
@@ -245,34 +289,73 @@ class ChatItemViewState extends State<ChatItemView> {
             : Text(attachment.title, style: TextStyle(fontSize: 10),);
       } else if (attachment.imageUrl != null) {
         downloadLink = attachment.imageUrl;
-        attachmentBody = Column(children: <Widget>[
-          getImage(message, attachment),
+        attachmentBody = LayoutBuilder(builder: (context, bc) {
+          print('Column bc=$bc');
+          return Column(children: <Widget>[
+          LayoutBuilder(builder: (context, bc) {
+            print('getimage bc=$bc');
+            return getImage(message, attachment);
+          },),
           attachment.description != null
               ? Text(attachment.description, style: TextStyle(fontSize: 11),)
               : SizedBox(),
-        ]);
+        ]);});
+      } else if (attachment.messageLink != null) {
+        String attachmentMessageId = attachment.messageLink.split("msg=")[1];
+        User attachmentAuthor = Utils.getCachedUser(userName: attachment.authorName);
+        if (attachmentAuthor == null)
+          print('############ attachment.authorName = ${attachment.authorName}');
+        String attachmentText = attachment.text;
+        if (attachment.attachments != null && attachment.attachments.length > 0) {
+          attachmentText = attachmentText.replaceAll('[ ](${attachment.attachments[0].messageLink})', '');
+        }
+
+        Message attachmentMessage = Message(
+          id: attachmentMessageId,
+          rid: widget.room.id,
+          msg: attachmentText,
+          user: attachmentAuthor,
+          updatedAt: attachment.ts,
+          attachments: attachment.attachments,
+          ts: attachment.ts,
+        );
+        attachmentBody = Expanded(child: _buildChatItem(attachmentMessage));
+/*
+        attachmentBody = Expanded(child:
+        attachment.authorIcon != null && attachment.text != null
+            ? GestureDetector(child: _buildChatItem(messageUser, message, messageText: attachmentText, avatarPath: attachment.authorIcon, userName: displayName, attachmentMessage: true),
+                onTap: () => widget.chatViewState.findAndScroll(attachmentMessageId),
+              )
+            : SizedBox(),
+        );
+*/
       } else {
         //log(message.toString());
         attachmentBody = Expanded(child:
           attachment.authorIcon != null && attachment.text != null
-              ? _buildChatItem(messageUser, message, messageText: attachment.text, avatarPath: attachment.authorIcon, userName: attachment.authorName)
+              ? _buildChatItem(message, messageText: attachment.text, avatarPath: attachment.authorIcon, userName: attachment.authorName)
               : SizedBox(),
           );
       }
-      widgets.add(Row(
+      widgets.add(LayoutBuilder(builder: (context, bc) {
+        print('return Row bc=$bc');
+        attachment.renderWidth = bc.maxWidth;
+        return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
             attachmentBody,
-            SizedBox(width: 5,),
+            //SizedBox(width: 5,),
             Column(children: [
               downloadLink != null ? InkWell(
                 child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
-                onTap: () async { downloadByUrlLaunch(downloadLink); },
+                onTap: () async { downloadFile(downloadLink); },
               ) : SizedBox(),
             ])
-          ]));
+          ]);}));
     }
-    return Column(children: widgets);
+    return LayoutBuilder(builder: (context, bc) {
+      print('return Column bc=$bc');
+      return Container(child: Column(children: widgets), width: bc.maxWidth,);});
   }
 
   String buildDownloadUrl(String downloadLink) {
@@ -284,12 +367,41 @@ class ChatItemViewState extends State<ChatItemView> {
     return uri.toString();
   }
 
-  void downloadByUrlLaunch(String downloadLink) {
-    launch(Uri.encodeFull(buildDownloadUrl(downloadLink)));
+  void downloadFile(String downloadLink) {
+    String downloadUrl = buildDownloadUrl(downloadLink);
+    downloadByUrlLaunch(downloadUrl);
+  }
+
+  void downloadByUrlLaunch(String downloadUrl) {
+    launch(Uri.encodeFull(downloadUrl));
+  }
+
+/*
+  Future<void> downloadByDownloader(String downloadUrl) async {
+    Directory d = await pp.getApplicationDocumentsDirectory();
+    d.createSync();
+    final taskId = await FlutterDownloader.enqueue(
+      url: downloadUrl,
+      savedDir: d.path,
+      showNotification: true, // show download progress in status bar (for Android)
+      openFileFromNotification: true, // click on notification to open downloaded file (for Android)
+    );
+  }
+*/
+
+  bool messageHasMessageAttachments(List<MessageAttachment> attachments) {
+    bool haveIt = attachments != null && attachments.length > 0 && attachments[0].messageLink != null;
+    // if (haveIt)
+    //   log('messageHasAttachments=${message.attachments[0]}');
+    return haveIt;
   }
 
   Widget buildMessageBody(Message message) {
     String userName = _getUserName(message);
+    if (messageHasMessageAttachments(message.attachments)) {
+      message.msg = message.msg.replaceAll('[ ](${message.attachments[0].messageLink})', '');
+      message.urls = null;
+    }
     String newMessage = message.msg;
     switch (message.t) {
       case 'au': newMessage = '$userName added ${message.msg}'; break;
@@ -371,6 +483,25 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget getImage(Message message, MessageAttachment attachment) {
+    if (widget.onTapExit) {
+      return InkWell(
+        child: buildImageByLayout(message, attachment),
+        onTap: () { Navigator.pop(context, message.id); },
+      );
+    }
+
+    return FullScreenWidget(
+      child: Hero(
+        tag: attachment.imageUrl,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: buildImageByLayout(message, attachment),
+        ),
+      ),
+    );
+  }
+
+  buildImageByLayout(Message message, MessageAttachment attachment) {
     String imagePath = attachment.imageUrl;
     Map<String, String> header = {
       'X-Auth-Token': widget.authRC.data.authToken,
@@ -382,55 +513,41 @@ class ChatItemViewState extends State<ChatItemView> {
       'rc_uid': widget.authRC.data.userId
     };
 
-    var dpr = MediaQuery.of(context).devicePixelRatio;
-    var imageWidth = MediaQuery.of(context).size.width - 150;
-    var imageWidthInDevice = imageWidth * dpr;
+    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+      print('buildImageByLayout constraints=$constraints');
+      var dpr = MediaQuery.of(context).devicePixelRatio;
+      var imageWidth = attachment.renderWidth - 30;
+      var imageWidthInDevice = imageWidth * dpr;
 
-    double r = imageWidthInDevice / attachment.imageDimensions.width;
-    double imageHeightInDevice = attachment.imageDimensions.height * r;
+      double r = imageWidthInDevice / attachment.imageDimensions.width;
+      double imageHeightInDevice = attachment.imageDimensions.height * r;
 
-    var uri = serverUri.replace(path: imagePath, queryParameters: query);
-    //print('@@@ image url=${uri.toString()}');
-    //var image = ei.ExtendedImage.network(serverUri.replace(path: imagePath).toString(),
-    var image = ei.ExtendedImage.network(uri.toString(),
-      width: imageWidthInDevice / dpr,
-      height: imageHeightInDevice / dpr,
-      cacheWidth: 800,
-      fit: BoxFit.contain,
-      headers: header,
-      cache: true,
-      mode: kIsWeb ? ei.ExtendedImageMode.none : ei.ExtendedImageMode.gesture,
-      initGestureConfigHandler: (state) {
-        return ei.GestureConfig(
-          minScale: 0.9,
-          animationMinScale: 0.7,
-          maxScale: 3.0,
-          animationMaxScale: 3.5,
-          speed: 1.0,
-          inertialSpeed: 100.0,
-          initialScale: 1.0,
-          inPageView: false,
-          initialAlignment: ei.InitialAlignment.center,
-        );
-      },
-    );
+      var uri = serverUri.replace(path: imagePath, queryParameters: query);
 
-    if (widget.onTapExit) {
-      return InkWell(
-        child: image,
-        onTap: () { Navigator.pop(context, message.id); },
+      var image = ei.ExtendedImage.network(uri.toString(),
+        width: imageWidthInDevice / dpr,
+        height: imageHeightInDevice / dpr,
+        cacheWidth: 800,
+        fit: BoxFit.contain,
+        headers: header,
+        cache: true,
+        mode: kIsWeb ? ei.ExtendedImageMode.none : ei.ExtendedImageMode.gesture,
+        initGestureConfigHandler: (state) {
+          return ei.GestureConfig(
+            minScale: 0.9,
+            animationMinScale: 0.7,
+            maxScale: 3.0,
+            animationMaxScale: 3.5,
+            speed: 1.0,
+            inertialSpeed: 100.0,
+            initialScale: 1.0,
+            inPageView: false,
+            initialAlignment: ei.InitialAlignment.center,
+          );
+        },
       );
-    }
-
-    return FullScreenWidget(
-      child: Hero(
-        tag: imagePath,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(5),
-          child: image,
-        ),
-      ),
-    );
+      return image;
+    });
   }
 
   pickReaction(Message message) async {
@@ -499,7 +616,7 @@ class ChatItemViewState extends State<ChatItemView> {
     if (message.attachments != null && message.attachments.length > 0) {
       var att = message.attachments.first;
       imagePath = att.imageUrl;
-      if (att.titleLinkDownload)
+      if (att.titleLinkDownload != null && att.titleLinkDownload)
         downloadPath = message.attachments.first.titleLink;
     }
     List<PopupMenuEntry<String>> items = [];
@@ -539,7 +656,7 @@ class ChatItemViewState extends State<ChatItemView> {
     } else if (value == 'edit') {
       handleUpdateMessage(message);
     } else if (value == 'download') {
-      downloadByUrlLaunch(downloadPath);
+      downloadFile(downloadPath);
     } else if (value == 'set_profile') {
       setProfilePicture(imagePath);
     } else if (value == 'share') {
@@ -550,24 +667,6 @@ class ChatItemViewState extends State<ChatItemView> {
         };
         // Web support problem
         shareFile(serverUri.replace(path: imagePath).toString(), header);
-/*
-        DefaultCacheManager manager = new DefaultCacheManager();
-        uio.File f = await manager.getSingleFile(serverUri.replace(path: imagePath).toString(), headers: header);
-        Share.shareFiles([f.path]);
-
-        http.Response r = await getNetworkImageData(imagePath);
-        if (r.statusCode == 200) {
-          Uint8List data = r.bodyBytes;
-          String contentType = r.headers['content-type'];
-          MediaType mt = MediaType.parse(contentType);
-          print('---content type=$contentType');
-          uio.Directory tempDir = await getTemporaryDirectory();
-          tempDir = await tempDir.createTemp();
-          uio.File f = uio.File(tempDir.path + '/temp_shared_file.' + mt.subtype);
-          print('---shared file=${f.path}');
-          f.writeAsBytes(data);
-        }
-*/
       } else {
         String share = message.msg;
         if (share == null || share.isEmpty)
