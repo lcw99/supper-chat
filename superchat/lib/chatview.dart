@@ -58,6 +58,7 @@ import 'utils/utils.dart';
 
 typedef Widget MessageSearchBuilderCallBack();
 final String gotoBottomKey = ':gotoBottom:';
+Message quotedMessage;
 
 class ChatView extends StatefulWidget {
   final StreamController<rocket_notification.Notification> notificationController;
@@ -185,6 +186,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   @override
   void initState() {
+    quotedMessage = null;
     subscribeRoomEvent(widget.room.id);
 
     var userTypingJob = RepeatedJobWaiter(sendUserTyping, waitingTime: 5000);
@@ -335,8 +337,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         alignment: Alignment.bottomCenter,
         child: FloatingActionButton(onPressed: (){
           if (userTypingKey.currentState.typing == gotoBottomKey) {
-            userTypingKey.currentState.setTypingUser('');
-            itemScrollController.jumpTo(index: 0);
+            Future.delayed(Duration.zero, () {
+              userTypingKey.currentState.setTypingUser('');
+              itemScrollController.jumpTo(index: 0);
+            });
           }
         }, backgroundColor: Colors.amber, child: UserTyping(key: userTypingKey, hideFabAnimation: _hideFabAnimation,)))),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -387,7 +391,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         Container(color: Colors.blue.shade100, child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-          //UserTyping(key: userTypingKey),
+          quotedMessage != null ?
+            buildQuotedMessage() :
+            SizedBox(),
           Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
             child: Container(height: 50, color: Colors.white, child: _buildInputBox())
@@ -478,6 +484,18 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     ));
   }
 
+  buildQuotedMessage() {
+    return Container(child: Row(children: [
+      Expanded(child: ChatItemView(chatHomeState: widget.chatHomeState, me: widget.me, authRC: widget.authRC, message: quotedMessage, room: widget.room, chatViewState: this,)),
+      InkWell(child: Icon(Icons.cancel), onTap: () {
+        setState(() {
+          quotedMessage = null;
+        });
+      },),
+      SizedBox(width: 15),
+    ],), padding: EdgeInsets.only(top: 10), decoration: BoxDecoration(border: Border.all(color: Colors.purpleAccent, width: 2)),);
+  }
+
   bool onDropFile = false;
   Widget buildChatList() {
     if (scrollIndex >= 0) {
@@ -519,13 +537,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         onNotification: (notification) {
           if (notification.metrics.atEdge) {
             print('*****listview Scrollend = ${notification.metrics.pixels}');
-            userTypingKey.currentState.setTypingUser('');
             if (!historyEnd && notification.metrics.pixels != notification.metrics.minScrollExtent) { // bottom
               print('!!! scrollview hit top');
               setState(() {
                 getMoreMessages = true;
                 chatItemOffset += chatItemCount;
               });
+            } else if (notification.metrics.pixels == notification.metrics.minScrollExtent) {
+              userTypingKey.currentState.setTypingUser('');
             }
           }
           return true;
@@ -808,9 +827,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     );
   }
 
-
+  //message = '[ ](https://chat.smallet.co/channel/pppp_test?msg=NeZ9q4YHzezW8qTAK)  ' + message;
   Future<void> _postMessage(String message) async {
     if (message != null && message.isNotEmpty) {
+      if (quotedMessage != null) {
+        String url = serverUri.replace(path: '/channel/${widget.room.name}', query: 'msg=${quotedMessage.id}').toString();
+        message = '[ ]($url)  ' + message;
+        quotedMessage = null;
+      }
       final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
       MessageService messageService = MessageService(rocketHttpService);
       MessageNew msg = MessageNew(roomId: widget.room.id, text: message);

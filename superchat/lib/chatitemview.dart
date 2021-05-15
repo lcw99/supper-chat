@@ -234,8 +234,10 @@ class ChatItemViewState extends State<ChatItemView> {
                   onTap: () {
                     if (widget.onTapExit)
                       Navigator.pop(context, message.id);
-                    else
+                    else if (!message.isAttachment)
                       pickReaction(message);
+                    else
+                      widget.chatViewState.findAndScroll(message.id);
                   },
                   child: buildMessageBody(message),
                 ),
@@ -305,10 +307,7 @@ class ChatItemViewState extends State<ChatItemView> {
         User attachmentAuthor = Utils.getCachedUser(userName: attachment.authorName);
         if (attachmentAuthor == null)
           print('############ attachment.authorName = ${attachment.authorName}');
-        String attachmentText = attachment.text;
-        if (attachment.attachments != null && attachment.attachments.length > 0) {
-          attachmentText = attachmentText.replaceAll('[ ](${attachment.attachments[0].messageLink})', '');
-        }
+        String attachmentText = attachment.text.replaceAll(RegExp(r'\[ \]\(.*\)'), '');
 
         Message attachmentMessage = Message(
           id: attachmentMessageId,
@@ -318,6 +317,7 @@ class ChatItemViewState extends State<ChatItemView> {
           updatedAt: attachment.ts,
           attachments: attachment.attachments,
           ts: attachment.ts,
+          isAttachment: true,
         );
         attachmentBody = Expanded(child: _buildChatItem(attachmentMessage));
 /*
@@ -399,7 +399,7 @@ class ChatItemViewState extends State<ChatItemView> {
   Widget buildMessageBody(Message message) {
     String userName = _getUserName(message);
     if (messageHasMessageAttachments(message.attachments)) {
-      message.msg = message.msg.replaceAll('[ ](${message.attachments[0].messageLink})', '');
+      message.msg = message.msg.replaceAll(RegExp(r'\[ \]\(.*\)'), '');
       message.urls = null;
     }
     String newMessage = message.msg;
@@ -483,16 +483,23 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget getImage(Message message, MessageAttachment attachment) {
-    if (widget.onTapExit) {
+    if (widget.onTapExit || message.isAttachment) {
       return InkWell(
-        child: buildImageByLayout(message, attachment),
-        onTap: () { Navigator.pop(context, message.id); },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: buildImageByLayout(message, attachment)),
+        onTap: () {
+          if (widget.onTapExit)
+            Navigator.pop(context, message.id);
+          else
+            widget.chatViewState.findAndScroll(message.id);
+        },
       );
     }
 
     return FullScreenWidget(
       child: Hero(
-        tag: attachment.imageUrl,
+        tag: attachment.imageUrl + message.id + message.isAttachment.toString(),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
           child: buildImageByLayout(message, attachment),
@@ -622,6 +629,7 @@ class ChatItemViewState extends State<ChatItemView> {
     List<PopupMenuEntry<String>> items = [];
     items.add(PopupMenuItem(child: Text('Copy...'), value: 'copy'));
     items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
+    items.add(PopupMenuItem(child: Text('Quote...'), value: 'quote'));
     if (_messageStarred(message))
       items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
     else
@@ -647,6 +655,10 @@ class ChatItemViewState extends State<ChatItemView> {
       widget.chatHomeState.deleteMessage(message.id);
     } else if (value == 'copy') {
       Clipboard.setData(ClipboardData(text: message.msg));
+    } else if (value == 'quote') {
+      widget.chatViewState.setState(() {
+        quotedMessage = message;
+      });
     } else if (value == 'star') {
       getMessageService().starMessage(message.id, widget.authRC);
     } else if (value == 'unstar') {
