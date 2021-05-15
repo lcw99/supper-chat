@@ -24,6 +24,7 @@ class Message {
   Map<String, Reaction>? reactions;
   List<Mention>? mentions;
   List<String>? channels;
+  List<String>? replies;
   String? emoji;
   String? avatar;
   List<MessageAttachment>? attachments;
@@ -34,6 +35,11 @@ class Message {
   bool? pinned;
   DateTime? pinnedAt;
   User? pinnedBy;
+  bool? tshow;
+  String? tmid;
+  int? tcount;
+  DateTime? tlm;
+
   bool? isAttachment = false;
 
   Message({
@@ -50,6 +56,7 @@ class Message {
     this.reactions,
     this.mentions,
     this.channels,
+    this.replies,
     this.starred,
     this.emoji,
     this.avatar,
@@ -61,12 +68,21 @@ class Message {
     this.pinnedAt,
     this.pinnedBy,
     this.updatedAt,
+    this.tshow,
+    this.tmid,
+    this.tcount,
+    this.tlm,
+
     this.isAttachment,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {
     if (json != null) {
       pinned = json['pinned'];
+      tshow = json['tshow'];
+      tmid = json['tmid'];
+      tcount = json['tcount'];
+      tlm = jsonToDateTime(json['tlm']);
       pinnedAt = jsonToDateTime(json['_pinnedAt']);
       pinnedBy = json['pinnedBy'] != null ? User.fromMap(json['pinnedBy']) : null;
       alias = json['alias'];
@@ -98,6 +114,8 @@ class Message {
       }
       channels =
           json['channels'] != null ? List<String>.from(json['channels']) : null;
+      replies =
+          json['replies'] != null ? List<String>.from(json['replies']) : null;
 
       if (json['starred'] != null) {
         List<dynamic> jsonList = json['starred'].runtimeType == String
@@ -144,6 +162,18 @@ class Message {
 
     if (pinned != null) {
       map['pinned'] = pinned;
+    }
+    if (tshow != null) {
+      map['tshow'] = tshow;
+    }
+    if (tmid != null) {
+      map['tmid'] = tmid;
+    }
+    if (tcount != null) {
+      map['tcount'] = tcount;
+    }
+    if (tlm != null) {
+      map['tlm'] = tlm!.toIso8601String();
     }
     if (pinnedAt != null) {
       map['pinnedAt'] = pinnedAt!.toIso8601String();
@@ -199,6 +229,9 @@ class Message {
     }
     if (channels != null) {
       map['channels'] = channels;
+    }
+    if (replies != null) {
+      map['replies'] = replies;
     }
     if (starred != null) {
       map['starred'] = starred
