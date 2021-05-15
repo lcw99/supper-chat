@@ -207,6 +207,27 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
+  Future<ChannelMessages> chatSearch(String roomId, String searchText, int count, Authentication authentication) async {
+    String path = '/api/v1/chat.search';
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      {'roomId': roomId, 'searchText': searchText, 'count': count},
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    //log("chatSearch resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return ChannelMessages.fromMap(jsonDecode(resp));
+      } else {
+        return ChannelMessages();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+
   Future<SpotlightResponse> spotlight(String query, Authentication authentication) async {  // @ user, #channel
     String path = '/api/v1/spotlight';
     http.Response response = await _httpService.getWithQuery(

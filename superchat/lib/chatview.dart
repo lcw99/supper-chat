@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
+import 'package:async/async.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
 import 'package:moor/moor.dart' as moor;
@@ -54,6 +55,9 @@ import 'package:rocket_chat_connector_flutter/models/room.dart' as RC;
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
 import 'database/chatdb.dart' as db;
 import 'utils/utils.dart';
+
+typedef Widget MessageSearchBuilderCallBack();
+final String gotoBottomKey = ':gotoBottom:';
 
 class ChatView extends StatefulWidget {
   final StreamController<rocket_notification.Notification> notificationController;
@@ -152,10 +156,15 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   bool showEmojiKeyboard = false;
   FocusNode myFocusNode;
 
-  GlobalKey<_UserTypingState> userTypingKey = GlobalKey();
+  GlobalKey<UserTypingState> userTypingKey = GlobalKey();
   GlobalKey<ChatViewState> chatViewKey = GlobalKey();
 
   List<String> permissions;
+
+  DropzoneViewController dropzoneViewController;
+  String droppedFile;
+  bool announcementExpand = false;
+  final ItemScrollController itemScrollController = ItemScrollController();
 
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
@@ -309,10 +318,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     super.dispose();
   }
 
-  DropzoneViewController dropzoneViewController;
-  String droppedFile;
-  bool announcementExpand = false;
-
   @override
   Widget build(BuildContext context) {
     var markAsReadJob = RepeatedJobWaiter(markAsRead);
@@ -328,7 +333,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         child: ScaleTransition(
         scale: _hideFabAnimation,
         alignment: Alignment.bottomCenter,
-        child: FloatingActionButton(onPressed: (){}, backgroundColor: Colors.amber, child: UserTyping(key: userTypingKey, hideFabAnimation: _hideFabAnimation,)))),
+        child: FloatingActionButton(onPressed: (){
+          if (userTypingKey.currentState.typing == gotoBottomKey) {
+            userTypingKey.currentState.setTypingUser('');
+            itemScrollController.jumpTo(index: 0);
+          }
+        }, backgroundColor: Colors.amber, child: UserTyping(key: userTypingKey, hideFabAnimation: _hideFabAnimation,)))),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       key: chatViewKey,
       appBar: AppBar(
@@ -338,7 +348,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           IconButton(
             icon: const Icon(Icons.star_border_outlined),
             onPressed: () {
-              _handleStarredMessage();
+              _handleSearchedMessage('Starred Messages', _buildStarredMessage);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.search_outlined),
+            onPressed: () {
+              _handleSearchedMessage('Search Messages', _buildSearchMessage);
             },
           ),
           PopupMenuButton(
@@ -432,31 +448,31 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           !getMoreMessages && (chatDataStore.length > 0) ?
           buildChatList() :
           FutureBuilder(
-        future: () {
-          print('@@@@@@ call future _getChannelMessages @@@@@@ updateAll=$getMoreMessages');
-          var ua = getMoreMessages;
-          getMoreMessages = false;
-          if (chatDataStore.length == 0)
-            ua = true;
-          return _getChannelMessages(chatItemCount, chatItemOffset, ua);
-        } (),
-        builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
-          print('~~~~~~~~ builder update=${snapshot.hasData}, con state=${snapshot.connectionState}');
-          print('~~~~~~~~ builder chatDataStore.length=${chatDataStore.length}');
-          if (snapshot.connectionState == ConnectionState.done) {
-            print('------- builder connectionState.done needScrollToBottom=$needScrollToBottom');
-            markAsReadJob.trigger();
-            getMoreMessages = false;
-            needScrollToBottom = false;
-          }
-          if (snapshot.hasData) {
-            return buildChatList();
-          } else {
-            print('***** builder has no data');
-            return SizedBox();
-          }
-        }
-      )
+            future: () {
+              print('@@@@@@ call future _getChannelMessages @@@@@@ updateAll=$getMoreMessages');
+              var ua = getMoreMessages;
+              getMoreMessages = false;
+              if (chatDataStore.length == 0)
+                ua = true;
+              return _getChannelMessages(chatItemCount, chatItemOffset, ua);
+            } (),
+            builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
+              print('~~~~~~~~ builder update=${snapshot.hasData}, con state=${snapshot.connectionState}');
+              print('~~~~~~~~ builder chatDataStore.length=${chatDataStore.length}');
+              if (snapshot.connectionState == ConnectionState.done) {
+                print('------- builder connectionState.done needScrollToBottom=$needScrollToBottom');
+                markAsReadJob.trigger();
+                getMoreMessages = false;
+                needScrollToBottom = false;
+              }
+              if (snapshot.hasData) {
+                return buildChatList();
+              } else {
+                print('***** builder has no data');
+                return SizedBox();
+              }
+            }
+          )
         )
       ],)
     ));
@@ -468,7 +484,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       Future.delayed(const Duration(milliseconds: 300), () {
         //itemScrollController.scrollTo(index: scrollIndex, duration: Duration(seconds: 1), curve: Curves.easeInOutCubic);
         print('---------->>> jumpto = $scrollIndex');
-        itemScrollController.jumpTo(index: scrollIndex, alignment: 0);
+        if (scrollIndex > 0)
+          itemScrollController.jumpTo(index: scrollIndex, alignment: 0);
         scrollIndex = -1;
       });
     }
@@ -492,7 +509,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
           // messageId: messageId, me: widget.me, authRC: widget.authRC, );
           return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-            message: message, me: widget.me, authRC: widget.authRC, index: index, room: widget.room);
+            message: message, me: widget.me, authRC: widget.authRC, index: index, room: widget.room, chatViewState: this,);
         }
     );
 
@@ -502,6 +519,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         onNotification: (notification) {
           if (notification.metrics.atEdge) {
             print('*****listview Scrollend = ${notification.metrics.pixels}');
+            userTypingKey.currentState.setTypingUser('');
             if (!historyEnd && notification.metrics.pixels != notification.metrics.minScrollExtent) { // bottom
               print('!!! scrollview hit top');
               setState(() {
@@ -576,21 +594,24 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       _controller.animateTo(offset + 1000, duration: Duration(milliseconds: 30), curve: Curves.ease);
   }
 
-  final ItemScrollController itemScrollController = ItemScrollController();
-  _handleStarredMessage() async {
+  _handleSearchedMessage(String title, MessageSearchBuilderCallBack messageSearchBuilderCallBack) async {
     String messageId = await showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Starred Messages'),
+            title: Text(title),
             insetPadding: EdgeInsets.all(5),
             contentPadding: EdgeInsets.all(5),
             content: Container(height: MediaQuery.of(context).size.height * .7, width: MediaQuery.of(context).size.width, child:
-              _buildStarredMessage(),
+              messageSearchBuilderCallBack(),
             )
           );
         }
     );
+    findAndScroll(messageId);
+  }
+
+  Future<void> findAndScroll(String messageId) async {
     if (messageId == null)
       return;
     print('@@@ selected message=$messageId');
@@ -622,10 +643,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       needScrollToBottom = false;
       scrollIndex = index;
     });
+    if (scrollIndex >= 0)
+      userTypingKey.currentState.setTypingUser(gotoBottomKey, stayTime: 0);
     Future.delayed(Duration(seconds: 1), () { Fluttertoast.cancel(); } );
   }
 
-  _buildStarredMessage() {
+  Widget _buildStarredMessage() {
     return FutureBuilder(
       future: _getStarredMessages(),
       builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
@@ -643,8 +666,78 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     );
   }
 
+  String searchText;
+  CancelableOperation<void> cancellableOperation;
+  String helpText;
+
+  Future<dynamic> fromCancelable(Future<dynamic> future) async {
+    cancellableOperation?.cancel();
+    cancellableOperation = CancelableOperation.fromFuture(future, onCancel: () {
+      print('Operation Cancelled');
+      cancellableOperation = null;
+    });
+    return cancellableOperation.value;
+  }
+
+  Future<dynamic> getTranslation(String text) async {
+    return Future.delayed(const Duration(milliseconds: 1000), () {
+      return text;
+    });
+  }
+
+  Widget _buildSearchMessage() {
+    return StatefulBuilder(builder: (context, setState) {
+      return Column(children: [
+        Container(child: TextFormField(
+          autofocus: true,
+          keyboardType: TextInputType.text,
+          maxLines: 1,
+          decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),),
+          onChanged: (text) {
+            if (text == null || text.isEmpty)
+              return;
+            fromCancelable(getTranslation(text)).then((value) {
+              print("Then called: $value");
+              setState(() { searchText = text; });
+            });
+          },
+        ), margin: EdgeInsets.only(left: 15, top:10, bottom: 0, right: 15),),
+        FutureBuilder(
+            future: _getSearchedMessages(searchText),
+            builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
+              if(snapshot.hasData && snapshot.data.messages != null) {
+                return Expanded(child: Column(children: [
+                  Container(child: Text('count = ${snapshot.data.messages.length}', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                    alignment: Alignment.centerLeft, margin: EdgeInsets.only(left: 15, bottom: 10),),
+                  Expanded(child: ListView.builder(
+                    itemCount: snapshot.data.messages.length,
+                    itemBuilder: (BuildContext c, int index) {
+                      var message = snapshot.data.messages[index];
+                      return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: widget.room,);
+                  }))
+                ],));
+              } else {
+                return Text('no result\nregular expression possible, like /.*text.*/', style: TextStyle(fontSize: 12,), );
+              }
+            }
+        ),
+      ],);
+    });
+  }
+
   Future<ChannelMessages> _getStarredMessages() {
     return getChannelService().getStarredMessages(widget.room.id, widget.authRC);
+  }
+
+  Future<ChannelMessages> _getSearchedMessages(String text) {
+    if (text == null || text.isEmpty)
+      return Future.value(ChannelMessages());
+    bool isRegular = text.startsWith('/') && (text.endsWith('/') || text.endsWith('/i'));
+    if (!isRegular || text.length < 3) {
+      text = text.replaceAll('/', '\x2f');
+      text = '/.*$text.*/';
+    }
+    return getChannelService().chatSearch(widget.room.id, text, 100, widget.authRC);
   }
 
   _buildInputBox() {
@@ -909,10 +1002,10 @@ class UserTyping extends StatefulWidget {
   UserTyping({Key key, @required this.hideFabAnimation}) : super(key: key);
 
   @override
-  _UserTypingState createState() => _UserTypingState();
+  UserTypingState createState() => UserTypingState();
 }
 
-class _UserTypingState extends State<UserTyping> {
+class UserTypingState extends State<UserTyping> {
   String typing = '';
   Timer t;
 
@@ -921,7 +1014,7 @@ class _UserTypingState extends State<UserTyping> {
     super.initState();
   }
 
-  setTypingUser(String userName) {
+  setTypingUser(String userName, {int stayTime = 7}) {
     print('---typing user=$userName');
     setState(() {
       if (t != null) {
@@ -931,24 +1024,34 @@ class _UserTypingState extends State<UserTyping> {
       typing = userName;
     });
     if (userName != '') {
-      t = Timer(Duration(seconds: 7), () {
-        setState(() {
-          typing = '';
+      if (stayTime > 0) {
+        t = Timer(Duration(seconds: stayTime), () {
+          setState(() {
+            typing = '';
+          });
         });
-      });
+      } else {
+        t = null;
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    String avatarPath = '/avatar/$typing';
-    String url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
+    Widget actionButton;
+    if (typing == gotoBottomKey)
+      actionButton = CircleAvatar(radius: 20, child: Icon(Icons.arrow_downward));
+    else {
+      String avatarPath = '/avatar/$typing';
+      String url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
+      actionButton = CircleAvatar(radius: 20, backgroundImage: NetworkImage(url));
+    }
     if (typing == '') {
       widget.hideFabAnimation.reverse();
       return SizedBox();
     } else {
       widget.hideFabAnimation.forward();
-      return CircleAvatar(radius: 20, backgroundImage: NetworkImage(url));
+      return actionButton;
     }
   }
 

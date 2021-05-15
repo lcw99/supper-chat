@@ -62,6 +62,7 @@ dependencies:
   file_picker: ^3.0.1
   flutter_dropzone: ^2.0.1
   fluro: ^2.0.3
+  async: ^2.5.0
   emoji_picker_flutter:
     path: ../emoji_picker_flutter
   ss_image_editor:

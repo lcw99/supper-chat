@@ -28,6 +28,7 @@ class MessageAttachment {
   ImageDimensions? imageDimensions;
   String? type;
   List<MessageAttachment>? attachments;
+  double? renderWidth;
 
   MessageAttachment({
     this.audioUrl,
@@ -51,6 +52,7 @@ class MessageAttachment {
     this.imageDimensions,
     this.type,
     this.attachments,
+    this.renderWidth,
   });
 
   MessageAttachment.fromMap(Map<String, dynamic> json) {

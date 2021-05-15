@@ -59,6 +59,7 @@ class Message {
     this.pinned,
     this.pinnedAt,
     this.pinnedBy,
+    this.updatedAt,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {
