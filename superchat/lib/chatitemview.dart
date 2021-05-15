@@ -155,7 +155,7 @@ class ChatItemViewState extends State<ChatItemView> {
     if (messageText != null)
       usernameFontSize *= 0.8;
     return LayoutBuilder(builder: (context, boxConstraint) {
-      print('boxConstraint=$boxConstraint');
+      //print('boxConstraint=$boxConstraint');
       double avatarSize = specialMessage || attachmentMessage ? 20 : 40;
       return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,7 +245,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 ),
                 bAttachments ?
                   LayoutBuilder(builder: (context, boxConstraint){
-                    print('bAttachments boxConstraint=$boxConstraint');
+                    //print('bAttachments boxConstraint=$boxConstraint');
                     return Container(child: buildAttachments(message), width: boxConstraint.maxWidth,);
                   })
                   : SizedBox(),
@@ -290,10 +290,10 @@ class ChatItemViewState extends State<ChatItemView> {
       } else if (attachment.imageUrl != null) {
         downloadLink = attachment.imageUrl;
         attachmentBody = LayoutBuilder(builder: (context, bc) {
-          print('Column bc=$bc');
+          //print('Column bc=$bc');
           return Column(children: <Widget>[
           LayoutBuilder(builder: (context, bc) {
-            print('getimage bc=$bc');
+            //print('getimage bc=$bc');
             return getImage(message, attachment);
           },),
           attachment.description != null
@@ -338,7 +338,7 @@ class ChatItemViewState extends State<ChatItemView> {
           );
       }
       widgets.add(LayoutBuilder(builder: (context, bc) {
-        print('return Row bc=$bc');
+        //print('return Row bc=$bc');
         attachment.renderWidth = bc.maxWidth;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -354,7 +354,7 @@ class ChatItemViewState extends State<ChatItemView> {
           ]);}));
     }
     return LayoutBuilder(builder: (context, bc) {
-      print('return Column bc=$bc');
+      //print('return Column bc=$bc');
       return Container(child: Column(children: widgets), width: bc.maxWidth,);});
   }
 
@@ -436,7 +436,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 children: [
                 MouseRegion(
                 cursor: SystemMouseCursors.text,
-                child: kIsWeb ? SelectableText(
+                child: kIsWeb && !widget.onTapExit ? SelectableText(
                   newMessage,
                   style: TextStyle(fontSize: messageFontSize, color: Colors.black, fontWeight: FontWeight.normal),
                 ) : Linkable(
@@ -514,7 +514,7 @@ class ChatItemViewState extends State<ChatItemView> {
     };
 
     return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-      print('buildImageByLayout constraints=$constraints');
+      //print('buildImageByLayout constraints=$constraints');
       var dpr = MediaQuery.of(context).devicePixelRatio;
       var imageWidth = attachment.renderWidth - 30;
       var imageWidthInDevice = imageWidth * dpr;
