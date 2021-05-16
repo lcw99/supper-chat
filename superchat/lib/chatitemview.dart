@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
+import 'package:superchat/utils/dialogs.dart';
+import 'package:superchat/wigets/userinfo.dart';
 import 'package:universal_io/io.dart' as uio;
 import 'dart:typed_data';
 
@@ -161,7 +164,14 @@ class ChatItemViewState extends State<ChatItemView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
-        Utils.buildUserAvatar(avatarSize, user, avatarPath: avatarPath),
+        GestureDetector(child: Utils.buildUserAvatar(avatarSize, user, avatarPath: avatarPath),
+        onTap: () async {
+          String ret = await showDialogWithWidget(context, UserInfo(userInfo: user), MediaQuery.of(context).size.height - 200);
+          if (ret != 'im.create')
+            return;
+          var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
+          Future.delayed(Duration(seconds: 2), () => widget.chatViewState.popToChatHome(resp.room.rid));
+        },),
         SizedBox(width: 5,),
         // user name
         Container(child: Column(
@@ -222,12 +232,11 @@ class ChatItemViewState extends State<ChatItemView> {
       dateStr += DateFormat('dd ').format(ts);
     dateStr += DateFormat('kk:mm:ss').format(ts);
 
-    return
-      GestureDetector (
-          onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
-          onLongPress: () { if (!widget.onTapExit) messagePopupMenu(context, tabPosition, message); },
-          child:
-          Column(
+    return GestureDetector (
+      onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
+      onLongPress: () { if (!widget.onTapExit) messagePopupMenu(context, tabPosition, message); },
+      child:
+      Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 GestureDetector (
@@ -320,22 +329,8 @@ class ChatItemViewState extends State<ChatItemView> {
           isAttachment: true,
         );
         attachmentBody = Expanded(child: _buildChatItem(attachmentMessage));
-/*
-        attachmentBody = Expanded(child:
-        attachment.authorIcon != null && attachment.text != null
-            ? GestureDetector(child: _buildChatItem(messageUser, message, messageText: attachmentText, avatarPath: attachment.authorIcon, userName: displayName, attachmentMessage: true),
-                onTap: () => widget.chatViewState.findAndScroll(attachmentMessageId),
-              )
-            : SizedBox(),
-        );
-*/
       } else {
-        //log(message.toString());
-        attachmentBody = Expanded(child:
-          attachment.authorIcon != null && attachment.text != null
-              ? _buildChatItem(message, messageText: attachment.text, avatarPath: attachment.authorIcon, userName: attachment.authorName)
-              : SizedBox(),
-          );
+        log('unknown attachment type=$message');
       }
       widgets.add(LayoutBuilder(builder: (context, bc) {
         //print('return Row bc=$bc');
@@ -375,19 +370,6 @@ class ChatItemViewState extends State<ChatItemView> {
   void downloadByUrlLaunch(String downloadUrl) {
     launch(Uri.encodeFull(downloadUrl));
   }
-
-/*
-  Future<void> downloadByDownloader(String downloadUrl) async {
-    Directory d = await pp.getApplicationDocumentsDirectory();
-    d.createSync();
-    final taskId = await FlutterDownloader.enqueue(
-      url: downloadUrl,
-      savedDir: d.path,
-      showNotification: true, // show download progress in status bar (for Android)
-      openFileFromNotification: true, // click on notification to open downloaded file (for Android)
-    );
-  }
-*/
 
   bool messageHasMessageAttachments(List<MessageAttachment> attachments) {
     bool haveIt = attachments != null && attachments.length > 0 && attachments[0].messageLink != null;
@@ -556,40 +538,32 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   pickReaction(Message message) async {
-    String emoji = await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return
-          Dialog(insetPadding: EdgeInsets.all(15),
-          child:
-          SizedBox(height: 350, width: MediaQuery.of(context).size.width, child:
-          epf.EmojiPicker(
-            onEmojiSelected: (category, emoji) {
-              print('@@@ selected emoji=${emoji.name}');
-              Navigator.pop(context, emoji.name);
-            },
-            config: epf.Config(
-                columns: 6,
-                emojiSizeMax: 26.0,
-                verticalSpacing: 0,
-                horizontalSpacing: 0,
-                initCategory: epf.Category.RECENT,
-                bgColor: Color(0xFFF2F2F2),
-                indicatorColor: Colors.blue,
-                iconColor: Colors.grey,
-                iconColorSelected: Colors.blue,
-                progressIndicatorColor: Colors.blue,
-                showRecentsTab: true,
-                recentsLimit: 28,
-                noRecentsText: "No Recents",
-                noRecentsStyle: const TextStyle(fontSize: 20, color: Colors.black26),
-                categoryIcons: const epf.CategoryIcons(),
-                buttonMode: epf.ButtonMode.MATERIAL
-            ),
-          )
-          ));
-        }
+    var emojiPicker = epf.EmojiPicker(
+      onEmojiSelected: (category, emoji) {
+        print('@@@ selected emoji=${emoji.name}');
+        Navigator.pop(context, emoji.name);
+      },
+      config: epf.Config(
+          columns: 6,
+          emojiSizeMax: 26.0,
+          verticalSpacing: 0,
+          horizontalSpacing: 0,
+          initCategory: epf.Category.RECENT,
+          bgColor: Color(0xFFF2F2F2),
+          indicatorColor: Colors.blue,
+          iconColor: Colors.grey,
+          iconColorSelected: Colors.blue,
+          progressIndicatorColor: Colors.blue,
+          showRecentsTab: true,
+          recentsLimit: 28,
+          noRecentsText: "No Recents",
+          noRecentsStyle: const TextStyle(fontSize: 20, color: Colors.black26),
+          categoryIcons: const epf.CategoryIcons(),
+          buttonMode: epf.ButtonMode.MATERIAL
+      ),
     );
+
+    String emoji = await showDialogWithWidget(context, emojiPicker, 350, alertDialog: false);
 
     if (emoji == null)
       return;

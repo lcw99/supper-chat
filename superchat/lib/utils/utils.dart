@@ -30,11 +30,11 @@ class Utils {
   static void clearCache() => userCache.clear();
   static void clearUser(String userId) => userCache.clearUser(userId);
 
-  static Future<User> getUserInfo(Authentication authentication, {String userId, String userName, bool foreRefresh = false}) async {
+  static Future<User> getUserInfo(Authentication authentication, {String userId, String userName, bool forceRefresh = false}) async {
     if (userId == null && userName == null)
       return null;
     User user;
-    if (!foreRefresh) {
+    if (!forceRefresh) {
       user = userCache.getUser(userName: userName, userId: userId);
       if (user != null)
         return user;
@@ -192,7 +192,7 @@ class UserCache {
     print('new jobCode=$jobCode');
     jobList.add(jobCode);
     User user = await getUserService().getUserInfo(UserIdFilter(userId: userId, username: userName), authentication);
-    print('++++++ get getUserInfo done=${user.username}');
+    print('++++++ get getUserInfo done user=$user');
     addUser(user);
     jobList.remove(jobCode);
     return false;

@@ -508,7 +508,7 @@ class _LoginHomeState extends State<LoginHome> {
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
               if (auth.status == 'error') {
-                logout(googleSignIn, null);
+                logout(null);
                 return SizedBox();
               }
               KeyValue authKeyValue = KeyValue(key: 'userAuth', value: auth.data.authToken);
@@ -586,7 +586,7 @@ class _LoginHomeState extends State<LoginHome> {
 
 }
 
-Future<void> logout(googleProfile, Authentication authRC) async {
+Future<void> logout(Authentication authRC) async {
   if (googleSignInMode) {
     try {
       await googleSignIn.disconnect();

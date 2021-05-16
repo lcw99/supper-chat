@@ -184,6 +184,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     webSocketService.sendUserTyping(widget.room.id, widget.me.username, true);
   }
 
+  void popToChatHome(String roomId) {
+    Navigator.pop(context, roomId);
+  }
+
   @override
   void initState() {
     quotedMessage = null;
@@ -362,10 +366,17 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             },
           ),
           PopupMenuButton(
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'room_info')
                 roomInformation();
               else if (value == 'pinned_messages') {}
+              else if (value == 'leave_room') {
+                var r = await getChannelService().leaveRoom(widget.room, widget.authRC);
+                if (r.success)
+                  Navigator.pop(context);
+                else
+                  Utils.showToast(r.body);
+              }
               else if (value == 'room_members')
                 Navigator.push(context, MaterialPageRoute(builder: (context) => RoomMembers(room: widget.room, authRC: widget.authRC,)));
               else if (value == 'add_user') {
@@ -381,6 +392,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 PopupMenuItem(child: Text("Room Members..."), value: 'room_members',),
                 PopupMenuItem(child: Text("Add User..."), value: 'add_user',),
                 PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
+                if (widget.room.t != 'd')
+                  PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),
               ];
           }),
         ],
@@ -810,10 +823,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             itemBuilder: (context){
               List<PopupMenuEntry<dynamic>> menus = [];
               menus.add(PopupMenuItem(child: Text("Pick File..."), value: 'pick_file',));
-              if (!kIsWeb) {
-                menus.add(PopupMenuItem(child: Text("Pick Image..."), value: 'pick_image',));
-                menus.add(PopupMenuItem(child: Text("Take Photo..."), value: 'take_photo'));
-              }
+              menus.add(PopupMenuItem(child: Text("Pick Image..."), value: 'pick_image',));
+              menus.add(PopupMenuItem(child: Text("Take Photo..."), value: 'take_photo'));
               return menus;
             }),
             Container(

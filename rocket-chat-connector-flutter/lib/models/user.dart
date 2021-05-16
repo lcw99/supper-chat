@@ -154,7 +154,7 @@ class User {
     }
 
     if (lastLogin != null) {
-      map['lastLogin'] = lastLogin;
+      map['lastLogin'] = lastLogin!.toIso8601String();
     }
 
     if (avatarETag != null) {
