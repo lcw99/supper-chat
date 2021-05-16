@@ -32,66 +32,73 @@ class _MyProfileState extends State<MyProfile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('My Profile')),
+      appBar: AppBar(title: Text(widget.user.name)),
       body:
         FutureBuilder<User>(
-          future: Utils.getUserInfo(widget.authRC, userId: widget.user.id, foreRefresh: true),
+          future: Utils.getUserInfo(widget.authRC, userId: widget.user.id, forceRefresh: true),
           builder: (context, AsyncSnapshot<User> snapshot) {
             if (!snapshot.hasData)
               return Center(child: CircularProgressIndicator());
             User userInfo = snapshot.data;
-            bool googleProfile = userInfo.services != null && userInfo.services['google'] != null;
-            return Column(
-                children: [
-                  SizedBox(height: 15,),
-                  Image.network(Utils.getAvatarUrl(userInfo)),
-                  TextButton(
-                    child: Text('Change Avatar'),
-                    onPressed: () async {
-                      if (kIsWeb) {
-                        FilePickerResult result = await FilePicker.platform.pickFiles();
-                        if (result != null) {
-                          if (result.files.single.bytes != null) {
-                            await getUserService().avatarImageUpload(widget.authRC, bytes: result.files.single.bytes, fileName: result.files.single.name);
-                            Future.delayed(Duration(seconds: 1), () { setState(() {}); });
-                          }
-                        }
-                      } else {
-                        final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
-                        File file = File(pickedFile.path);
-                        await getUserService().avatarImageUpload(widget.authRC, file: file);
-                        Future.delayed(Duration(seconds: 1), () { setState(() {}); });
-                      }
-                    },
-                  ),
-                  ListTile(
-                    title: Text('id'),
-                    subtitle: Text(userInfo.id),
-                  ),
-                  ListTile(
-                    title: Text('user name'),
-                    subtitle: Text(userInfo.username == null ? '' : userInfo.username),
-                  ),
-                  ListTile(
-                    title: Text('display name'),
-                    subtitle: Text(userInfo.name),
-                  ),
-                  ListTile(
-                    title: Text('email'),
-                    subtitle: userInfo.emails.first != null ? Text(userInfo.emails.first.address.toString()) : SizedBox(),
-                  ),
-                  Container(
-                    padding: EdgeInsets.only(top: 20),
-                    child: InkWell(
-                    onTap: () {logout(googleProfile, widget.authRC);},
-                    child: Wrap(children: <Widget>[
-                      Icon(Icons.logout),
-                      Text('Logout'),
-                    ],)
-                  )),
-                ],
-              );
+            return buildMyProfile(userInfo);
           })
+    );
+  }
+
+  buildMyProfile(User userInfo) {
+    return Column(
+      children: [
+        SizedBox(height: 15,),
+        Image.network(Utils.getAvatarUrl(userInfo)),
+        TextButton(
+          child: Text('Change Avatar'),
+          onPressed: () async {
+            if (kIsWeb) {
+              FilePickerResult result = await FilePicker.platform.pickFiles();
+              if (result != null) {
+                if (result.files.single.bytes != null) {
+                  await getUserService().avatarImageUpload(widget.authRC, bytes: result.files.single.bytes, fileName: result.files.single.name);
+                  Future.delayed(Duration(seconds: 1), () { setState(() {}); });
+                }
+              }
+            } else {
+              final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
+              File file = File(pickedFile.path);
+              await getUserService().avatarImageUpload(widget.authRC, file: file);
+              Future.delayed(Duration(seconds: 1), () { setState(() {}); });
+            }
+          },
+        ),
+        ListTile(
+          dense: true,
+          title: Text('id'),
+          subtitle: Text(userInfo.id),
+        ),
+        ListTile(
+          dense: true,
+          title: Text('user name'),
+          subtitle: Text(userInfo.username == null ? '' : userInfo.username),
+        ),
+        ListTile(
+          dense: true,
+          title: Text('display name'),
+          subtitle: Text(userInfo.name),
+        ),
+        ListTile(
+          dense: true,
+          title: Text('email'),
+          subtitle: userInfo.emails.first != null ? Text(userInfo.emails.first.address.toString()) : SizedBox(),
+        ),
+        Container(
+          padding: EdgeInsets.only(top: 20),
+          child: InkWell(
+              onTap: () {logout(widget.authRC);},
+              child: Wrap(children: <Widget>[
+                Icon(Icons.logout),
+                Text('Logout'),
+              ],)
+          )),
+      ],
     );
   }
 

@@ -1,11 +1,11 @@
 // This is a generated file; do not edit or check into version control.
-FLUTTER_ROOT=C:\Users\chang\FlutterSDK\flutter
-FLUTTER_APPLICATION_PATH=C:\Users\chang\StudioProjects\super-chat\superchat
+FLUTTER_ROOT=c:\flutter
+FLUTTER_APPLICATION_PATH=C:\Users\chang\AndroidStudioProjects\super-chat\superchat
 FLUTTER_TARGET=lib\main.dart
 FLUTTER_BUILD_DIR=build
 SYMROOT=${SOURCE_ROOT}/../build\ios
-FLUTTER_BUILD_NAME=1.0.7
-FLUTTER_BUILD_NUMBER=8
+FLUTTER_BUILD_NAME=1.0.8
+FLUTTER_BUILD_NUMBER=11
 DART_OBFUSCATION=false
 TRACK_WIDGET_CREATION=false
 TREE_SHAKE_ICONS=false

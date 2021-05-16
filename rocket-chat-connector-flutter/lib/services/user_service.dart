@@ -182,13 +182,12 @@ class UserService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         String res = utf8.decode(response.bodyBytes);
+        log('****http call return getUserInfo=$res');
         var user = User.fromMap(jsonDecode(res)['user']);
         count++;
-        log('****http call return getUserInfo=${user.username}, count=${count}');
         return user;
       }
     }
-    Logger().e('getUserInfo', response);
     return User();
   }
 

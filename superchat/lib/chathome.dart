@@ -566,7 +566,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           //Text(room.id, style: TextStyle(color: Colors.grey)),
           room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          room.announcement != null ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
+          room.announcement != null && room.announcement.isNotEmpty ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
           getLastMessage(room) != null ? Text(getLastMessage(room), maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
           room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
@@ -579,6 +579,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       lm = room.lastMessage.msg;
     if ((lm == null || lm.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
       lm = room.lastMessage.attachments.first.title;
+    if (lm != null)
+      lm = lm.replaceAll(RegExp(r'\[ \]\(.*\)[\s]*'), '');
     return lm;
   }
 
@@ -619,12 +621,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         builder: (context) => ChatView(chatHomeState: this, authRC: widget.authRC, room: selectedRoom, notificationController: notificationController, me: widget.user, sharedObject: sharedObj)),
     );
     bChatScreenOpen = false;
-/*
+
     if (result != null) {
       print('!!!!! auto navigate to room = $result');
       Future.delayed(Duration(seconds: 1), () { setChannelById(result); });
     }
-*/
+
     if (refresh)
       setState(() {});
   }

@@ -15,6 +15,7 @@ import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.
 import 'package:rocket_chat_connector_flutter/models/new/channel_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_new_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
+import 'package:rocket_chat_connector_flutter/models/response/create_direct_message_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/room_members_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/spotlight_response.dart';
@@ -78,6 +79,45 @@ class ChannelService {
         return Response.fromMap(jsonDecode(response.body)).success == true;
       } else {
         return false;
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<Response> leaveRoom(model.Room room, Authentication authentication) async {
+    Map<String, String?> body = {"roomId": room.id};
+
+    String api = '/api/v1/groups.leave';
+    if (room.t == 'c')
+      api = '/api/v1/rooms.leave';
+    http.Response response = await _httpService.post(
+      api,
+      jsonEncode(body),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return Response.fromMap(jsonDecode(response.body));
+      }
+    }
+    return Response(success: false, body: response.body);
+  }
+
+  Future<CreateDirectMessageResponse> createDirectMessage(String username, Authentication authentication) async {
+    Map<String, String?> body = {"username": username};
+
+    http.Response response = await _httpService.post(
+      '/api/v1/im.create',
+      jsonEncode(body),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return CreateDirectMessageResponse.fromMap(jsonDecode(response.body));
+      } else {
+        return CreateDirectMessageResponse();
       }
     }
     throw RocketChatException(response.body);
