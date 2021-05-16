@@ -225,10 +225,11 @@ class UserService {
       null
     );
 
+    var res = utf8.decode(response.bodyBytes);
+    print('register resp=$res');
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        var res = utf8.decode(response.bodyBytes);
-        return User.fromMap(jsonDecode(res));
+        return User.fromMap(jsonDecode(res)['user']);
       } else {
         return User();
       }

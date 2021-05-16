@@ -35,6 +35,7 @@ import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
 
 import 'flatform_depended/platform_depended.dart';
 import 'model/join_info.dart';
+import 'utils/password_generator.dart';
 import 'utils/utils.dart';
 
 final String serverUrl = "https://chat.smallet.co";
@@ -376,7 +377,7 @@ class _LoginHomeState extends State<LoginHome> {
 
     if (user != null) {
       var ss = user.email.split("@");
-      UserNew userNew = UserNew(username: ss[0], name: user.displayName, email: user.email, pass: user.id);
+      UserNew userNew = UserNew(username: ss[0], name: user.displayName, email: user.email, pass: generatePassword(true, true, true, true, 10));
       RC.User userRC = await UserService(rocketHttpService).register(userNew);
       print("user=" + userRC.toString());
     }
@@ -389,22 +390,6 @@ class _LoginHomeState extends State<LoginHome> {
     if (user == null)
       user = await googleSignIn.signInSilently();
     print('!!!!_silent login2=${user==null}, ${authFirebase.currentUser==null}');
-
-    /*
-    if (authFirebase.currentUser == null && user != null) {
-      print('!!!!try silent login');
-      final GoogleSignInAccount googleUser = await googleSignIn.signIn();
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      FBA.GoogleAuthCredential credential = FBA.GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      await authFirebase.signInWithCredential(credential);
-    } else {
-      print('!!!!_silent login4=${user==null}, ${authFirebase.currentUser==null}');
-    }
-    */
   }
 
   Future<FirebaseApp> initializeFlutterFire() async {
@@ -458,8 +443,7 @@ class _LoginHomeState extends State<LoginHome> {
     } else {
       if (authTokenPrevious != null)
         return await authenticationService.login(username, resume: authTokenPrevious);
-      else
-        return await authenticationService.login(username, password: password);
+      return await authenticationService.login(username, password: password);
     }
   }
 
@@ -488,11 +472,6 @@ class _LoginHomeState extends State<LoginHome> {
     });
   }
 
-  String loginStatus = '...';
-  GlobalKey loginStatusKey = GlobalKey();
-  void showLoginStatus(String s) {
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -503,7 +482,7 @@ class _LoginHomeState extends State<LoginHome> {
 
     if (!firebaseInitialized) {
       print('!firebaseInitialized----------------------');
-      return Container(color: Colors.white);
+      return Scaffold(body: buildShowVersion('login initializing'));
     }
 
     if (googleSignInMode && triedSilentLogin == false) {
@@ -520,7 +499,6 @@ class _LoginHomeState extends State<LoginHome> {
     if (firebaseInitialized && (!googleSignInMode || (triedSilentLogin && googleSignIn.currentUser != null))) {
       if (googleSignInMode)
         print("******************googleid=" + googleSignIn.currentUser.id);
-      showLoginStatus('google login complete');
       return Scaffold(body:
         FutureBuilder<Authentication>(
           future: getAuthentication(),
@@ -529,6 +507,10 @@ class _LoginHomeState extends State<LoginHome> {
               return buildShowVersion('login progress');
             if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
               Authentication auth = snapshot.data;
+              if (auth.status == 'error') {
+                logout(googleSignIn, null);
+                return SizedBox();
+              }
               KeyValue authKeyValue = KeyValue(key: 'userAuth', value: auth.data.authToken);
               locator<ChatDatabase>().upsertKeyValue(authKeyValue);
               user = auth.data.me;
@@ -578,7 +560,7 @@ class _LoginHomeState extends State<LoginHome> {
         SizedBox(height: 50,),
         SizedBox(height: 50, child: Column(children: [
           Text('SuperChat $version($buildNumber)' + (kDebugMode ? ' - debug' : ''), style: TextStyle(fontSize: 10, color: Colors.blueAccent),),
-          Text('$status', key: loginStatusKey, style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
+          Text('$status', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
         ])),
       ])])));
   }
@@ -605,13 +587,19 @@ class _LoginHomeState extends State<LoginHome> {
 }
 
 Future<void> logout(googleProfile, Authentication authRC) async {
-  if (googleSignInMode)
-    await googleSignIn.signOut();
+  if (googleSignInMode) {
+    try {
+      await googleSignIn.disconnect();
+      await googleSignIn.signOut();
+    } catch (e) {
+      print("signout error=$e");
+    }
+  }
   googleSignInMode = true;
   authTokenPrevious = null;
-  await getAuthenticationService().logout(authRC);
+  if (authRC != null)
+    await getAuthenticationService().logout(authRC);
   await locator<ChatDatabase>().deleteAllTables();
-  //Navigator.of(context).pushNamedAndRemoveUntil(Routes.demoSimple, (Route<dynamic> route) => false);
   navGlobalKey.currentState.pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
   //navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
 }
