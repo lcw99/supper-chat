@@ -36,7 +36,7 @@ class AuthenticationService {
       var json = jsonDecode(s);
       return Authentication.fromMap(json);
     }
-    throw RocketChatException(response.body);
+    return Authentication(status: 'error', data: null);
   }
 
   Future<String> logout(Authentication authentication) async {

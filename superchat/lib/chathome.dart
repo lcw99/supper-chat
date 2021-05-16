@@ -139,7 +139,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     webSocketService.sendUserPresence("offline");
     if (bChatScreenOpen && selectedRoom != null)
       unsubscribeRoomEvent(selectedRoom.id);
-    webSocketService.close();
+    Future.delayed(Duration(seconds: 3), () => webSocketService.close());
   }
 
   @override
@@ -191,7 +191,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               print('resultMessageController.add error=$e');
             }
           }
-          notificationController.add(event);
+          try {
+            notificationController.add(event);
+          } catch (e) {
+            print('notificationController.add error=$e');
+          }
         } else if (event.msg == 'changed') {
           notificationController.add(event);
           if (event.collection == 'stream-notify-user' && event.notificationFields != null) {
