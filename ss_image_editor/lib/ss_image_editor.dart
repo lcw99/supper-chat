@@ -59,17 +59,19 @@ class _SSImageEditorState extends State<SSImageEditor> {
       appBar: AppBar(
         title: const Text('image editor'),
         actions: <Widget>[
+/*
           IconButton(
             icon: const Icon(Icons.photo_library),
             onPressed: _getImage,
           ),
+*/
           IconButton(
             icon: const Icon(Icons.done),
             onPressed: () {
               var imageData;
               var editAct = editorKey.currentState!.editAction;
               if (editAct!.needCrop || editAct.needFlip || editAct.hasRotateAngle)
-                imageData = _cropImage(true);
+                imageData = _cropImage(kIsWeb ? false : true);
               Navigator.pop(context, imageData);
             },
           ),

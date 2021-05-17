@@ -589,7 +589,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 String fileName = ev.name;
                 Uint8List bytes = await dropzoneViewController.getFileData(ev);
                 String mimeType = await dropzoneViewController.getFileMIME(ev);
-                postFile(bytes: bytes, desc: fileName, mimeType: mimeType);
+                postFile(bytes: bytes, fileName: fileName, mimeType: mimeType);
               },
               onLeave: () {
                 setState(() {
@@ -863,7 +863,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         Message newMessage = await postFile(file: file);
       } else {
         if (result.files.single.bytes != null) {
-          Message newMessage = await postFile(bytes: result.files.single.bytes, desc: result.files.single.name);
+          Message newMessage = await postFile(bytes: result.files.single.bytes, fileName: result.files.single.name);
         }
       }
     } else {
@@ -871,34 +871,46 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     }
   }
 
-  Future<void> _pickImage({imageSource}) async {
-    var pickedFile;
-    if (imageSource != null)
-      pickedFile = await picker.getImage(source: imageSource);
-    else
-      //pickedFile = await pickImage(context, fileResult: true);
-      pickedFile = await picker.getImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      File file = File(pickedFile.path);
-      ImageFileData data = await Navigator.push(context, MaterialPageRoute(builder: (context) => ImageFileDescription(file: file)));
-      if (data != null) {
-        if (data.description != null && data.description == '')
-          data.description = null;
-        file = File(data.filePath);
-        Message newMessage = await postFile(file: file, desc: data.description);
-      }
+  Future<void> _pickImage({bool fromCamera = false}) async {
+    Uint8List imageData;
+    String fileName;
+    if (fromCamera) {
+      var pickedFile = await picker.getImage(source: ImageSource.camera);
+      imageData = await pickedFile.readAsBytes();
+      fileName = pickedFile.path;
     } else {
+      FilePickerResult result = await FilePicker.platform.pickFiles(type: FileType.image);
+      if (result != null) {
+        fileName = result.files.single.name;
+        if (result.files.single.path != null) {
+          File file = File(result.files.single.path);
+          imageData = file.readAsBytesSync();
+        } else {
+          if (result.files.single.bytes != null) {
+            imageData = result.files.single.bytes;
+          }
+        }
+      }
+    }
+    if (imageData == null) {
       print('No image selected.');
+      return;
+    }
+
+    ImageFileData data = await Navigator.push(context, MaterialPageRoute(builder: (context) => ImageFileDescription(imageData: imageData,)));
+    if (data != null) {
+      if (data.description != null && data.description == '')
+        data.description = null;
+      Message newMessage = await postFile(bytes: data.imageData, fileName: fileName, desc: data.description);
     }
   }
 
-  Future<Message> postFile({File file, Uint8List bytes, String desc, String mimeType}) {
-    return getMessageService().roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, desc: desc, mimeType: mimeType);
+  Future<Message> postFile({File file, Uint8List bytes, String fileName, String desc, String mimeType}) {
+    return getMessageService().roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, fileName: fileName, desc: desc, mimeType: mimeType);
   }
 
   Future<void> _takePhoto() async {
-    _pickImage(imageSource: ImageSource.camera);
+    _pickImage(fromCamera: true);
   }
 
   RoomMessage messageToRoomMessage(Message m) {
