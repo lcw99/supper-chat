@@ -9,6 +9,8 @@ class MessageNew {
   String? emoji;
   String? roomId;
   String? text;
+  String? msg;
+  String? tmid;
   List<MessageAttachment>? attachments;
 
   MessageNew({
@@ -17,6 +19,8 @@ class MessageNew {
     this.emoji,
     this.roomId,
     this.text,
+    this.msg,
+    this.tmid,
     this.attachments,
   });
 
@@ -26,7 +30,9 @@ class MessageNew {
       avatar = json['avatar'];
       emoji = json['emoji'];
       roomId = json['roomId'];
+      tmid = json['tmid'];
       text = json['text'];
+      msg = json['msg'];
 
       if (json['attachments'] != null) {
         List<dynamic> jsonList = json['attachments'].runtimeType == String //
@@ -58,8 +64,14 @@ class MessageNew {
     if (roomId != null) {
       map['roomId'] = roomId;
     }
+    if (tmid != null) {
+      map['tmid'] = tmid;
+    }
     if (text != null) {
       map['text'] = text;
+    }
+    if (msg != null) {
+      map['msg'] = msg;
     }
     if (attachments != null) {
       map['attachments'] = attachments
