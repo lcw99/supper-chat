@@ -24,6 +24,8 @@ class MyProfile extends StatefulWidget {
 }
 
 class _MyProfileState extends State<MyProfile> {
+  bool logoutStarted = false;
+
   @override
   void initState() {
     super.initState();
@@ -91,8 +93,13 @@ class _MyProfileState extends State<MyProfile> {
         ),
         Container(
           padding: EdgeInsets.only(top: 20),
-          child: InkWell(
-              onTap: () {logout(widget.authRC);},
+          child: logoutStarted ? SizedBox() : InkWell(
+              onTap: () {
+                logout(widget.authRC);
+                setState(() {
+                  logoutStarted = true;
+                });
+              },
               child: Wrap(children: <Widget>[
                 Icon(Icons.logout),
                 Text('Logout'),
