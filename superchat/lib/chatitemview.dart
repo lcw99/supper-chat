@@ -90,8 +90,13 @@ class ChatItemViewState extends State<ChatItemView> {
         });
   }
 
-  Widget buildChatItemMain(message) {
-    return Container(child: _buildChatItem(message), margin: EdgeInsets.only(right: 15), width: MediaQuery.of(context).size.width - 15,);
+  Widget buildChatItemMain(Message message) {
+    double leftMargin = 0;
+    if (message.tmid != null)
+      leftMargin = 20;
+    return Container(child: _buildChatItem(message),
+      margin: EdgeInsets.only(right: 15, left: leftMargin),
+      width: MediaQuery.of(context).size.width - 15,);
   }
 
   bool testAttachmentUserIsCached(MessageAttachment attachment) {
@@ -147,6 +152,17 @@ class ChatItemViewState extends State<ChatItemView> {
     // if (message.pinned != null && message.pinned)
     //   log('@@@ pinned message=' + message.toString());
 
+    var now = DateTime.now().toLocal();
+    var ts = message.ts.toLocal();
+    String dateStr = '';
+    if (now.year != ts.year)
+      dateStr += DateFormat('yyyy-').format(ts);
+    if (now.month != ts.month)
+      dateStr += DateFormat('MM-').format(ts);
+    if (now.day != ts.day)
+      dateStr += DateFormat('dd ').format(ts);
+    dateStr += DateFormat('jm').format(ts);
+
     User user = Utils.getCachedUser(userId: message.user.id);
     bool specialMessage = message.t != null;
     if (userName == null)
@@ -196,6 +212,9 @@ class ChatItemViewState extends State<ChatItemView> {
                   Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize),)
                 ])  : SizedBox(),
               ]),
+              Expanded(child: Container(child: Text(dateStr, style: TextStyle(fontSize: usernameFontSize, ),),
+                alignment: Alignment.centerRight,
+              )),
             ]),
             messageText != null
               ? Text(messageText, style: TextStyle(fontSize: MESSAGE_FONT_SIZE * 0.8))
@@ -221,17 +240,6 @@ class ChatItemViewState extends State<ChatItemView> {
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
-    var now = DateTime.now().toLocal();
-    var ts = message.ts.toLocal();
-    String dateStr = '';
-    if (now.year != ts.year)
-      dateStr += DateFormat('yyyy-').format(ts);
-    if (now.month != ts.month)
-      dateStr += DateFormat('MM-').format(ts);
-    if (now.day != ts.day)
-      dateStr += DateFormat('dd ').format(ts);
-    dateStr += DateFormat('kk:mm:ss').format(ts);
-
     return GestureDetector (
       onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
       onLongPress: () { if (!widget.onTapExit) messagePopupMenu(context, tabPosition, message); },
@@ -249,10 +257,6 @@ class ChatItemViewState extends State<ChatItemView> {
                       widget.chatViewState.findAndScroll(message.id);
                   },
                   child: buildMessageBody(message),
-                ),
-                Container(
-                  alignment: Alignment.topRight,
-                  child: Text(dateStr, style: TextStyle(fontSize: 8, color: Colors.black54),)
                 ),
                 bAttachments ?
                   LayoutBuilder(builder: (context, boxConstraint){
@@ -299,7 +303,7 @@ class ChatItemViewState extends State<ChatItemView> {
             ? Text(attachment.description, style: TextStyle(fontSize: 10),)
             : Text(attachment.title, style: TextStyle(fontSize: 10),);
       } else if (attachment.imageUrl != null) {
-        downloadLink = attachment.imageUrl;
+        //downloadLink = attachment.imageUrl;
         attachmentBody = LayoutBuilder(builder: (context, bc) {
           //print('Column bc=$bc');
           return Column(children: <Widget>[
@@ -340,12 +344,10 @@ class ChatItemViewState extends State<ChatItemView> {
           children: <Widget>[
             attachmentBody,
             //SizedBox(width: 5,),
-            Column(children: [
-              downloadLink != null ? InkWell(
-                child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
-                onTap: () async { downloadFile(downloadLink); },
-              ) : SizedBox(),
-            ])
+            downloadLink != null ? InkWell(
+              child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
+              onTap: () async { downloadFile(downloadLink); },
+            ) : SizedBox(),
           ]);}));
     }
     return LayoutBuilder(builder: (context, bc) {
@@ -395,14 +397,16 @@ class ChatItemViewState extends State<ChatItemView> {
     var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
     if (message.t != null)
       messageFontSize = MESSAGE_FONT_SIZE * 0.6;
+    else if (message.tmid != null)
+      messageFontSize = MESSAGE_FONT_SIZE * 0.8;
     var messageBackgroundColor = Colors.white;
     if (message.user.id == widget.me.id)
       messageBackgroundColor = Colors.amber.shade100;
 
     return Container(
         child: Column(children: <Widget>[
-          newMessage == '' ? SizedBox() : Container(
-              padding: EdgeInsets.all(5),
+          newMessage == null || newMessage.isEmpty ? SizedBox() : Container(
+              padding: EdgeInsets.all(3),
               decoration: BoxDecoration(
                 color: messageBackgroundColor,
                 border: Border.all(color: Colors.blueAccent, width: 0),
@@ -503,7 +507,7 @@ class ChatItemViewState extends State<ChatItemView> {
     return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
       //print('buildImageByLayout constraints=$constraints');
       var dpr = MediaQuery.of(context).devicePixelRatio;
-      var imageWidth = attachment.renderWidth - 30;
+      var imageWidth = attachment.renderWidth;
       var imageWidthInDevice = imageWidth * dpr;
 
       double r = imageWidthInDevice / attachment.imageDimensions.width;
