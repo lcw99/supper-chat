@@ -41,6 +41,7 @@ class Message {
   DateTime? tlm;
 
   bool? isAttachment = false;
+  bool? isReply = false;
 
   Message({
     this.id,
@@ -74,6 +75,7 @@ class Message {
     this.tlm,
 
     this.isAttachment,
+    this.isReply,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {

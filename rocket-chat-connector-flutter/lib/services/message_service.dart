@@ -21,10 +21,16 @@ class MessageService {
 
   MessageService(this._httpService);
 
-  Future<MessageNewResponse> postMessage(MessageNew message, Authentication authentication) async {
+  Future<MessageNewResponse> postMessage(MessageNew message, Authentication authentication, {bool sendMessage = false}) async {
+    String api = '/api/v1/chat.postMessage';
+    var payload = message.toMap();
+    if (sendMessage) {
+      api = '/api/v1/chat.sendMessage';
+      payload = { "message" : message.toMap() };
+    }
     http.Response response = await _httpService.post(
-      '/api/v1/chat.postMessage',
-      jsonEncode(message.toMap()),
+      api,
+      jsonEncode(payload),
       authentication,
     );
 

@@ -857,18 +857,25 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   //message = '[ ](https://chat.smallet.co/channel/pppp_test?msg=NeZ9q4YHzezW8qTAK)  ' + message;
   Future<void> _postMessage(String message) async {
-    if (message != null && message.isNotEmpty) {
-      if (quotedMessage != null) {
-        String url = serverUri.replace(path: '/channel/${widget.room.name}', query: 'msg=${quotedMessage.id}').toString();
+    if (message == null || message.isEmpty)
+      return;
+    MessageNew msg = MessageNew(roomId: widget.room.id, text: message);
+    bool useSendMessage = false;
+    if (quotedMessage != null) {
+      if (quotedMessage.isReply) {
+        msg.tmid = quotedMessage.id;
+        msg.msg = message;
+        msg.text = null;
+        useSendMessage = true;
+      } else {
+        String url = serverUri.replace(path: '/channel/${widget.room.name}',
+            query: 'msg=${quotedMessage.id}').toString();
         message = '[ ]($url)  ' + message;
-        quotedMessage = null;
       }
-      final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-      MessageService messageService = MessageService(rocketHttpService);
-      MessageNew msg = MessageNew(roomId: widget.room.id, text: message);
-      MessageNewResponse respMsg = await messageService.postMessage(msg, widget.authRC);
-      _teController.text = '';
+      quotedMessage = null;
     }
+    MessageNewResponse respMsg = await getMessageService().postMessage(msg, widget.authRC, sendMessage: useSendMessage);
+    _teController.text = '';
   }
 
   void _pickFile() async {

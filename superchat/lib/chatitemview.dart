@@ -93,7 +93,7 @@ class ChatItemViewState extends State<ChatItemView> {
   Widget buildChatItemMain(Message message) {
     double leftMargin = 0;
     if (message.tmid != null)
-      leftMargin = 20;
+      leftMargin = 40;
     return Container(child: _buildChatItem(message),
       margin: EdgeInsets.only(right: 15, left: leftMargin),
       width: MediaQuery.of(context).size.width - 15,);
@@ -146,12 +146,41 @@ class ChatItemViewState extends State<ChatItemView> {
     return message.starred != null && message.starred.length > 0;
   }
 
-  Widget _buildChatItem(Message message, {String messageText, String avatarPath, String userName, bool attachmentMessage = false}) {
-    // if (message.starred != null && message.starred.length > 0)
-    //   log('@@@ starred message=' + message.toString());
-    // if (message.pinned != null && message.pinned)
-    //   log('@@@ pinned message=' + message.toString());
+  Widget _buildChatItem(Message message) {
+    User user = Utils.getCachedUser(userId: message.user.id);
+    bool roomChangedMessage = message.t != null;
+    double avatarSize = 40;
+    if (roomChangedMessage)
+      avatarSize = 20;
+    else if (message.tmid != null || message.isAttachment)
+      avatarSize = 30;
+    return LayoutBuilder(builder: (context, boxConstraint) {
+      //print('boxConstraint=$boxConstraint');
+      return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: 9,),
+        GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
+          onTap: () async {
+            String ret = await showDialogWithWidget(context, UserInfo(userInfo: user), MediaQuery.of(context).size.height - 200);
+            if (ret != 'im.create')
+              return;
+            var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
+            Future.delayed(Duration(seconds: 2), () => widget.chatViewState.popToChatHome(resp.room.rid));
+        },),
+        SizedBox(width: 5,),
+        Container(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildUserNameLine(user),
+            _buildMessage(message),
+            SizedBox(height: 8,),
+          ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize),),
+        //SizedBox(width: 40,),
+      ],);});
+  }
 
+  Widget _buildUserNameLine(user) {
     var now = DateTime.now().toLocal();
     var ts = message.ts.toLocal();
     String dateStr = '';
@@ -159,70 +188,43 @@ class ChatItemViewState extends State<ChatItemView> {
       dateStr += DateFormat('yyyy-').format(ts);
     if (now.month != ts.month)
       dateStr += DateFormat('MM-').format(ts);
-    if (now.day != ts.day)
-      dateStr += DateFormat('dd ').format(ts);
+    if (now.day != ts.day) {
+      if (now.day - ts.day == 1)
+        dateStr += 'yesterday ';
+      else
+        dateStr += DateFormat('dd ').format(ts);
+    }
     dateStr += DateFormat('jm').format(ts);
 
-    User user = Utils.getCachedUser(userId: message.user.id);
-    bool specialMessage = message.t != null;
-    if (userName == null)
-      userName = Utils.getUserNameByUser(user);
+    String userName = Utils.getUserNameByUser(user);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
     var usernameFontSize = USERNAME_FONT_SIZE;
-    if (messageText != null)
-      usernameFontSize *= 0.8;
-    return LayoutBuilder(builder: (context, boxConstraint) {
-      //print('boxConstraint=$boxConstraint');
-      double avatarSize = specialMessage || attachmentMessage ? 20 : 40;
-      return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(width: 9,),
-        GestureDetector(child: Utils.buildUserAvatar(avatarSize, user, avatarPath: avatarPath),
-        onTap: () async {
-          String ret = await showDialogWithWidget(context, UserInfo(userInfo: user), MediaQuery.of(context).size.height - 200);
-          if (ret != 'im.create')
-            return;
-          var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
-          Future.delayed(Duration(seconds: 2), () => widget.chatViewState.popToChatHome(resp.room.rid));
-        },),
-        SizedBox(width: 5,),
-        // user name
-        Container(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(children: [
+      Text(
+        userName  + '(${widget.index.toString()})' ,
+        style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
+        textAlign: TextAlign.left,
+      ),
+      Wrap(alignment: WrapAlignment.end,
           children: [
-            Row(children: [
-              Text(
-                userName  + '(${widget.index.toString()})' ,
-                style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
-                textAlign: TextAlign.left,
-              ),
-              Wrap(alignment: WrapAlignment.end,
-              children: [
-                _messageStarred(message) ? Wrap(children: [
-                  SizedBox(width: 2,),
-                  Icon(Icons.star_border_outlined, size: 14, color: Colors.redAccent,),
-                ]) : SizedBox(),
-                message.pinnedBy != null ? Wrap(children: [
-                  SizedBox(width: 4,),
-                  Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12,), angle: 45 * 3.14 / 180,),
-                  SizedBox(width: 1,),
-                  Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize),)
-                ])  : SizedBox(),
-              ]),
-              Expanded(child: Container(child: Text(dateStr, style: TextStyle(fontSize: usernameFontSize, ),),
-                alignment: Alignment.centerRight,
-              )),
-            ]),
-            messageText != null
-              ? Text(messageText, style: TextStyle(fontSize: MESSAGE_FONT_SIZE * 0.8))
-              : _buildMessage(message),
-            SizedBox(height: 8,),
-          ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize),),
-        //SizedBox(width: 40,),
-      ],);});
+            _messageStarred(message) ? Wrap(children: [
+              SizedBox(width: 2,),
+              Icon(Icons.star_border_outlined, size: 14, color: Colors.redAccent,),
+            ]) : SizedBox(),
+            message.pinnedBy != null ? Wrap(children: [
+              SizedBox(width: 4,),
+              Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12,), angle: 45 * 3.14 / 180,),
+              SizedBox(width: 1,),
+              Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize),)
+            ])  : SizedBox(),
+          ]),
+      Expanded(child: Container(child:
+      Text(dateStr, style: TextStyle(fontSize: usernameFontSize, color: Colors.blueGrey, fontStyle: FontStyle.italic),),
+        alignment: Alignment.centerRight,
+      )),
+    ]);
   }
 
   _getUserName(Message message) {
@@ -235,9 +237,10 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Offset tabPosition;
-  _buildMessage(Message message) {
+  Widget _buildMessage(Message message) {
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
+    bool hasReplies = message.replies != null && message.replies.length > 0;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
     return GestureDetector (
@@ -245,36 +248,44 @@ class ChatItemViewState extends State<ChatItemView> {
       onLongPress: () { if (!widget.onTapExit) messagePopupMenu(context, tabPosition, message); },
       child:
       Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          GestureDetector (
+            onTap: () {
+              if (widget.onTapExit)
+                Navigator.pop(context, message.id);
+              else if (!message.isAttachment)
+                pickReaction(message);
+              else
+                widget.chatViewState.findAndScroll(message.id);
+            },
+            child: buildMessageBody(message),
+          ),
+          bAttachments ?
+            LayoutBuilder(builder: (context, boxConstraint){
+              //print('bAttachments boxConstraint=$boxConstraint');
+              return Container(child: buildAttachments(message), width: boxConstraint.maxWidth,);
+            })
+            : SizedBox(),
+          Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                GestureDetector (
-                  onTap: () {
-                    if (widget.onTapExit)
-                      Navigator.pop(context, message.id);
-                    else if (!message.isAttachment)
-                      pickReaction(message);
-                    else
-                      widget.chatViewState.findAndScroll(message.id);
-                  },
-                  child: buildMessageBody(message),
-                ),
-                bAttachments ?
-                  LayoutBuilder(builder: (context, boxConstraint){
-                    //print('bAttachments boxConstraint=$boxConstraint');
-                    return Container(child: buildAttachments(message), width: boxConstraint.maxWidth,);
-                  })
+              children: [
+                hasReplies ?
+                  GestureDetector(child:
+                    Container(child: Icon(Icons.add_comment_outlined, color: Colors.blueAccent), height: 30,
+                      padding: EdgeInsets.only(right: 10),
+                    ),
+                    onTap: () => replyMessage(),
+                  )
                   : SizedBox(),
-                Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 1, child: bReactions ?
-                      Container(
-                        height: 30,
-                        width: MediaQuery.of(context).size.width,
-                        child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
-                      ) : SizedBox()),
-                    ]),
-              ]));
+                Expanded(flex: 1, child: bReactions ?
+                Container(
+                  height: 30,
+                  width: MediaQuery.of(context).size.width,
+                  child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
+                ) : SizedBox()),
+              ]),
+        ]));
   }
 
   String getDownloadLink(Message message) {
@@ -397,19 +408,22 @@ class ChatItemViewState extends State<ChatItemView> {
     var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
     if (message.t != null)
       messageFontSize = MESSAGE_FONT_SIZE * 0.6;
-    else if (message.tmid != null)
+    else if (message.tmid != null || message.isAttachment)
       messageFontSize = MESSAGE_FONT_SIZE * 0.8;
     var messageBackgroundColor = Colors.white;
     if (message.user.id == widget.me.id)
       messageBackgroundColor = Colors.amber.shade100;
 
+    double messageBorderWidth = 0;
+    if (message.isAttachment)
+      messageBorderWidth = 1;
     return Container(
         child: Column(children: <Widget>[
           newMessage == null || newMessage.isEmpty ? SizedBox() : Container(
               padding: EdgeInsets.all(3),
               decoration: BoxDecoration(
                 color: messageBackgroundColor,
-                border: Border.all(color: Colors.blueAccent, width: 0),
+                border: Border.all(color: Colors.blueAccent, width: messageBorderWidth),
                 borderRadius: BorderRadius.all(
                     Radius.circular(2.0) //                 <--- border radius here
                 ),
@@ -606,6 +620,8 @@ class ChatItemViewState extends State<ChatItemView> {
     items.add(PopupMenuItem(child: Text('Copy...'), value: 'copy'));
     items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
     items.add(PopupMenuItem(child: Text('Quote...'), value: 'quote'));
+    if (message.tmid == null)
+      items.add(PopupMenuItem(child: Text('Reply...'), value: 'reply'));
     if (_messageStarred(message))
       items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
     else
@@ -632,9 +648,9 @@ class ChatItemViewState extends State<ChatItemView> {
     } else if (value == 'copy') {
       Clipboard.setData(ClipboardData(text: message.msg));
     } else if (value == 'quote') {
-      widget.chatViewState.setState(() {
-        quotedMessage = message;
-      });
+      replyMessage();
+    } else if (value == 'reply') {
+      replyMessage();
     } else if (value == 'star') {
       getMessageService().starMessage(message.id, widget.authRC);
     } else if (value == 'unstar') {
@@ -663,6 +679,13 @@ class ChatItemViewState extends State<ChatItemView> {
           Share.share(share);
       }
     }
+  }
+
+  void replyMessage() {
+    widget.chatViewState.setState(() {
+      quotedMessage = message;
+      quotedMessage.isReply = true;
+    });
   }
 
   handleUpdateMessage(Message message) {
