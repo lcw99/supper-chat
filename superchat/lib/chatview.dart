@@ -75,7 +75,6 @@ class ChatView extends StatefulWidget {
 }
 
 class ChatDataStore {
-  final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
   List<ChatItemData> _chatData = [];
 
   get length => _chatData.length;
@@ -88,11 +87,20 @@ class ChatDataStore {
     return _chatData.indexWhere((element) => element.messageId == messageId) >= 0;
   }
 
-  insertAt(int index, Message m) async {
+  insertNewOnTop(Message m) {
+    if (m.tmid != null) {
+      int i = findIndexByMessageId(m.tmid);
+      _insertAt(i - _chatData[i].replyCount, m);
+      _chatData[i].replyCount++;
+    } else
+      _insertAt(0, m);
+  }
+
+  _insertAt(int index, Message m) async {
     String info = jsonEncode(m.toMap());
     RoomMessage roomMessage = RoomMessage(rid: m.rid, mid: m.id, ts: m.ts, info: info);
     await locator<db.ChatDatabase>().upsertRoomMessage(roomMessage);
-    _chatData.insert(index, ChatItemData(GlobalKey(), m.id, info, m.ts));
+    _chatData.insert(index, ChatItemData(GlobalKey(), m.id, m.tmid, info, m.ts));
   }
 
   removeAt(int index) async {
@@ -131,6 +139,13 @@ class ChatDataStore {
     _chatData.sort((b, a) {
       return a.timeStamp.compareTo(b.timeStamp);
     });
+    List<ChatItemData> threadMessages = _chatData.where((e) => e.threadId != null).toList();
+    _chatData.removeWhere((e) => e.threadId != null);
+    for (int i = 0; i < threadMessages.length; i++) {
+      int pos = findIndexByMessageId(threadMessages[i].threadId);
+      _chatData[pos].replyCount++;
+      _chatData.insert(pos, threadMessages[i]);
+    }
   }
 }
 
@@ -138,8 +153,10 @@ class ChatItemData {
   GlobalKey<ChatItemViewState> key;
   DateTime timeStamp;
   String messageId;
+  String threadId;
   String info;
-  ChatItemData(this.key, this.messageId, this.info, this.timeStamp);
+  int replyCount = 0;
+  ChatItemData(this.key, this.messageId, this.threadId, this.info, this.timeStamp);
 }
 
 class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerProviderStateMixin<ChatView>  {
@@ -239,7 +256,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               setState(() {
                 print('!!!new message');
                 needScrollToBottom = true;
-                chatDataStore.insertAt(0, roomMessage);
+                chatDataStore.insertNewOnTop(roomMessage);
               });
               userTypingKey.currentState.setTypingUser('');
             }
@@ -984,7 +1001,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           log('@@@@ add new message=${rm.info}');
           Message m = Message.fromMap(jsonDecode(rm.info));
           Utils.getUserInfo(widget.authRC, userId: m.user.id);
-          chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, rm.info, rm.ts));
+          chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, m.tmid, rm.info, rm.ts));
         }
       }
       chatDataStore.sortMessagesByTimeStamp();
