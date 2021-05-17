@@ -77,7 +77,10 @@ void main() async {
     googleSignInMode = true;
     await _initNotification();
   } else {
-    googleSignInMode = true;
+    if (isLocalhost())
+      googleSignInMode = false;
+    else
+      googleSignInMode = true;
   }
 
   authTokenPrevious = null;

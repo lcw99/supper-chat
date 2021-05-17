@@ -89,10 +89,11 @@ class MessageService {
     throw RocketChatException(response.body);
   }
 
-  Future<Message> roomImageUpload(String? roomId, Authentication? authentication, {File? file, Uint8List? bytes, String? desc, String? mimeType}) async {
+  Future<Message> roomImageUpload(String? roomId, Authentication? authentication,
+        {File? file, Uint8List? bytes, String? desc, String? mimeType, String? fileName}) async {
     var uri = _httpService.getUri()!.replace(path: '/api/v1/rooms.upload/$roomId');
-    if (mimeType == null && desc!= null && bytes != null) {
-      mimeType = lookupMimeType(desc, headerBytes: bytes);
+    if (mimeType == null && fileName!= null && bytes != null) {
+      mimeType = lookupMimeType(fileName, headerBytes: bytes);
     }
     var request = http.MultipartRequest('POST', uri)
       ..headers['X-Auth-Token'] = authentication!.data!.authToken!
@@ -100,7 +101,7 @@ class MessageService {
       ..files.add(file != null ? await http.MultipartFile.fromPath(
           'file', file.path,
           contentType: MediaType.parse(lookupMimeType(file.path)!)) :
-          http.MultipartFile.fromBytes('file', bytes!.toList(), filename: desc!,
+          http.MultipartFile.fromBytes('file', bytes!.toList(), filename: fileName!,
               contentType: MediaType.parse(mimeType != null && mimeType.isNotEmpty ? mimeType : 'application/octet-stream'))
       );
 

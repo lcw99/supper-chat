@@ -11,3 +11,7 @@ Widget pickedImage(String path, {double imageWidth, double imageHeight, cacheWid
 Future<String> downloadAndSaveFile(String url, String fileName) async {
   throw UnimplementedError('Unsupported');
 }
+
+bool isLocalhost() {
+  throw UnimplementedError('Unsupported');
+}

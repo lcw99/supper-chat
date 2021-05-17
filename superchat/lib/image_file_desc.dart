@@ -9,14 +9,15 @@ import 'package:ss_image_editor/common/image_picker/image_picker.dart';
 import 'package:ss_image_editor/ss_image_editor.dart';
 
 class ImageFileData {
-  String filePath;
+  Uint8List imageData;
   String description;
-  ImageFileData(this.filePath, this.description);
+  ImageFileData(this.imageData, this.description);
 }
 
 class ImageFileDescription extends StatefulWidget {
-  ImageFileDescription({Key key, this.file}) : super(key: key);
   final File file;
+  final Uint8List imageData;
+  ImageFileDescription({Key key, this.file, this.imageData}) : super(key: key);
 
   @override
   _ImageFileDescriptionState createState() => _ImageFileDescriptionState();
@@ -30,7 +31,10 @@ class _ImageFileDescriptionState extends State<ImageFileDescription> {
 
   @override
   void initState() {
-    _memoryImage = widget.file.readAsBytesSync();
+    if (widget.file != null)
+      _memoryImage = widget.file.readAsBytesSync();
+    if (widget.imageData != null)
+      _memoryImage = widget.imageData;
     edited = false;
     super.initState();
   }
@@ -75,12 +79,7 @@ class _ImageFileDescriptionState extends State<ImageFileDescription> {
               if (_teController.text.isNotEmpty)
                 desc = _teController.text;
               ImageFileData retData;
-              if (edited) {
-                final String imageFilePath = await ImageSaver.save(tempImageFileName, _memoryImage);
-                retData = ImageFileData(imageFilePath, desc);
-              } else {
-                retData = ImageFileData(widget.file.path, desc);
-              }
+              retData = ImageFileData(_memoryImage, desc);
               Navigator.pop(context, retData);
             },
           ),

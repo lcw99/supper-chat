@@ -542,7 +542,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           title: Row(children: [
             roomType,
             SizedBox(width: 3,),
-            Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+            Flexible(child: Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),)),
             room.u != null && room.u.id == widget.user.id ?
             Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
           ]),

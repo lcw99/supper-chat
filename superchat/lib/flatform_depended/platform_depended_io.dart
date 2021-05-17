@@ -38,3 +38,6 @@ Future<String> downloadAndSaveFile(String url, String fileName) async {
   return filePath;
 }
 
+bool isLocalhost() {
+  throw UnimplementedError('Unsupported');
+}
