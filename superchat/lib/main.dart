@@ -56,7 +56,7 @@ double textScaleFactor = 1.0;
 String version;
 String buildNumber;
 
-bool googleSignInMode;
+bool needGoogleSignin;
 
 JoinInfo joinInfo;
 //JoinInfo joinInfo = JoinInfo('yzYen4', null);
@@ -74,20 +74,20 @@ void main() async {
     MyWidgetsBinding();
   }
   if (!kIsWeb) {
-    googleSignInMode = true;
+    needGoogleSignin = true;
     await _initNotification();
   } else {
     if (isLocalhost())
-      googleSignInMode = false;
+      needGoogleSignin = false;
     else
-      googleSignInMode = true;
+      needGoogleSignin = true;
   }
 
   authTokenPrevious = null;
   var keyValue = await locator<ChatDatabase>().getValueByKey('userAuth');
   print ('@#@# prev auth=$keyValue');
   if (keyValue != null) {
-    googleSignInMode = false;
+    needGoogleSignin = false;
     authTokenPrevious = keyValue.value;
   }
 
@@ -436,8 +436,8 @@ class _LoginHomeState extends State<LoginHome> {
 
   Future<Authentication> getAuthentication() async {
     final AuthenticationService authenticationService = getAuthenticationService();
-    print('getAuthentication1=$googleSignInMode, authTokenPrevious=$authTokenPrevious');
-    if (googleSignInMode) {
+    print('getAuthentication1=$needGoogleSignin, authTokenPrevious=$authTokenPrevious');
+    if (needGoogleSignin) {
       final GoogleSignInAccount googleSignInAccount = await googleSignIn.signInSilently();
       print('getAuthentication2');
       GoogleSignInAuthentication acc = await googleSignInAccount.authentication;
@@ -488,7 +488,7 @@ class _LoginHomeState extends State<LoginHome> {
       return Scaffold(body: buildShowVersion('login initializing'));
     }
 
-    if (googleSignInMode && triedSilentLogin == false) {
+    if (needGoogleSignin && triedSilentLogin == false) {
       silentLogin(context);
     }
 
@@ -499,8 +499,8 @@ class _LoginHomeState extends State<LoginHome> {
       }
     });
 
-    if (firebaseInitialized && (!googleSignInMode || (triedSilentLogin && googleSignIn.currentUser != null))) {
-      if (googleSignInMode)
+    if (firebaseInitialized && (!needGoogleSignin || (triedSilentLogin && googleSignIn.currentUser != null))) {
+      if (needGoogleSignin)
         print("******************googleid=" + googleSignIn.currentUser.id);
       return Scaffold(body:
         FutureBuilder<Authentication>(
@@ -517,7 +517,7 @@ class _LoginHomeState extends State<LoginHome> {
               KeyValue authKeyValue = KeyValue(key: 'userAuth', value: auth.data.authToken);
               locator<ChatDatabase>().upsertKeyValue(authKeyValue);
               user = auth.data.me;
-              if (googleSignInMode) {
+              if (needGoogleSignin) {
                 if (user.avatarETag == null) {
                   String avatarUrl = googleSignIn.currentUser.photoUrl;
                   getUserService().setAvatar(avatarUrl, auth);
@@ -590,20 +590,21 @@ class _LoginHomeState extends State<LoginHome> {
 }
 
 Future<void> logout(Authentication authRC) async {
-  if (googleSignInMode) {
+  if (await googleSignIn.isSignedIn()) {
+    print('google sign out!');
     try {
-      await googleSignIn.disconnect();
       await googleSignIn.signOut();
+      await authFirebase.signOut();
     } catch (e) {
       print("signout error=$e");
     }
   }
-  googleSignInMode = true;
+  needGoogleSignin = true;
   authTokenPrevious = null;
   if (authRC != null)
     await getAuthenticationService().logout(authRC);
   await locator<ChatDatabase>().deleteAllTables();
-  navGlobalKey.currentState.pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+  Future.delayed(Duration.zero, () => navGlobalKey.currentState.pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false));
   //navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);
 }
 
