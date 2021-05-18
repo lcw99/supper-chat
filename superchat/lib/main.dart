@@ -151,7 +151,9 @@ androidNotification(RemoteMessage message) async {
   if (messageStr == null) {
     if (message.data['message'] != null) {
       String s = message.data['message'];
-      messageStr = s.split(':')[1];
+      var ss = s.split(':');
+      if (ss.length > 1)
+        messageStr = ss[1];
     }
   }
   if (messageStr == null) {

@@ -30,7 +30,6 @@ class WebClipboard {
   WebClipboard._internal();
 
   addPasteListener(ClipboardCallback callback) {
-    print('##### addPasteListener @@@@@####');
     document.removeEventListener('paste', pasteAuto, false);
     _singleton._callback = callback;
     document.addEventListener('paste', pasteAuto, false);
@@ -39,7 +38,6 @@ class WebClipboard {
   pasteAuto(Event ee) async {
     ClipboardEvent e = ee;
     if (e.clipboardData != null) {
-      print('@@@@@@@@@@@@@@@@@ clipboard event');
       var items = e.clipboardData.items;
       if (items == null) return;
 
