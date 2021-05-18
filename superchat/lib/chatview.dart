@@ -922,7 +922,18 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       return;
     }
 
+    postImageWithEdit(fileName, imageData);
+  }
+
+  static bool onProcessing = false;
+  postImageWithEdit(String fileName, Uint8List imageData) async {
+    if (onProcessing) {
+      print('!!!!!!!!!!!!!!!!!!!!!ImageFileDescription already open');
+      return;
+    }
+    onProcessing = true;
     ImageFileData data = await Navigator.push(context, MaterialPageRoute(builder: (context) => ImageFileDescription(imageData: imageData,)));
+    onProcessing = false;
     if (data != null) {
       if (data.description != null && data.description == '')
         data.description = null;
@@ -930,8 +941,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     }
   }
 
-  Future<Message> postFile({File file, Uint8List bytes, String fileName, String desc, String mimeType}) {
-    return getMessageService().roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, fileName: fileName, desc: desc, mimeType: mimeType);
+  Future<Message> postFile({File file, Uint8List bytes, String fileName, String desc, String mimeType, String tmid}) {
+    String tmid;
+    if (quotedMessage != null && quotedMessage.isReply)
+      tmid = quotedMessage.id;
+    return getMessageService().roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, fileName: fileName, desc: desc, mimeType: mimeType, tmid: tmid);
   }
 
   Future<void> _takePhoto() async {
@@ -1056,8 +1070,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Future<void> postHtmlFile(htmlFile) async {
     String fileName = htmlFile.name;
     Uint8List bytes = await dropzoneViewController.getFileData(htmlFile);
-    String mimeType = await dropzoneViewController.getFileMIME(htmlFile);
-    postFile(bytes: bytes, fileName: fileName, mimeType: mimeType);
+    postImageWithEdit(fileName, bytes);
   }
 }
 
