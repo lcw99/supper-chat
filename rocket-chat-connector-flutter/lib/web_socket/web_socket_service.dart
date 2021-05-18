@@ -143,14 +143,14 @@ class WebSocketService {
 
   void subscribeNotifyUser(User user) {
     subscribeNotifyUserEvent(user, 'message');
-    //subscribeNotifyUserEvent(user, 'otr');
-    //subscribeNotifyUserEvent(user, 'webrtc');
+    subscribeNotifyUserEvent(user, 'otr');
+    subscribeNotifyUserEvent(user, 'webrtc');
     subscribeNotifyUserEvent(user, 'notification');
     subscribeNotifyUserEvent(user, 'rooms-changed');
     subscribeNotifyUserEvent(user, 'subscriptions-changed');
-    //subscribeNotifyUserEvent(user, 'uiInteraction');
-    //subscribeNotifyUserEvent(user, 'e2ekeyRequest');
-    //subscribeNotifyUserEvent(user, 'userData');
+    subscribeNotifyUserEvent(user, 'uiInteraction');
+    subscribeNotifyUserEvent(user, 'e2ekeyRequest');
+    subscribeNotifyUserEvent(user, 'userData');
   }
 
   void subscribeNotifyUserEvent(User user, String event) {

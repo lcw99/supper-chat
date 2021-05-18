@@ -392,8 +392,11 @@ class ChatItemViewState extends State<ChatItemView> {
 
   Widget buildMessageBody(Message message) {
     String userName = _getUserName(message);
-    message.msg = message.msg.replaceAll(RegExp(r'\[ \]\(.*\)[\s]*'), '');
-    message.urls = null;
+    var regExp = RegExp(r'\[ \]\(.*\)[\s]*');
+    if (regExp.hasMatch(message.msg)) {
+      message.msg = message.msg.replaceAll(regExp, '');
+      message.urls = null;
+    }
     String newMessage = message.msg;
     switch (message.t) {
       case 'au': newMessage = '$userName added ${message.msg}'; break;
@@ -588,10 +591,6 @@ class ChatItemViewState extends State<ChatItemView> {
     sendReaction(message, emoji, true);
   }
 
-  MessageService getMessageService() {
-    final rocket_http_service.HttpService rocketHttpService = rocket_http_service.HttpService(serverUri);
-    return MessageService(rocketHttpService);
-  }
   sendReaction(message, emoji, bool shouldReact) {
     MessageService messageService = getMessageService();
     String em = emoji;
