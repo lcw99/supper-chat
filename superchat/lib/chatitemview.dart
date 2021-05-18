@@ -166,7 +166,7 @@ class ChatItemViewState extends State<ChatItemView> {
       children: [
         SizedBox(width: 9,),
         message.tmid != null ?
-          GestureDetector(child: replyIcon, onTap: () => replyMessage())
+          GestureDetector(child: replyIcon, onTap: () => replyMessage(true))
           : SizedBox(),
         GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
           onTap: () async {
@@ -646,9 +646,9 @@ class ChatItemViewState extends State<ChatItemView> {
     } else if (value == 'copy') {
       Clipboard.setData(ClipboardData(text: message.msg));
     } else if (value == 'quote') {
-      replyMessage();
+      replyMessage(false);
     } else if (value == 'reply') {
-      replyMessage();
+      replyMessage(true);
     } else if (value == 'star') {
       getMessageService().starMessage(message.id, widget.authRC);
     } else if (value == 'unstar') {
@@ -679,10 +679,10 @@ class ChatItemViewState extends State<ChatItemView> {
     }
   }
 
-  void replyMessage() {
+  void replyMessage(bool reply) {
     widget.chatViewState.setState(() {
       quotedMessage = message;
-      quotedMessage.isReply = true;
+      quotedMessage.isReply = reply;
     });
   }
 
