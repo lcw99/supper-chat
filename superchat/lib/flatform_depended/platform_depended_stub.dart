@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dropzone/flutter_dropzone.dart';
 
 Object shareFile(String url, Map<String, String> header) {
   throw UnimplementedError('Unsupported');
@@ -14,4 +15,8 @@ Future<String> downloadAndSaveFile(String url, String fileName) async {
 
 bool isLocalhost() {
   throw UnimplementedError('Unsupported');
+}
+
+class WebClipboard {
+  addPasteListener(callback) {}
 }

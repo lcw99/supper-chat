@@ -41,3 +41,7 @@ Future<String> downloadAndSaveFile(String url, String fileName) async {
 bool isLocalhost() {
   throw UnimplementedError('Unsupported');
 }
+
+class WebClipboard {
+  addPasteListener(callback) {}
+}

@@ -5,6 +5,7 @@ import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 
 import 'edit_room.dart';
+import 'flatform_depended/platform_depended.dart';
 import 'model/join_info.dart';
 import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
@@ -80,6 +81,7 @@ final StreamController<RC.Notification> resultMessageController = StreamControll
 
 class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   Map<String, List<String>> roleToPermissions = Map<String, List<String>>();
+  WebClipboard webClipboard;
 
   int selectedPage = 0;
   int totalUnread = 0;
@@ -104,6 +106,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   void initState() {
     super.initState();
 
+    if (kIsWeb) {
+      webClipboard = WebClipboard();
+      webClipboard.addPasteListener(onClipboardImage);
+    }
+
     joinInfo = widget.joinInfo;
     webSocketService = WebSocketService(url: webSocketUrl, authentication: widget.authRC);
     subscribeAndConnect();
@@ -122,6 +129,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         setChannelById(_rid);
       }
     }
+  }
+
+  onClipboardImage(htmlFile) {
+    notificationController.add(RC.Notification(msg: 'clipboard_paste', result: htmlFile));
   }
 
   void joinRoomRequest(String joinToken) {
