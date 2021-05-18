@@ -1070,7 +1070,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Future<void> postHtmlFile(htmlFile) async {
     String fileName = htmlFile.name;
     Uint8List bytes = await dropzoneViewController.getFileData(htmlFile);
-    postImageWithEdit(fileName, bytes);
+    String mime = await dropzoneViewController.getFileMIME(htmlFile);
+    if (mime.contains('image'))
+      postImageWithEdit(fileName, bytes);
+    else
+      Message newMessage = await postFile(bytes: bytes, fileName: fileName, desc: fileName);
   }
 }
 
