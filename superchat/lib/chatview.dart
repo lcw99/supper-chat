@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
 import 'package:moor/moor.dart' as moor;
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
+import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:universal_io/io.dart';
 import 'dart:ui';
 
@@ -196,6 +197,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   AnimationController _hideFabAnimation;
+  StreamSubscription subscription;
 
   Future<void> sendUserTyping() async {
     webSocketService.sendUserTyping(widget.room.id, widget.me.username, true);
@@ -229,11 +231,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       }
     });
 
-    widget.notificationController.stream.listen((event) {
+    subscription = widget.notificationController.stream.listen((event) {
       if (event.msg == 'request_close') {
         if (this.mounted)
           Navigator.pop(context, event.collection);
         return;
+      } else if (event.msg == 'clipboard_paste') {
+        onClipboardImage(event.result);
       }
       if (event.msg == 'changed' && this.mounted) {
         if (event.collection == 'stream-room-messages') {
@@ -333,7 +337,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   @override
   void dispose() {
-    unsubscribeRoomEvent(widget.room.id);
+    subscription.cancel();
     _teController.dispose();
     _hideFabAnimation.dispose();
     myFocusNode.dispose();
@@ -589,7 +593,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             kIsWeb ? DropzoneView(
               operation: DragOperation.copy,
               cursor: CursorType.Default,
-              onCreated: (ctrl) => dropzoneViewController = ctrl,
+              onCreated: (ctrl) {
+                dropzoneViewController = ctrl;
+              },
               onLoaded: () => print('Zone loaded'),
               onError: (ev) => print('Error: $ev'),
               onHover: () {
@@ -597,16 +603,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                   onDropFile = true;
                 });
               },
-              onDrop: (ev) async {
-                print('Drop: $ev');
+              onDrop: (htmlFile) async {
                 setState(() {
                     onDropFile = false;
                 });
-                inspect(ev);
-                String fileName = ev.name;
-                Uint8List bytes = await dropzoneViewController.getFileData(ev);
-                String mimeType = await dropzoneViewController.getFileMIME(ev);
-                postFile(bytes: bytes, fileName: fileName, mimeType: mimeType);
+                postHtmlFile(htmlFile);
               },
               onLeave: () {
                 setState(() {
@@ -1048,6 +1049,16 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         Navigator.pop(context);
   }
 
+  onClipboardImage(htmlFile) {
+    postHtmlFile(htmlFile);
+  }
+
+  Future<void> postHtmlFile(htmlFile) async {
+    String fileName = htmlFile.name;
+    Uint8List bytes = await dropzoneViewController.getFileData(htmlFile);
+    String mimeType = await dropzoneViewController.getFileMIME(htmlFile);
+    postFile(bytes: bytes, fileName: fileName, mimeType: mimeType);
+  }
 }
 
 class RepeatedJobWaiter {

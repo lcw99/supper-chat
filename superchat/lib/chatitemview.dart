@@ -92,11 +92,12 @@ class ChatItemViewState extends State<ChatItemView> {
 
   Widget buildChatItemMain(Message message) {
     double leftMargin = 0;
-    if (message.tmid != null)
-      leftMargin = 40;
+    bool isThreadMessage = message.tmid != null;
+    if (isThreadMessage)
+      leftMargin = 15;
     return Container(child: _buildChatItem(message),
-      margin: EdgeInsets.only(right: 15, left: leftMargin),
-      width: MediaQuery.of(context).size.width - 15,);
+        margin: EdgeInsets.only(right: 15, left: leftMargin),
+        width: MediaQuery.of(context).size.width - 15,);
   }
 
   bool testAttachmentUserIsCached(MessageAttachment attachment) {
@@ -146,6 +147,10 @@ class ChatItemViewState extends State<ChatItemView> {
     return message.starred != null && message.starred.length > 0;
   }
 
+  final Widget replyIcon = Transform.rotate(child: Icon(Icons.call_missed_outgoing, size: 25, color: Colors.blueAccent,),
+    angle: 0.785398,
+    alignment: Alignment.center,
+  );
   Widget _buildChatItem(Message message) {
     User user = Utils.getCachedUser(userId: message.user.id);
     bool roomChangedMessage = message.t != null;
@@ -160,6 +165,9 @@ class ChatItemViewState extends State<ChatItemView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
+        message.tmid != null ?
+          GestureDetector(child: replyIcon, onTap: () => replyMessage())
+          : SizedBox(),
         GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
           onTap: () async {
             String ret = await showDialogWithWidget(context, UserInfo(userInfo: user), MediaQuery.of(context).size.height - 200);
@@ -175,7 +183,7 @@ class ChatItemViewState extends State<ChatItemView> {
             _buildUserNameLine(user),
             _buildMessage(message),
             SizedBox(height: 8,),
-          ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize),),
+          ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize + (message.tmid != null ? 25 : 0)),),
         //SizedBox(width: 40,),
       ],);});
   }
@@ -240,7 +248,6 @@ class ChatItemViewState extends State<ChatItemView> {
   Widget _buildMessage(Message message) {
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
-    bool hasReplies = message.replies != null && message.replies.length > 0;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
     return GestureDetector (
@@ -270,14 +277,6 @@ class ChatItemViewState extends State<ChatItemView> {
           Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                hasReplies ?
-                  GestureDetector(child:
-                    Container(child: Icon(Icons.add_comment_outlined, color: Colors.blueAccent), height: 30,
-                      padding: EdgeInsets.only(right: 10),
-                    ),
-                    onTap: () => replyMessage(),
-                  )
-                  : SizedBox(),
                 Expanded(flex: 1, child: bReactions ?
                 Container(
                   height: 30,
