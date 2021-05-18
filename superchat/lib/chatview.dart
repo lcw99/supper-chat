@@ -144,8 +144,10 @@ class ChatDataStore {
     _chatData.removeWhere((e) => e.threadId != null);
     for (int i = 0; i < threadMessages.length; i++) {
       int pos = findIndexByMessageId(threadMessages[i].threadId);
-      _chatData[pos].replyCount++;
-      _chatData.insert(pos, threadMessages[i]);
+      if (pos >= 0) {
+        _chatData[pos].replyCount++;
+        _chatData.insert(pos, threadMessages[i]);
+      }
     }
   }
 }
@@ -872,6 +874,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         String url = serverUri.replace(path: '/channel/${widget.room.name}',
             query: 'msg=${quotedMessage.id}').toString();
         message = '[ ]($url)  ' + message;
+        msg.text = message;
       }
       quotedMessage = null;
     }
