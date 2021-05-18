@@ -96,7 +96,7 @@ class MessageService {
   }
 
   Future<Message> roomImageUpload(String? roomId, Authentication? authentication,
-        {File? file, Uint8List? bytes, String? desc, String? mimeType, String? fileName}) async {
+        {File? file, Uint8List? bytes, String? desc, String? mimeType, String? fileName, String? tmid}) async {
     var uri = _httpService.getUri()!.replace(path: '/api/v1/rooms.upload/$roomId');
     if (mimeType == null && fileName!= null && bytes != null) {
       mimeType = lookupMimeType(fileName, headerBytes: bytes);
@@ -111,8 +111,10 @@ class MessageService {
               contentType: MediaType.parse(mimeType != null && mimeType.isNotEmpty ? mimeType : 'application/octet-stream'))
       );
 
-    if (desc != null && desc != '')
+    if (desc != null && desc.isNotEmpty)
       request.fields["description"] = desc;
+    if (tmid != null && tmid.isNotEmpty)
+      request.fields["tmid"] = tmid;
 
     var response = await request.send();
 
