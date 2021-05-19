@@ -653,8 +653,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     ChannelService channelService = getChannelService();
     UpdatedSinceFilter filter = UpdatedSinceFilter(updateSince);
     RoomUpdate roomUpdate = await channelService.getRooms(widget.authRC, filter);
+    print('roomUpdate.update.length=${roomUpdate.update.length}');
+    print('roomUpdate.remove.length=${roomUpdate.remove.length}');
+
     List<RC.Room> updatedRoom = roomUpdate.update;
-    print('updatedRoom.length = ${updatedRoom.length}');
 
     if (roomType == 'c') {
       List<RC.Room> allPublicRoom = (await channelService.getChannelList(widget.authRC)).channelList;
@@ -672,11 +674,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
     if (subsUpdate.update.isNotEmpty) {
       print('subs updated');
-      for (RC.Subscription ms in subsUpdate.update) {
-        if (ms.blocked != null && ms.blocked)
-          print('blocked!!! = ${ms.rid}');
-        String info = jsonEncode(ms.toMap());
-        await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: ms.id, info: info));
+      for (RC.Subscription sub in subsUpdate.update) {
+        if (sub.blocked != null && sub.blocked)
+          print('blocked!!! = ${sub.rid}');
+        String info = jsonEncode(sub.toMap());
+        await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: sub.id, info: info));
       }
     }
 
@@ -703,7 +705,6 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     }
 
     List<RC.Room> removedRoom = roomUpdate.remove;
-    print('removedRoom.length = ${removedRoom.length}');
 
     if (removedRoom.isNotEmpty) {
       print('room removed');
@@ -728,7 +729,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       }
       if (roomType == null || (roomType != null && room.t == roomType)) {
         room.roomAvatarUrl = await Utils.getRoomAvatarUrl(room, widget.authRC);
-        roomList.add(room);
+        if (room.t != 'd' || room.subscription.open)
+          roomList.add(room);
       }
     }
     roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });

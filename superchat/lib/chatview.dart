@@ -415,8 +415,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 PopupMenuItem(child: Text("Room Members..."), value: 'room_members',),
                 PopupMenuItem(child: Text("Add User..."), value: 'add_user',),
                 PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
-                if (widget.room.t != 'd')
-                  PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),
+                PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),
               ];
           }),
         ],
