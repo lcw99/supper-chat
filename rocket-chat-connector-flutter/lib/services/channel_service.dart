@@ -90,6 +90,8 @@ class ChannelService {
     String api = '/api/v1/groups.leave';
     if (room.t == 'c')
       api = '/api/v1/rooms.leave';
+    if (room.t == 'd')
+      api = '/api/v1/im.close';
     http.Response response = await _httpService.post(
       api,
       jsonEncode(body),
