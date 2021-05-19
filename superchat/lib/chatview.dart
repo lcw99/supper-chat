@@ -45,6 +45,7 @@ import 'package:superchat/main.dart';
 import 'add_user_to_room.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
+import 'room_files.dart';
 import 'room_info.dart';
 import 'room_members.dart';
 import 'edit_room.dart';
@@ -393,6 +394,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               if (value == 'room_info')
                 roomInformation();
               else if (value == 'pinned_messages') {}
+              else if (value == 'room_files') {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => RoomFiles(room: widget.room, authRC: widget.authRC,)));
+              }
               else if (value == 'leave_room') {
                 var r = await getChannelService().leaveRoom(widget.room, widget.authRC);
                 if (r.success)
@@ -413,6 +417,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               return [
                 PopupMenuItem(child: Text("Pinned Messages..."), value: 'pinned_messages',),
                 PopupMenuItem(child: Text("Room Members..."), value: 'room_members',),
+                PopupMenuItem(child: Text("Files..."), value: 'room_files',),
                 PopupMenuItem(child: Text("Add User..."), value: 'add_user',),
                 PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
                 PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),

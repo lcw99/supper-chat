@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
+import 'package:rocket_chat_connector_flutter/models/image_dimensions.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
@@ -13,6 +16,8 @@ import 'package:superchat/constants/constants.dart';
 
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rc;
 import 'package:http/http.dart' as http;
+import 'package:extended_image/extended_image.dart' as ei;
+import 'package:url_launcher/url_launcher.dart';
 
 class Utils {
   static UserCache userCache = UserCache();
@@ -168,6 +173,81 @@ class Utils {
             child: Image.network(url, key: UniqueKey()))
     );
   }
+
+  static String getDateString(DateTime ts) {
+    var now = DateTime.now().toLocal();
+    String dateStr = '';
+    if (now.year != ts.year)
+      dateStr += DateFormat('yyyy-').format(ts);
+    if (now.month != ts.month)
+      dateStr += DateFormat('MM-').format(ts);
+    if (now.day != ts.day) {
+      if (now.day - ts.day == 1)
+        dateStr += 'yesterday ';
+      else
+        dateStr += DateFormat('dd ').format(ts);
+    }
+    dateStr += DateFormat('jm').format(ts);
+
+    return dateStr;
+  }
+
+  static buildImageByLayout(Authentication authRC, String imagePath, double imageWidth, ImageDimensions imageDimensions) {
+    Map<String, String> query = {
+      'rc_token': authRC.data.authToken,
+      'rc_uid': authRC.data.userId
+    };
+
+    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+      //print('buildImageByLayout constraints=$constraints');
+      var dpr = MediaQuery.of(context).devicePixelRatio;
+      var imageWidthInDevice = imageWidth * dpr;
+
+      double r = imageWidthInDevice / imageDimensions.width;
+      double imageHeightInDevice = imageDimensions.height * r;
+
+      var uri = serverUri.replace(path: imagePath, queryParameters: query);
+
+      var image = ei.ExtendedImage.network(uri.toString(),
+        width: imageWidthInDevice / dpr,
+        height: imageHeightInDevice / dpr,
+        cacheWidth: 800,
+        fit: BoxFit.contain,
+        cache: true,
+        mode: kIsWeb ? ei.ExtendedImageMode.none : ei.ExtendedImageMode.gesture,
+        initGestureConfigHandler: (state) {
+          return ei.GestureConfig(
+            minScale: 0.9,
+            animationMinScale: 0.7,
+            maxScale: 3.0,
+            animationMaxScale: 3.5,
+            speed: 1.0,
+            inertialSpeed: 100.0,
+            initialScale: 1.0,
+            inPageView: false,
+            initialAlignment: ei.InitialAlignment.center,
+          );
+        },
+      );
+      return image;
+    });
+  }
+
+  static String buildDownloadUrl(Authentication authRC, String downloadLink) {
+    Map<String, String> query = {
+      'rc_token': authRC.data.authToken,
+      'rc_uid': authRC.data.userId
+    };
+    var uri = serverUri.replace(path: downloadLink, queryParameters: query);
+    return uri.toString();
+  }
+
+  static void downloadFile(Authentication authRC, String downloadLink) {
+    String downloadUrl = buildDownloadUrl(authRC, downloadLink);
+    launch(Uri.encodeFull(downloadUrl));
+  }
+
+
 }
 
 class UserCache {
