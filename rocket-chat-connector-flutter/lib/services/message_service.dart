@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:typed_data';
 import 'package:universal_io/io.dart';
 
@@ -94,6 +95,27 @@ class MessageService {
     }
     throw RocketChatException(response.body);
   }
+
+  Future<Response> getMessageReadReceipts(String messageId, Authentication authentication) async {
+    String path = '/api/v1/chat.getMessageReadReceipts';
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      {'messageId': messageId},
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("chat.getMessageReadReceipts resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return Response.fromMap(jsonDecode(resp));
+      } else {
+        return Response();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
 
   Future<Message> roomImageUpload(String? roomId, Authentication? authentication,
         {File? file, Uint8List? bytes, String? desc, String? mimeType, String? fileName, String? tmid}) async {

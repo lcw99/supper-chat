@@ -361,7 +361,7 @@ class ChatItemViewState extends State<ChatItemView> {
   Widget buildMessageBody(Message message) {
     String userName = _getUserName(message);
     var regExp = RegExp(r'\[ \]\(.*\)[\s]*');
-    if (regExp.hasMatch(message.msg)) {
+    if (message.msg != null && regExp.hasMatch(message.msg)) {
       message.msg = message.msg.replaceAll(regExp, '');
       message.urls = null;
     }
@@ -551,6 +551,7 @@ class ChatItemViewState extends State<ChatItemView> {
     if (message.user.id == widget.me.id) {
       items.add(PopupMenuItem(child: Text('Delete...'), value: 'delete'));
       items.add(PopupMenuItem(child: Text('Edit...'), value: 'edit'));
+      items.add(PopupMenuItem(child: Text('Read receipts...'), value: 'read_receipts'));
     }
 
     var pos = RelativeRect.fromLTRB(0,0,0,0);
@@ -580,6 +581,8 @@ class ChatItemViewState extends State<ChatItemView> {
       Utils.downloadFile(widget.authRC, downloadPath);
     } else if (value == 'set_profile') {
       setProfilePicture(imagePath);
+    } else if (value == 'read_receipts') {
+      getMessageService().getMessageReadReceipts(message.id, widget.authRC);
     } else if (value == 'share') {
       if (imagePath != null) {
         Map<String, String> header = {
