@@ -2,24 +2,25 @@
 //
 //     final roomMembersResponse = roomMembersResponseFromMap(jsonString);
 
+import 'package:rocket_chat_connector_flutter/models/rc_file.dart';
 import 'package:rocket_chat_connector_flutter/models/response/query_response.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 
-class RoomMembersResponse extends QueryResponse {
-  RoomMembersResponse({
-    this.users,
+class RcFileResponse extends QueryResponse {
+  RcFileResponse({
+    this.files,
     count,
     offset,
     total,
     success,
   }) : super(count: count, offset: offset, total: total, success: success);
 
-  List<User>? users;
+  List<RcFile>? files;
 
-  factory RoomMembersResponse.fromMap(Map<String, dynamic> json) {
+  factory RcFileResponse.fromMap(Map<String, dynamic> json) {
     var p = QueryResponse.fromMap(json);
-    return RoomMembersResponse(
-      users: List<User>.from(json["members"].map((x) => User.fromMap(x))),
+    return RcFileResponse(
+      files: List<RcFile>.from(json["files"].map((x) => RcFile.fromMap(x))),
       count: p.count,
       offset: p.offset,
       total: p.total,
@@ -29,7 +30,7 @@ class RoomMembersResponse extends QueryResponse {
 
   Map<String, dynamic> toMap() {
     var p = super.toMap();
-    p["users"] = List<dynamic>.from(users!.map((x) => x.toMap()));
+    p["users"] = List<dynamic>.from(files!.map((x) => x.toMap()));
     return p;
   }
 }

@@ -1,28 +1,22 @@
 import 'dart:convert';
 
-class Response {
-  bool? success;
+import 'package:rocket_chat_connector_flutter/models/response/response_base.dart';
+
+class Response extends ResponseBase {
   String? body;
 
   Response({
-    this.success = false,
+    success,
     this.body,
-  });
+  }) : super(success: success);
 
   Response.fromMap(Map<String, dynamic>? json) {
     if (json != null) {
-      success = json['success'];
       body = json['body'] != null ? json['body'] : null;
     }
   }
 
   Map<String, dynamic> toMap() => {
-        'success': success,
         'body': body,
       };
-
-  @override
-  String toString() {
-    return jsonEncode(this.toMap());
-  }
 }

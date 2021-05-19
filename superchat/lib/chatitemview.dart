@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
+import 'package:rocket_chat_connector_flutter/models/image_dimensions.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:superchat/utils/dialogs.dart';
@@ -10,7 +11,6 @@ import 'package:superchat/wigets/userinfo.dart';
 import 'package:universal_io/io.dart' as uio;
 import 'dart:typed_data';
 
-import 'package:extended_image/extended_image.dart' as ei;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -189,21 +189,7 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget _buildUserNameLine(user) {
-    var now = DateTime.now().toLocal();
-    var ts = message.ts.toLocal();
-    String dateStr = '';
-    if (now.year != ts.year)
-      dateStr += DateFormat('yyyy-').format(ts);
-    if (now.month != ts.month)
-      dateStr += DateFormat('MM-').format(ts);
-    if (now.day != ts.day) {
-      if (now.day - ts.day == 1)
-        dateStr += 'yesterday ';
-      else
-        dateStr += DateFormat('dd ').format(ts);
-    }
-    dateStr += DateFormat('jm').format(ts);
-
+    String dateStr = Utils.getDateString(message.ts);
     String userName = Utils.getUserNameByUser(user);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
@@ -356,31 +342,13 @@ class ChatItemViewState extends State<ChatItemView> {
             //SizedBox(width: 5,),
             downloadLink != null ? InkWell(
               child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
-              onTap: () async { downloadFile(downloadLink); },
+              onTap: () async { Utils.downloadFile(widget.authRC, downloadLink); },
             ) : SizedBox(),
           ]);}));
     }
     return LayoutBuilder(builder: (context, bc) {
       //print('return Column bc=$bc');
       return Container(child: Column(children: widgets), width: bc.maxWidth,);});
-  }
-
-  String buildDownloadUrl(String downloadLink) {
-    Map<String, String> query = {
-      'rc_token': widget.authRC.data.authToken,
-      'rc_uid': widget.authRC.data.userId
-    };
-    var uri = serverUri.replace(path: downloadLink, queryParameters: query);
-    return uri.toString();
-  }
-
-  void downloadFile(String downloadLink) {
-    String downloadUrl = buildDownloadUrl(downloadLink);
-    downloadByUrlLaunch(downloadUrl);
-  }
-
-  void downloadByUrlLaunch(String downloadUrl) {
-    launch(Uri.encodeFull(downloadUrl));
   }
 
   bool messageHasMessageAttachments(List<MessageAttachment> attachments) {
@@ -487,7 +455,7 @@ class ChatItemViewState extends State<ChatItemView> {
       return InkWell(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
-          child: buildImageByLayout(message, attachment)),
+          child: Utils.buildImageByLayout(widget.authRC, attachment.imageUrl, attachment.renderWidth, attachment.imageDimensions)),
         onTap: () {
           if (widget.onTapExit)
             Navigator.pop(context, message.id);
@@ -502,59 +470,10 @@ class ChatItemViewState extends State<ChatItemView> {
         tag: attachment.imageUrl + message.id + message.isAttachment.toString(),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
-          child: buildImageByLayout(message, attachment),
+          child: Utils.buildImageByLayout(widget.authRC, attachment.imageUrl, attachment.renderWidth, attachment.imageDimensions),
         ),
       ),
     );
-  }
-
-  buildImageByLayout(Message message, MessageAttachment attachment) {
-    String imagePath = attachment.imageUrl;
-    Map<String, String> header = {
-      'X-Auth-Token': widget.authRC.data.authToken,
-      'X-User-Id': widget.authRC.data.userId
-    };
-
-    Map<String, String> query = {
-      'rc_token': widget.authRC.data.authToken,
-      'rc_uid': widget.authRC.data.userId
-    };
-
-    return LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
-      //print('buildImageByLayout constraints=$constraints');
-      var dpr = MediaQuery.of(context).devicePixelRatio;
-      var imageWidth = attachment.renderWidth;
-      var imageWidthInDevice = imageWidth * dpr;
-
-      double r = imageWidthInDevice / attachment.imageDimensions.width;
-      double imageHeightInDevice = attachment.imageDimensions.height * r;
-
-      var uri = serverUri.replace(path: imagePath, queryParameters: query);
-
-      var image = ei.ExtendedImage.network(uri.toString(),
-        width: imageWidthInDevice / dpr,
-        height: imageHeightInDevice / dpr,
-        cacheWidth: 800,
-        fit: BoxFit.contain,
-        headers: header,
-        cache: true,
-        mode: kIsWeb ? ei.ExtendedImageMode.none : ei.ExtendedImageMode.gesture,
-        initGestureConfigHandler: (state) {
-          return ei.GestureConfig(
-            minScale: 0.9,
-            animationMinScale: 0.7,
-            maxScale: 3.0,
-            animationMaxScale: 3.5,
-            speed: 1.0,
-            inertialSpeed: 100.0,
-            initialScale: 1.0,
-            inPageView: false,
-            initialAlignment: ei.InitialAlignment.center,
-          );
-        },
-      );
-      return image;
-    });
   }
 
   pickReaction(Message message) async {
@@ -658,7 +577,7 @@ class ChatItemViewState extends State<ChatItemView> {
     } else if (value == 'edit') {
       handleUpdateMessage(message);
     } else if (value == 'download') {
-      downloadFile(downloadPath);
+      Utils.downloadFile(widget.authRC, downloadPath);
     } else if (value == 'set_profile') {
       setProfilePicture(imagePath);
     } else if (value == 'share') {
@@ -672,7 +591,7 @@ class ChatItemViewState extends State<ChatItemView> {
       } else {
         String share = message.msg;
         if (share == null || share.isEmpty)
-          share = buildDownloadUrl(getDownloadLink(message));
+          share = Utils.buildDownloadUrl(widget.authRC, getDownloadLink(message));
         if (share != null && share.isNotEmpty)
           Share.share(share);
       }

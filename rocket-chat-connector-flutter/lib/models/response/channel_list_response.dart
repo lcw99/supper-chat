@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:rocket_chat_connector_flutter/models/channel.dart';
+import 'package:rocket_chat_connector_flutter/models/response/response_base.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 
-class ChannelListResponse {
+class ChannelListResponse extends ResponseBase {
   List<Room>? channelList = [];
   bool? success;
 

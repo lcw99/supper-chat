@@ -16,6 +16,7 @@ import 'package:rocket_chat_connector_flutter/models/new/channel_new.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_new_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/channel_list_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/create_direct_message_response.dart';
+import 'package:rocket_chat_connector_flutter/models/response/rcfile_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/room_members_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/spotlight_response.dart';
@@ -23,7 +24,7 @@ import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart';
-import 'package:rocket_chat_connector_flutter/models/room.dart' as model;
+import 'package:rocket_chat_connector_flutter/models/room.dart' as RC;
 
 class ChannelService {
   HttpService _httpService;
@@ -84,7 +85,7 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<Response> leaveRoom(model.Room room, Authentication authentication) async {
+  Future<Response> leaveRoom(RC.Room room, Authentication authentication) async {
     Map<String, String?> body = {"roomId": room.id};
 
     String api = '/api/v1/groups.leave';
@@ -178,7 +179,7 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<Response> roomAnnouncement(model.Room? room, String? announcement, Authentication authentication) async {
+  Future<Response> roomAnnouncement(RC.Room? room, String? announcement, Authentication authentication) async {
     String path = '/api/v1/channels.setAnnouncement';
     if (room!.t == 'p')
       path = '/api/v1/groups.setAnnouncement';
@@ -224,6 +225,38 @@ class ChannelService {
         return RoomMembersResponse.fromMap(jsonDecode(resp));
       } else {
         return RoomMembersResponse();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<RcFileResponse> getFiles(RC.Room room, Authentication authentication, {int? offset, int? count, Map<String, int>? sort}) async {
+    String path = '/api/v1/groups.files';
+    if (room.t == 'c')
+      path = '/api/v1/channels.files';
+    if (room.t == 'd')
+      path = '/api/v1/im.files';
+    Map<String, dynamic> payload = {"roomId": room.id};
+    if (offset != null)
+      payload["offset"] = offset;
+    if (count != null)
+      payload["count"] = count;
+    if (sort != null)
+      payload["sort"] = sort;
+
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      payload,
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("files resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return RcFileResponse.fromMap(jsonDecode(resp));
+      } else {
+        return RcFileResponse(success: false);
       }
     }
     throw RocketChatException(response.body);
@@ -290,7 +323,7 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
-  Future<model.Room> getRoomInfo(Authentication authentication, {String? roomId, String? roomName}) async {
+  Future<RC.Room> getRoomInfo(Authentication authentication, {String? roomId, String? roomName}) async {
     String path = '/api/v1/rooms.info';
     var payLoad;
     if (roomId != null)
@@ -298,7 +331,7 @@ class ChannelService {
     else if (roomName != null)
       payLoad = {'roomName': roomName};
     if (payLoad == null)
-      return model.Room();
+      return RC.Room();
     http.Response response = await _httpService.getWithQuery(
       path,
       payLoad,
@@ -309,10 +342,10 @@ class ChannelService {
     log("chat.getRoomInfo resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty) {
-        return model.Room.fromMap(jsonDecode(resp)['room']);
+        return RC.Room.fromMap(jsonDecode(resp)['room']);
       }
     }
-    return model.Room();
+    return RC.Room();
   }
 
   Future<SyncMessages> syncMessages(String roomId, DateTime lastUpdate, Authentication authentication) async {
