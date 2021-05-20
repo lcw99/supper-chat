@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -115,7 +116,7 @@ class Utils {
     else
       roomType = Icon(Icons.device_unknown, color: Colors.yellow);
 
-    String roomName = r.name;
+    String roomName = getRoomName(r);
     if (r.name == null && r.t == 'd') {
       roomName = r.usernames.toString();
     }
@@ -125,6 +126,17 @@ class Utils {
       r.u != null && r.u.id == ownerId ? Icon(Icons.perm_identity, color: Colors.white) : SizedBox(),
       Expanded(child: Text(roomName, overflow: TextOverflow.fade,)),
     ],);
+  }
+
+  static String getRoomName(Room room) {
+    String roomName = room.fname;
+    if (roomName == null)
+      roomName = room.name;
+    if (roomName == null) {
+      if (room.t == 'd')
+        roomName = room.usernames.toString();
+    }
+    return roomName;
   }
 
   static showToast(String msg) {
@@ -175,6 +187,7 @@ class Utils {
   }
 
   static String getDateString(DateTime ts) {
+    ts = ts.toLocal();
     var now = DateTime.now().toLocal();
     String dateStr = '';
     if (now.year != ts.year)
@@ -305,3 +318,25 @@ class UserCache {
 
 }
 
+typedef void TaskCallback();
+class TaskQueue {
+  final int delay;
+
+  TaskQueue(this.delay) {
+    taskQ = Queue();
+  }
+
+  Queue<TaskCallback> taskQ;
+  static bool running = false;
+
+  addTask(TaskCallback callback) async {
+    taskQ.add(callback);
+
+    if (taskQ.isNotEmpty) {
+      while(running) await Future.delayed(Duration(milliseconds: delay));
+      running = true;
+      await Future.delayed(Duration(milliseconds: delay), () => taskQ.removeFirst()());
+      running = false;
+    }
+  }
+}

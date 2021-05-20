@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/image_dimensions.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
+import 'package:superchat/create_discussion.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:superchat/utils/dialogs.dart';
 import 'package:superchat/wigets/userinfo.dart';
@@ -65,6 +66,8 @@ class ChatItemView extends StatefulWidget {
 class ChatItemViewState extends State<ChatItemView> {
   Message message;
   GlobalKey<_ReactionViewState> keyReactionView = GlobalKey();
+  TaskQueue taskQueue = TaskQueue(1000);
+
   @override
   Widget build(BuildContext context) {
     User messageUser;
@@ -91,6 +94,13 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget buildChatItemMain(Message message) {
+    if(!message.isAttachment && widget.room.usersCount < 10) {
+      if (message.reactions == null ||
+          !message.reactions.containsKey(readCountEmoji) ||
+          !message.reactions[readCountEmoji].usernames.contains(widget.me.username))
+        taskQueue.addTask(() => getWebsocketService().setReaction(message.id, readCountEmoji, true));
+    }
+
     double leftMargin = 0;
     bool isThreadMessage = message.tmid != null;
     if (isThreadMessage)
@@ -147,10 +157,12 @@ class ChatItemViewState extends State<ChatItemView> {
     return message.starred != null && message.starred.length > 0;
   }
 
+/*
   final Widget replyIcon = Transform.rotate(child: Icon(Icons.call_missed_outgoing, size: 25, color: Colors.blueAccent,),
     angle: 0.785398,
     alignment: Alignment.center,
   );
+*/
   Widget _buildChatItem(Message message) {
     User user = Utils.getCachedUser(userId: message.user.id);
     bool roomChangedMessage = message.t != null;
@@ -166,7 +178,7 @@ class ChatItemViewState extends State<ChatItemView> {
       children: [
         SizedBox(width: 9,),
         message.tmid != null ?
-          GestureDetector(child: replyIcon, onTap: () => replyMessage(true))
+          GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,), onTap: () => replyMessage(true))
           : SizedBox(),
         GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
           onTap: () async {
@@ -236,6 +248,15 @@ class ChatItemViewState extends State<ChatItemView> {
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
+
+    int unreadCount = widget.room.usersCount;
+    if (bReactions) {
+      if (reactions.containsKey(readCountEmoji)) {
+        unreadCount -= reactions[readCountEmoji].usernames.length;
+        if (reactions.keys.length == 1)
+          bReactions = false;
+      }
+    }
     return GestureDetector (
       onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
       onLongPress: () { if (!widget.onTapExit) messagePopupMenu(context, tabPosition, message); },
@@ -245,14 +266,22 @@ class ChatItemViewState extends State<ChatItemView> {
         children: <Widget>[
           GestureDetector (
             onTap: () {
-              if (widget.onTapExit)
+              if (message.t == 'discussion-created')
+                Navigator.pop(context, message.drid);
+              else if (widget.onTapExit)
                 Navigator.pop(context, message.id);
               else if (!message.isAttachment)
                 pickReaction(message);
               else
                 widget.chatViewState.findAndScroll(message.id);
             },
-            child: buildMessageBody(message),
+            child: Stack(children: [
+              buildMessageBody(message),
+              message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox()
+                : Container(child: Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
+                    alignment: Alignment.topRight, padding: EdgeInsets.only(right: 2),
+                ),
+            ]),
           ),
           bAttachments ?
             LayoutBuilder(builder: (context, boxConstraint){
@@ -373,6 +402,7 @@ class ChatItemViewState extends State<ChatItemView> {
       case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
       case 'room_changed_description': newMessage = '$userName change room description'; break;
       case 'message_pinned': newMessage = '$userName pinned message'; break;
+      case 'discussion-created': newMessage = '$userName created discussion(${message.msg})'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
     }
     var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
@@ -414,6 +444,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 message.editedBy != null ?
                   Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
                   SizedBox(),
+                  message.t == 'discussion-created' ? Icon(Icons.double_arrow_sharp, color: Colors.blueAccent,) : SizedBox(),
               ])
           ),
           message.urls != null && message.urls.length > 0
@@ -539,6 +570,7 @@ class ChatItemViewState extends State<ChatItemView> {
     items.add(PopupMenuItem(child: Text('Quote...'), value: 'quote'));
     if (message.tmid == null)
       items.add(PopupMenuItem(child: Text('Reply...'), value: 'reply'));
+    items.add(PopupMenuItem(child: Text('Create Discussion...'), value: 'create_discussion'));
     if (_messageStarred(message))
       items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
     else
@@ -563,6 +595,8 @@ class ChatItemViewState extends State<ChatItemView> {
     );
     if (value == 'delete') {
       widget.chatHomeState.deleteMessage(message.id);
+    } else if (value == 'create_discussion') {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => CreateDiscussion(parentRoomId: widget.room.id, parentMessageId: message.id, authRC: widget.authRC,)));
     } else if (value == 'copy') {
       Clipboard.setData(ClipboardData(text: message.msg));
     } else if (value == 'quote') {
@@ -679,6 +713,8 @@ class _ReactionViewState extends State<ReactionView> {
       itemCount: reactions.keys.length,
       itemBuilder: (context, index) {
         var emoji = reactions.keys.elementAt(index);
+        if (emoji == readCountEmoji)
+          return SizedBox();
         Reaction r = reactions[emoji];
         return GestureDetector (
             onTap: () { widget.chatItemViewState.onReactionTouch(widget.message, emoji, r); },

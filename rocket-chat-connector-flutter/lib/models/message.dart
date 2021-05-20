@@ -20,6 +20,7 @@ class Message {
   DateTime? ts;
   User? user;
   String? rid;
+  String? drid;
   DateTime? updatedAt;
   Map<String, Reaction>? reactions;
   List<Mention>? mentions;
@@ -54,6 +55,7 @@ class Message {
     this.ts,
     this.user,
     this.rid,
+    this.drid,
     this.reactions,
     this.mentions,
     this.channels,
@@ -96,6 +98,7 @@ class Message {
       ts = jsonToDateTime(json['ts']);
       user = json['u'] != null ? User.fromMap(json['u']) : null;
       rid = json['rid'];
+      drid = json['drid'];
       updatedAt = jsonToDateTime(json['_updatedAt']);
       id = json['_id'];
 
@@ -214,6 +217,9 @@ class Message {
     }
     if (rid != null) {
       map['rid'] = rid;
+    }
+    if (drid != null) {
+      map['drid'] = drid;
     }
     if (updatedAt != null) {
       //map['_updatedAt'] = updatedAt!.toIso8601String();
