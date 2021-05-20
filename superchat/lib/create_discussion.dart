@@ -3,7 +3,7 @@ import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 
-import 'wigets/select_user.dart';
+import 'widgets/select_user.dart';
 
 class CreateDiscussion extends StatefulWidget {
   const CreateDiscussion({Key key, this.parentRoomId, this.parentMessageId, this.authRC}) : super(key: key);

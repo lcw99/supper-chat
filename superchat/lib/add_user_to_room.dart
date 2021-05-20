@@ -7,7 +7,7 @@ import 'package:rocket_chat_connector_flutter/models/response/spotlight_response
 import 'package:superchat/chathome.dart';
 
 import 'utils/utils.dart';
-import 'wigets/select_user.dart';
+import 'widgets/select_user.dart';
 
 class AddUser extends StatefulWidget {
   final Room room;

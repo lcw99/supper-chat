@@ -11,12 +11,14 @@ class Response extends ResponseBase {
   }) : super(success: success);
 
   Response.fromMap(Map<String, dynamic>? json) {
+    success = ResponseBase.fromMap(json).success;
     if (json != null) {
       body = json['body'] != null ? json['body'] : null;
     }
   }
 
   Map<String, dynamic> toMap() => {
+        'success': success,
         'body': body,
       };
 }

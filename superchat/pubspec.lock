@@ -231,7 +231,7 @@ packages:
       path: "../emoji_picker_flutter"
       relative: true
     source: path
-    version: "1.0.4"
+    version: "1.0.5"
   equatable:
     dependency: transitive
     description:
