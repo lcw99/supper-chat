@@ -8,7 +8,7 @@ import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:superchat/create_discussion.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
 import 'package:superchat/utils/dialogs.dart';
-import 'package:superchat/wigets/userinfo.dart';
+import 'package:superchat/widgets/userinfo.dart';
 import 'package:universal_io/io.dart' as uio;
 import 'dart:typed_data';
 
@@ -41,7 +41,8 @@ import 'chatview.dart';
 import 'constants/constants.dart';
 import 'main.dart';
 import 'utils/utils.dart';
-import 'wigets/full_screen_image.dart';
+import 'widgets/full_screen_image.dart';
+import 'read_receipt.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 import 'database/chatdb.dart' as db;
 
@@ -398,7 +399,8 @@ class ChatItemViewState extends State<ChatItemView> {
     switch (message.t) {
       case 'au': newMessage = '$userName added ${message.msg}'; break;
       case 'ru': newMessage = '$userName removed ${message.msg}'; break;
-      case 'uj': newMessage = '$userName joined'; break;
+      case 'uj': newMessage = '$userName joined room'; break;
+      case 'ul': newMessage = '$userName leave room'; break;
       case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
       case 'room_changed_description': newMessage = '$userName change room description'; break;
       case 'message_pinned': newMessage = '$userName pinned message'; break;
@@ -583,8 +585,9 @@ class ChatItemViewState extends State<ChatItemView> {
     if (message.user.id == widget.me.id) {
       items.add(PopupMenuItem(child: Text('Delete...'), value: 'delete'));
       items.add(PopupMenuItem(child: Text('Edit...'), value: 'edit'));
-      items.add(PopupMenuItem(child: Text('Read receipts...'), value: 'read_receipts'));
     }
+    if (widget.room.t != 'd')
+      items.add(PopupMenuItem(child: Text('Read receipts...'), value: 'read_receipts'));
 
     var pos = RelativeRect.fromLTRB(0,0,0,0);
     if (tabPosition != null)
@@ -616,7 +619,7 @@ class ChatItemViewState extends State<ChatItemView> {
     } else if (value == 'set_profile') {
       setProfilePicture(imagePath);
     } else if (value == 'read_receipts') {
-      getMessageService().getMessageReadReceipts(message.id, widget.authRC);
+      Navigator.push(context, MaterialPageRoute(builder: (context) => ReadReceipt(room: widget.room, messageId: message.id, authRC: widget.authRC,)));
     } else if (value == 'share') {
       if (imagePath != null) {
         Map<String, String> header = {

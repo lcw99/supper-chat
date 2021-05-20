@@ -100,12 +100,14 @@ class ChannelService {
       authentication,
     );
 
+    var resp = utf8.decode(response.bodyBytes);
+    log("^^^^^^^^^^^^^^^^^^^^^leaveRoom^^^^^^^^^^^^ resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return Response.fromMap(jsonDecode(response.body));
+        return Response.fromMap(jsonDecode(resp));
       }
     }
-    return Response(success: false, body: response.body);
+    return Response(success: false, body: resp);
   }
 
   Future<CreateDirectMessageResponse> createDirectMessage(String username, Authentication authentication) async {

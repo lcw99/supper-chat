@@ -41,7 +41,7 @@ import 'package:rocket_chat_connector_flutter/services/http_service.dart' as roc
 import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/permission.dart';
 import 'my_profile.dart';
-import 'wigets/unread_counter.dart';
+import 'widgets/unread_counter.dart';
 
 import 'chatview.dart';
 import 'database/chatdb.dart' as db;

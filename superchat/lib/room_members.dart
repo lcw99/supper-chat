@@ -80,9 +80,12 @@ class _RoomMembersState extends State<RoomMembers> {
       return usersData;
     RoomMembersResponse r = await getChannelService().getRoomMembers(widget.room.id, widget.room.t, widget.authRC, offset: offset, count: count, sort: { "username": 1 });
     int ownerIndex = r.users.indexWhere((element) => element.id == widget.room.u.id);
-    User owner = r.users.removeAt(ownerIndex);
+    User owner;
+    if (ownerIndex >= 0)
+      owner = r.users.removeAt(ownerIndex);
     usersData.addAll(r.users);
-    usersData.insert(0, owner);
+    if (ownerIndex >= 0)
+      usersData.insert(0, owner);
     if (r.total == r.offset + r.count)
       endOfData = true;
     return usersData;

@@ -5,7 +5,7 @@ import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/models/response/rcfile_response.dart';
 import 'package:rocket_chat_connector_flutter/models/rc_file.dart';
-import 'package:superchat/wigets/full_screen_image.dart';
+import 'widgets/full_screen_image.dart';
 
 import 'constants/constants.dart';
 import 'utils/utils.dart';

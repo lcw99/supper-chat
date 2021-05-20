@@ -13,6 +13,7 @@ import 'package:rocket_chat_connector_flutter/models/response/message_new_respon
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rocket_http_service;
 import 'package:rocket_chat_connector_flutter/models/new/reaction_new.dart';
+import 'package:rocket_chat_connector_flutter/models/response/receipt_response.dart';
 
 import 'package:path/path.dart' as path;
 import 'package:mime/mime.dart';
@@ -96,7 +97,7 @@ class MessageService {
     throw RocketChatException(response.body);
   }
 
-  Future<Response> getMessageReadReceipts(String messageId, Authentication authentication) async {
+  Future<ReceiptResponse> getMessageReadReceipts(String messageId, Authentication authentication) async {
     String path = '/api/v1/chat.getMessageReadReceipts';
     http.Response response = await _httpService.getWithQuery(
       path,
@@ -108,9 +109,9 @@ class MessageService {
     log("chat.getMessageReadReceipts resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        return Response.fromMap(jsonDecode(resp));
+        return ReceiptResponse.fromMap(jsonDecode(resp));
       } else {
-        return Response();
+        return ReceiptResponse(success: false);
       }
     }
     throw RocketChatException(response.body);

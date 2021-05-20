@@ -414,14 +414,17 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               }
             },
             itemBuilder: (context){
-              return [
+              var menu = [
                 PopupMenuItem(child: Text("Pinned Messages..."), value: 'pinned_messages',),
-                PopupMenuItem(child: Text("Room Members..."), value: 'room_members',),
                 PopupMenuItem(child: Text("Files..."), value: 'room_files',),
-                PopupMenuItem(child: Text("Add User..."), value: 'add_user',),
-                PopupMenuItem(child: Text("Room Information..."), value: 'room_info',),
                 PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),
               ];
+              if (widget.room.t != 'd') {
+                menu.add(PopupMenuItem(child: Text("Room Members..."), value: 'room_members',));
+                menu.add(PopupMenuItem(child: Text("Add User..."), value: 'add_user',));
+                menu.add(PopupMenuItem(child: Text("Room Information..."), value: 'room_info',));
+              }
+              return menu;
           }),
         ],
       ),
