@@ -65,7 +65,7 @@ class ChatDatabase extends _$ChatDatabase {
   // you should bump this number whenever you change or add a table definition. Migrations
   // are covered later in this readme.
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,7 +76,7 @@ class ChatDatabase extends _$ChatDatabase {
         print('migration from=$from, to=$to');
         if (from == 1) {
           await m.alterTable(TableMigration(rooms));
-        } else if (from == 10) {
+        } else if (from == 11) {
           for (final table in allTables) {
             await m.deleteTable(table.actualTableName);
             await m.createTable(table);

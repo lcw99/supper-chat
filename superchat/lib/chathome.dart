@@ -429,10 +429,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => EditRoom(chatHomeState: this, user: widget.user)));
               },
             ),
+/*
             ListTile(
               title: Text('Delete Local Data'),
               onTap: deleteAllTables,
             ),
+*/
           ],
         ),
       ),
@@ -524,15 +526,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         RC.Room room = roomList[index];
-        String roomName = room.name;
+        String roomName = Utils.getRoomName(room);
         int unreadCount = 0;
         if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
           unreadCount = room.subscription.unread;
-        if (roomName == null) {
-          if (room.t == 'd') {
-            roomName = room.usernames.toString();
-          }
-        }
 
         Widget roomType;
         if (room.t == 'c')

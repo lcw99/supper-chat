@@ -192,7 +192,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     print('+++++==== ChatView state=$state');
     if (state == AppLifecycleState.resumed) {
-      await _getChannelMessages(chatItemCount, chatItemOffset, true, syncMessages: true);
+      await _getRoomMessages(chatItemCount, chatItemOffset, true, syncMessages: true);
       setState(() {
         getMoreMessages = false;  // do not call future build.
       });
@@ -500,7 +500,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               getMoreMessages = false;
               if (chatDataStore.length == 0)
                 ua = true;
-              return _getChannelMessages(chatItemCount, chatItemOffset, ua);
+              return _getRoomMessages(chatItemCount, chatItemOffset, ua);
             } (),
             builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
               print('~~~~~~~~ builder update=${snapshot.hasData}, con state=${snapshot.connectionState}');
@@ -564,8 +564,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         //keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         itemBuilder: (context, index) {
           Message message = chatDataStore.getMessageAt(index);
-          // return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-          // messageId: messageId, me: widget.me, authRC: widget.authRC, );
+          // main list ChatItemView
           return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
             message: message, me: widget.me, authRC: widget.authRC, index: index, room: widget.room, chatViewState: this,);
         }
@@ -688,7 +687,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       index = chatDataStore.findIndexByMessageId(messageId);
       print('@@@ selected message=$messageId, index=$index');
       chatItemOffset += chatItemCount;
-      await _getChannelMessages(chatItemCount, chatItemOffset, true, syncMessages: false);
+      await _getRoomMessages(chatItemCount, chatItemOffset, true, syncMessages: false);
       count++;
       //await Future.delayed(Duration(seconds: 1), () {});
     } while(index < 0 && count < 100);
@@ -965,7 +964,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   static int historyCallCount = 0;
-  Future<ChannelMessages> _getChannelMessages(int count, int offset, bool _getMoreMessages, { bool syncMessages = true }) async {
+  Future<ChannelMessages> _getRoomMessages(int count, int offset, bool _getMoreMessages, { bool syncMessages = true }) async {
     print('!!!!!! get room history _getMoreMessages=$_getMoreMessages, syncMessages=$syncMessages');
     historyEnd = false;
     if (_getMoreMessages) {

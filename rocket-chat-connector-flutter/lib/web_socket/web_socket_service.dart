@@ -297,6 +297,17 @@ class WebSocketService {
     webSocketChannel!.sink.add(jsonEncode(msg));
   }
 
+  void setReaction(String messageId, String emoji, bool set) {
+    Map msg = {
+      "msg": "method",
+      "method": "setReaction",
+      "id": setReactionId,
+      "params": ["$emoji", "$messageId", set]
+    };
+    print('${DateTime.now()}------setReaction called------');
+    webSocketChannel!.sink.add(jsonEncode(msg));
+  }
+
   void getRoomRoles(String roomId) {
     Map msg = {
       "msg": "method",
@@ -345,80 +356,6 @@ class WebSocketService {
   }
 
 
-/*
 
-  void streamNotifyLoggedSubscribe(String uid, String userName, int status) {
-    Map msg = {
-      "msg": "sub",
-      "id": "${uid}subscription-id",
-      "name": "stream-notify-logged",
-      "fields": {
-        "eventName": "user-status",
-        "args": [["$uid", "$userName", status]] // 0 Offline 1 Online 2 Away 3 Busy
-      }
-    };
-
-    webSocketChannel.sink.add(jsonEncode(msg));
-  }
-
-  void streamChannelMessagesUnsubscribe(Channel channel) {
-    Map msg = {
-      "msg": "unsub",
-      "id": channel.id! + "subscription-id",
-    };
-    webSocketChannel.sink.add(jsonEncode(msg));
-  }
-
-  void streamRoomNotifyAll(WebSocketChannel webSocketChannel) {
-    Map msg = {
-      "msg": "sub",
-      "id": "subscription-id-9999",
-      "name": "stream-notify-all",
-      "params": ["event", false]
-    };
-    var data = jsonEncode(msg);
-    print('socket=$data');
-    webSocketChannel.sink.add(data);
-  }
-
-  void streamRoomMessagesUnsubscribe(
-      Room room) {
-    Map msg = {
-      "msg": "unsub",
-      "id": room.id! + "subscription-id",
-    };
-    webSocketChannel.sink.add(jsonEncode(msg));
-  }
-
-  void sendMessageOnChannel(
-      String message, String channelId) {
-    Map msg = {
-      "msg": "method",
-      "method": "sendMessage",
-      "id": "42",
-      "params": [
-        {"rid": channelId, "msg": message}
-      ]
-    };
-
-    webSocketChannel.sink.add(jsonEncode(msg));
-  }
-
-  void sendMessageOnRoom(
-      String message, Room room) {
-    Map msg = {
-      "msg": "method",
-      "method": "sendMessage",
-      "id": "42",
-      "params": [
-        {"rid": room.id, "msg": message}
-      ]
-    };
-
-    webSocketChannel.sink.add(jsonEncode(msg));
-  }
-
-
-*/
 }
 

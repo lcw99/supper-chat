@@ -6,7 +6,7 @@
 class CreateDirectMessageResponse {
   CreateDirectMessageResponse({
     this.room,
-    this.success,
+    this.success = false,
   });
 
   Room? room;

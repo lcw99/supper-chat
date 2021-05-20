@@ -23,6 +23,7 @@ import 'package:rocket_chat_connector_flutter/models/response/spotlight_response
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
+import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart' as RC;
 
@@ -31,7 +32,7 @@ class ChannelService {
 
   ChannelService(this._httpService);
 
-  Future<ChannelNewResponse> create(
+  Future<ChannelNewResponse> createChannel(
       ChannelNew channelNew, Authentication authentication) async {
     http.Response response = await _httpService.post(
       '/api/v1/channels.create',
@@ -121,6 +122,35 @@ class ChannelService {
         return CreateDirectMessageResponse.fromMap(jsonDecode(response.body));
       } else {
         return CreateDirectMessageResponse();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+  Future<Room> createDiscussion(String parentRoomId, String discussionName, List<String>? users, String parentMessageId,  Authentication authentication) async {
+    Map<String, dynamic?> body = {
+      "prid": "$parentRoomId",
+      "t_name": "$discussionName",
+      "pmid": "$parentMessageId",
+    };
+
+    if (users != null && users.length > 0)
+      body["users"] = users;
+
+    String payload = jsonEncode(body);
+    http.Response response = await _httpService.post(
+      '/api/v1/rooms.createDiscussion',
+      payload,
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("^^^^^^^^^^^^^^^^^^^^^createDiscussion^^^^^^^^^^^^ resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return Room.fromMap(jsonDecode(resp)["discussion"]);
+      } else {
+        return Room();
       }
     }
     throw RocketChatException(response.body);
