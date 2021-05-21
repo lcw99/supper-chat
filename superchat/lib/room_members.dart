@@ -5,7 +5,9 @@ import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/models/response/room_members_response.dart';
 
+import 'utils/dialogs.dart';
 import 'utils/utils.dart';
+import 'widgets/userinfo.dart';
 
 class RoomMembers extends StatefulWidget {
   final Room room;
@@ -19,6 +21,7 @@ class RoomMembers extends StatefulWidget {
 class _RoomMembersState extends State<RoomMembers> {
   List<User> usersData;
   bool endOfData = false;
+  bool refreshAll = false;
   bool getMoreData = false;
   int dataOffset = 0;
   int dataCount = 50;
@@ -62,8 +65,24 @@ class _RoomMembersState extends State<RoomMembers> {
                   itemBuilder: (context, index) {
                     User user = users[index];
                     return GestureDetector(
-                      onTap: () {
-
+                      onTap: () async {
+                        var actionChild = InkWell(
+                            onTap: () { Navigator.pop(context, 'kick.out.member'); },
+                            child: Wrap(children: <Widget>[
+                              Icon(Icons.remove_circle_outlined, color: Colors.redAccent), SizedBox(width: 5,),
+                              Text('Kick out'),
+                            ],)
+                        );
+                        String ret = await showDialogWithWidget(context, UserInfoWithAction(userInfo: user, actionChild: actionChild,), MediaQuery.of(context).size.height - 200);
+                        if (ret != 'kick.out.member')
+                          return;
+                        var resp = await getChannelService().kickMember(widget.room, user.id, widget.authRC);
+                        if (!resp.success) {
+                          Utils.showToast('Kick out error : ${resp.body}');
+                        } else
+                          setState(() {
+                            refreshAll = true;
+                          });
                       },
                       child: Utils.buildUser(user, 40));
                   }
@@ -78,8 +97,12 @@ class _RoomMembersState extends State<RoomMembers> {
   }
 
   Future<List<User>> getRoomMembers(int offset, int count) async {
-    if (endOfData)
+    if (endOfData && !refreshAll)
       return usersData;
+    if (refreshAll) {
+      refreshAll = false;
+      usersData.clear();
+    }
     RoomMembersResponse r = await getChannelService().getRoomMembers(widget.room.id, widget.room.t, widget.authRC, offset: offset, count: count, sort: { "username": 1 });
     int ownerIndex = r.users.indexWhere((element) => element.id == widget.room.u.id);
     User owner;

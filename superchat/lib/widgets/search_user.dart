@@ -77,7 +77,14 @@ class SearchUserState extends State<SearchUser> {
                       User user = users[index];
                       return GestureDetector(
                         onTap: () async {
-                          String ret = await showDialogWithWidget(context, UserInfo(userInfo: user), MediaQuery.of(context).size.height - 200);
+                          var actionChild = InkWell(
+                              onTap: () { Navigator.pop(context, 'im.create'); },
+                              child: Wrap(children: <Widget>[
+                                Icon(Icons.chat_outlined),
+                                Text('Direct Message'),
+                              ],)
+                          );
+                          String ret = await showDialogWithWidget(context, UserInfoWithAction(userInfo: user, actionChild: actionChild,), MediaQuery.of(context).size.height - 200);
                           if (ret != 'im.create')
                             return;
                           widget.onUserSelected(user);
