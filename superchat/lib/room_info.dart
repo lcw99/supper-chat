@@ -21,6 +21,7 @@ import 'package:rocket_chat_connector_flutter/models/constants/message_id.dart';
 
 import 'constants/constants.dart';
 import 'chatview.dart';
+import 'utils/dialogs.dart';
 import 'utils/utils.dart';
 
 class RoomInfo extends StatefulWidget {
@@ -68,7 +69,7 @@ class _RoomInfoState extends State<RoomInfo> {
     return Scaffold(
         appBar: AppBar(
         leadingWidth: 25,
-        title: Utils.getRoomTitle(context, widget.room, widget.user.id),
+        title: Utils.getRoomTitle(context, widget.room, widget.user),
     ),
     body: FutureBuilder<model.Room>(
       future: getRoom(widget.room.id),
@@ -223,30 +224,12 @@ class _RoomInfoState extends State<RoomInfo> {
   }
 
   void deleteRoom(context) async {
-    var result = await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-              title: Text('Delete Room'),
-              content: Text('Are you sure?'),
-              actions: [
-                TextButton(
-                  child: Text("Cancel"),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                TextButton(
-                  child: Text("OK"),
-                  onPressed: () {
-                    chatHomeStateKey.currentState.deleteRoom(widget.room.id);
-                    Navigator.pop(context, 'OK');
-                  },
-                ),
-              ]
-          );
-        }
-    );
+    var result = await showSimpleAlertDialog(context, 'Delete Room', 'Are you sure?', () {
+      chatHomeStateKey.currentState.deleteRoom(widget.room.id);
+      Navigator.pop(context, 'OK');
+    }, onCancel: () {
+      Navigator.pop(context);
+    });
     if (result == 'OK')
       Navigator.pop(context, 'room deleted');
   }

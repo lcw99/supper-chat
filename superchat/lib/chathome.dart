@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
+import 'package:superchat/create_direct_message.dart';
 
 import 'edit_room.dart';
 import 'flatform_depended/platform_depended.dart';
 import 'model/join_info.dart';
+import 'utils/dialogs.dart';
 import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
 
@@ -90,7 +92,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   bool firebaseInitialized = false;
 
-  final StreamController<RC.Notification> notificationController = StreamController<RC.Notification>.broadcast();
+  StreamController<RC.Notification> notificationController;
 
   static bool bChatScreenOpen = false;
 
@@ -104,6 +106,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   @override
   void initState() {
+    notificationController = StreamController<RC.Notification>.broadcast();
     super.initState();
 
     if (kIsWeb) {
@@ -268,24 +271,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   showNetworkAlertDialog() async {
-    await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-              title: Text('Network error'),
-              content: Text('Retry to connect?'),
-              actions: [
-                TextButton(
-                  child: Text("OK"),
-                  onPressed: () {
-                    subscribeAndConnect();
-                    Navigator.pop(context);
-                  },
-                ),
-              ]
-          );
-        }
-    );
+    showSimpleAlertDialog(context, 'Network error', 'Retry to connect?', () {
+      subscribeAndConnect();
+      Navigator.pop(context);
+    });
   }
 
   showJoinAlertDialog() async {
@@ -509,6 +498,22 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       floating: false,
       pinned: true,
       systemOverlayStyle: SystemUiOverlayStyle.dark,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add_comment),
+          onPressed: () async {
+            if (selectedPage == 0 || selectedPage == 1)
+              Navigator.push(context, MaterialPageRoute(builder: (context) => EditRoom(chatHomeState: this, user: widget.user)));
+            else {
+              User user = await Navigator.push(context, MaterialPageRoute(builder: (context) => CreateDirectMessage(authRC: widget.authRC)));
+              if (user == null)
+                return;
+              var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
+              Future.delayed(Duration(seconds: 2), () => setChannelById(resp.room.rid));
+            }
+          },
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
           centerTitle: true,
           title: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start,
@@ -526,7 +531,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         RC.Room room = roomList[index];
-        String roomName = Utils.getRoomName(room);
+        String roomName = Utils.getRoomName(room, widget.authRC.data.me);
         int unreadCount = 0;
         if (room.subscription != null && room.subscription.unread != null && room.subscription.unread > 0)
           unreadCount = room.subscription.unread;
@@ -814,30 +819,12 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   void deleteAllTables() async {
-    var result = await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-              title: Text('Delete Local Data'),
-              content: Text('Are you sure?'),
-              actions: [
-                TextButton(
-                  child: Text("Cancel"),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                TextButton(
-                  child: Text("OK"),
-                  onPressed: () {
-                    locator<db.ChatDatabase>().deleteAllTables();
-                    Navigator.pop(context, 'OK');
-                  },
-                ),
-              ]
-          );
-        }
-    );
+    var result = await showSimpleAlertDialog(context, 'Delete Local Data', 'Are you sure?', () {
+      locator<db.ChatDatabase>().deleteAllTables();
+      Navigator.pop(context, 'OK');
+    }, onCancel: () {
+      Navigator.pop(context);
+    });
     if (result == 'OK') {
       googleSignIn.signOut();
       navGlobalKey.currentState.pushAndRemoveUntil(MaterialPageRoute(builder: (context) => LoginHome()), (route) => false);

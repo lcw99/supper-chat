@@ -375,7 +375,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       key: chatViewKey,
       appBar: AppBar(
         leadingWidth: 25,
-        title: Utils.getRoomTitle(context, widget.room, widget.me.id),
+        title: Utils.getRoomTitle(context, widget.room, widget.me),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.star_border_outlined),
@@ -407,7 +407,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               else if (value == 'room_members')
                 Navigator.push(context, MaterialPageRoute(builder: (context) => RoomMembers(room: widget.room, authRC: widget.authRC,)));
               else if (value == 'add_user') {
-                if (permissions.contains('add-user-to-joined-room'))
+                if (permissions != null && permissions.contains('add-user-to-joined-room'))
                   Navigator.push(context, MaterialPageRoute(builder: (context) => AddUser(room: widget.room, authRC: widget.authRC,)));
                 else
                   Utils.showToast('You are not allowed to add members');

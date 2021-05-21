@@ -21,16 +21,18 @@ class _UserInfoState extends State<UserInfo> {
         children: [
           SizedBox(height: 15,),
           Image.network(Utils.getAvatarUrl(userInfo)),
+/*
           ListTile(
             title: Text('id'),
             subtitle: Text(userInfo.id),
           ),
+*/
           ListTile(
-            title: Text('user name'),
+            title: Text('User name'),
             subtitle: Text(userInfo.username == null ? '' : userInfo.username),
           ),
           ListTile(
-            title: Text('display name'),
+            title: Text('Display name'),
             subtitle: Text(userInfo.name),
           ),
           ListTile(
@@ -38,7 +40,7 @@ class _UserInfoState extends State<UserInfo> {
             subtitle: userInfo.emails != null && userInfo.emails.first != null ? Text(userInfo.emails.first.address.toString()) : SizedBox(),
           ),
           Container(
-              padding: EdgeInsets.only(top: 20),
+              padding: EdgeInsets.only(top: 5),
               child: InkWell(
                   onTap: () { Navigator.pop(context, 'im.create'); },
                   child: Wrap(children: <Widget>[

@@ -110,6 +110,28 @@ class ChannelService {
     return Response(success: false, body: resp);
   }
 
+  Future<Response> kickMember(RC.Room room, String userId, Authentication authentication) async {
+    Map<String, String?> body = { "roomId": room.id, "userId": userId };
+
+    String api = '/api/v1/groups.kick';
+    if (room.t == 'c')
+      api = '/api/v1/channels.kick';
+    http.Response response = await _httpService.post(
+      api,
+      jsonEncode(body),
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("^^^^^^^^^^^^^^^^^^^^^kickMember^^^^^^^^^^^^ resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return Response.fromMap(jsonDecode(resp));
+      }
+    }
+    return Response(success: false, body: resp);
+  }
+
   Future<CreateDirectMessageResponse> createDirectMessage(String username, Authentication authentication) async {
     Map<String, String?> body = {"username": username};
 
