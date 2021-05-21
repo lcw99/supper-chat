@@ -336,8 +336,13 @@ class TaskQueue {
     if (taskQ.isNotEmpty) {
       while(running) await Future.delayed(Duration(milliseconds: delay));
       running = true;
-      await Future.delayed(Duration(milliseconds: delay), () => taskQ.removeFirst()());
+      await Future.delayed(Duration(milliseconds: delay), () => taskQ.isNotEmpty ? taskQ.removeFirst()() : taskQ.clear());
       running = false;
     }
+  }
+
+  clear() {
+    taskQ.clear();
+    running = false;
   }
 }

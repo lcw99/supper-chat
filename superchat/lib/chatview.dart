@@ -164,6 +164,7 @@ class ChatItemData {
 }
 
 class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerProviderStateMixin<ChatView>  {
+  TaskQueue taskQueueMarkMessageRead;
   TextEditingController _teController = TextEditingController();
   int chatItemOffset = 0;
   final int chatItemCount = 50;
@@ -212,6 +213,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   @override
   void initState() {
+    taskQueueMarkMessageRead = TaskQueue(1000);
+
     quotedMessage = null;
     subscribeRoomEvent(widget.room.id);
 
@@ -248,6 +251,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             var arg = event.notificationFields.notificationArgs[0];
             log('+++++stream-room-messages:' + jsonEncode(arg));
             Message roomMessage = Message.fromMap(arg);
+            if (roomMessage.rid != widget.room.id) {
+              print('not this room message~~~~~!!!');
+              return;
+            }
             //print(jsonEncode(roomMessage));
             if (roomMessage.t == 'room_changed_announcement') {
               widget.room.announcement = roomMessage.msg;
@@ -340,6 +347,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   @override
   void dispose() {
+    taskQueueMarkMessageRead.clear();
     subscription.cancel();
     _teController.dispose();
     _hideFabAnimation.dispose();

@@ -67,7 +67,6 @@ class ChatItemView extends StatefulWidget {
 class ChatItemViewState extends State<ChatItemView> {
   Message message;
   GlobalKey<_ReactionViewState> keyReactionView = GlobalKey();
-  TaskQueue taskQueue = TaskQueue(1000);
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +98,7 @@ class ChatItemViewState extends State<ChatItemView> {
       if (message.reactions == null ||
           !message.reactions.containsKey(readCountEmoji) ||
           !message.reactions[readCountEmoji].usernames.contains(widget.me.username))
-        taskQueue.addTask(() => getWebsocketService().setReaction(message.id, readCountEmoji, true));
+        widget.chatViewState.taskQueueMarkMessageRead.addTask(() => getWebsocketService().setReaction(message.id, readCountEmoji, true));
     }
 
     double leftMargin = 0;
