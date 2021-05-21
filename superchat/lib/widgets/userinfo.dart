@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:superchat/utils/utils.dart';
 
-class UserInfo extends StatefulWidget {
+class UserInfoWithAction extends StatefulWidget {
   final User userInfo;
-  const UserInfo({Key key, this.userInfo}) : super(key: key);
+  final Widget actionChild;
+  const UserInfoWithAction({Key key, this.userInfo, this.actionChild}) : super(key: key);
 
   @override
-  _UserInfoState createState() => _UserInfoState();
+  _UserInfoWithActionState createState() => _UserInfoWithActionState();
 }
 
-class _UserInfoState extends State<UserInfo> {
+class _UserInfoWithActionState extends State<UserInfoWithAction> {
   @override
   Widget build(BuildContext context) {
     return buildUserProfile(widget.userInfo);
@@ -41,13 +42,8 @@ class _UserInfoState extends State<UserInfo> {
           ),
           Container(
               padding: EdgeInsets.only(top: 5),
-              child: InkWell(
-                  onTap: () { Navigator.pop(context, 'im.create'); },
-                  child: Wrap(children: <Widget>[
-                    Icon(Icons.chat_outlined),
-                    Text('Direct Message'),
-                  ],)
-              )),
+              child: widget.actionChild,
+          ),
         ]));
   }
 }
