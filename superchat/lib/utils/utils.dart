@@ -105,7 +105,7 @@ class Utils {
     }
   }
 
-  static Widget getRoomTitle(context, Room r, String ownerId) {
+  static Widget getRoomTitle(context, Room r, User owner) {
     Widget roomType;
     if (r.t == 'c')
       roomType = Icon(Icons.public, color: Colors.white);
@@ -116,25 +116,26 @@ class Utils {
     else
       roomType = Icon(Icons.device_unknown, color: Colors.yellow);
 
-    String roomName = getRoomName(r);
-    if (r.name == null && r.t == 'd') {
-      roomName = r.usernames.toString();
-    }
+    String roomName = getRoomName(r, owner);
 
     return Row(children: [
       roomType,
-      r.u != null && r.u.id == ownerId ? Icon(Icons.perm_identity, color: Colors.white) : SizedBox(),
+      r.u != null && r.u.id == owner.id ? Icon(Icons.perm_identity, color: Colors.white) : SizedBox(),
       Expanded(child: Text(roomName, overflow: TextOverflow.fade,)),
     ],);
   }
 
-  static String getRoomName(Room room) {
-    String roomName = room.fname;
+  static String getRoomName(Room r, User owner) {
+    String roomName = r.fname;
     if (roomName == null)
-      roomName = room.name;
+      roomName = r.name;
     if (roomName == null) {
-      if (room.t == 'd')
-        roomName = room.usernames.toString();
+      if (r.t == 'd')
+        roomName = r.usernames.toString();
+    }
+    if (r.name == null && r.t == 'd') {
+      r.usernames.remove(owner.name);
+      roomName = r.usernames.first;
     }
     return roomName;
   }

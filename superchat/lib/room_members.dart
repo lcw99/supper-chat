@@ -62,7 +62,9 @@ class _RoomMembersState extends State<RoomMembers> {
                   itemBuilder: (context, index) {
                     User user = users[index];
                     return GestureDetector(
-                      onTap: () {  },
+                      onTap: () {
+
+                      },
                       child: Utils.buildUser(user, 40));
                   }
                 )
