@@ -42,6 +42,7 @@ class Message {
 
   bool? isAttachment = false;
   bool? isReply = false;
+  String? displayMessage;
 
   Message({
     this.id,

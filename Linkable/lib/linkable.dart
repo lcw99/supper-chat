@@ -9,7 +9,6 @@ import 'package:linkable/link.dart';
 import 'package:linkable/mentionParser.dart';
 import 'package:linkable/parser.dart';
 import 'package:linkable/telParser.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 typedef void LinkClickCallback(String text, String type);
 class Linkable extends StatelessWidget {
