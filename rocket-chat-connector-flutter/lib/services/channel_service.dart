@@ -18,6 +18,7 @@ import 'package:rocket_chat_connector_flutter/models/response/channel_list_respo
 import 'package:rocket_chat_connector_flutter/models/response/create_direct_message_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/rcfile_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
+import 'package:rocket_chat_connector_flutter/models/response/response_base.dart';
 import 'package:rocket_chat_connector_flutter/models/response/room_members_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/spotlight_response.dart';
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
@@ -316,6 +317,33 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
+
+  Future<ResponseBase> ignoreUser(String roomId, String userId, bool ignore, Authentication authentication) async {
+    String path = '/api/v1/chat.ignoreUser';
+    var payload = {
+      'rid': roomId,
+      'userId': userId,
+      'ignore': ignore
+    };
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      payload,
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    //log("chat.ignoreUser resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return ResponseBase.fromMap(jsonDecode(resp));
+      } else {
+        return ResponseBase();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
+
   Future<ChannelMessages> getStarredMessages(String roomId, Authentication authentication) async {
     String path = '/api/v1/chat.getStarredMessages';
     http.Response response = await _httpService.getWithQuery(
@@ -476,7 +504,7 @@ class ChannelService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         var resp = utf8.decode(response.bodyBytes);
-        //log("subscriptions.get resp=$resp");
+        log("subscriptions.get resp=$resp");
         return SubscriptionUpdate.fromMap(jsonDecode(resp));
       } else {
         return SubscriptionUpdate();

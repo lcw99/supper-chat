@@ -680,6 +680,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         if (sub.blocked != null && sub.blocked)
           print('blocked!!! = ${sub.rid}');
         String info = jsonEncode(sub.toMap());
+        //print('updated sub=$info');
         await locator<db.ChatDatabase>().upsertSubscription(db.Subscription(sid: sub.id, info: info));
       }
     }

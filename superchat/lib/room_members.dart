@@ -64,27 +64,45 @@ class _RoomMembersState extends State<RoomMembers> {
                   itemCount: users.length,
                   itemBuilder: (context, index) {
                     User user = users[index];
+                    bool ignoredUser = widget.room.subscription.ignored != null && widget.room.subscription.ignored.contains(user.id);
                     return GestureDetector(
                       onTap: () async {
-                        var actionChild = InkWell(
+                        var actionChild = Column(children: [
+                          InkWell(
                             onTap: () { Navigator.pop(context, 'kick.out.member'); },
                             child: Wrap(children: <Widget>[
                               Icon(Icons.remove_circle_outlined, color: Colors.redAccent), SizedBox(width: 5,),
                               Text('Kick out'),
                             ],)
-                        );
+                          ),
+                          SizedBox(height: 5,),
+                          InkWell(
+                              onTap: () { Navigator.pop(context, 'ignore.user'); },
+                              child: Wrap(children: <Widget>[
+                                Icon(Icons.notifications_off_outlined, color: Colors.redAccent,),
+                                Text(ignoredUser ? 'Un-ignore User' : 'Ignore User', style: TextStyle(color: Colors.blueAccent)),
+                              ],)
+                          ),
+                        ]);
                         String ret = await showDialogWithWidget(context, UserInfoWithAction(userInfo: user, actionChild: actionChild,), MediaQuery.of(context).size.height - 200);
-                        if (ret != 'kick.out.member')
-                          return;
-                        var resp = await getChannelService().kickMember(widget.room, user.id, widget.authRC);
-                        if (!resp.success) {
-                          Utils.showToast('Kick out error : ${resp.body}');
-                        } else
-                          setState(() {
-                            refreshAll = true;
-                          });
+                        if (ret == 'kick.out.member') {
+                          var resp = await getChannelService().kickMember(widget.room, user.id, widget.authRC);
+                          if (!resp.success) {
+                            Utils.showToast('Kick out error : ${resp.body}');
+                          } else
+                            setState(() {
+                              refreshAll = true;
+                            });
+                        } else if (ret == 'ignore.user') {
+                          bool setIgnore = true;
+                          if (ignoredUser)
+                            setIgnore = false;
+                          var resp = await getChannelService().ignoreUser(widget.room.id, user.id, setIgnore, widget.authRC);
+                          Utils.showToast(resp.success ? (setIgnore ? 'User ignored' : 'User Un-ignored') : 'error');
+                          Navigator.pop(context);
+                        }
                       },
-                      child: Utils.buildUser(user, 40));
+                      child: Utils.buildUser(user, 40, userTag: ignoredUser ? Icon(Icons.notifications_off_outlined, color: Colors.grey) : null));
                   }
                 )
               );

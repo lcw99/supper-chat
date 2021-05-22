@@ -182,18 +182,35 @@ class ChatItemViewState extends State<ChatItemView> {
           : SizedBox(),
         GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
           onTap: () async {
-            var actionChild = InkWell(
+            bool ignoredUser = widget.room.subscription.ignored != null && widget.room.subscription.ignored.contains(user.id);
+            var actionChild = Column(children: [
+              InkWell(
                 onTap: () { Navigator.pop(context, 'im.create'); },
                 child: Wrap(children: <Widget>[
-                  Icon(Icons.chat_outlined),
-                  Text('Direct Message'),
+                  Icon(Icons.chat_outlined, color: Colors.blueAccent),
+                  Text('Direct Message', style: TextStyle(color: Colors.blueAccent)),
                 ],)
-            );
+              ),
+              SizedBox(height: 5,),
+              InkWell(
+                  onTap: () { Navigator.pop(context, 'ignore.user'); },
+                  child: Wrap(children: <Widget>[
+                    Icon(Icons.notifications_off_outlined, color: Colors.redAccent,),
+                    Text(ignoredUser ? 'Un-ignore User' : 'Ignore User', style: TextStyle(color: Colors.blueAccent)),
+                  ],)
+              ),
+            ]);
             String ret = await showDialogWithWidget(context, UserInfoWithAction(userInfo: user, actionChild: actionChild,), MediaQuery.of(context).size.height - 200);
-            if (ret != 'im.create')
-              return;
-            var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
-            Future.delayed(Duration(seconds: 2), () => widget.chatViewState.popToChatHome(resp.room.rid));
+            if (ret == 'im.create') {
+              var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
+              Future.delayed(Duration(seconds: 2), () => widget.chatViewState.popToChatHome(resp.room.rid));
+            } else if (ret == 'ignore.user') {
+              bool setIgnore = true;
+              if (ignoredUser)
+                setIgnore = false;
+              var resp = await getChannelService().ignoreUser(widget.room.id, user.id, setIgnore, widget.authRC);
+              Utils.showToast(resp.success ? (setIgnore ? 'User ignored' : 'User Un-ignored') : 'error');
+            }
         },),
         SizedBox(width: 5,),
         Container(child: Column(

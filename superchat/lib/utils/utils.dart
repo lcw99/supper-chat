@@ -76,7 +76,8 @@ class Utils {
     if (room.t == 'd') {
       for (String u in room.usernames) {
         if (u != authentication.data.me.username) {
-          User user = await getUserInfo(authentication, userName: u);
+          //User user = await getUserInfo(authentication, userName: u);
+          User user = User(username: u);
           return getAvatarUrl(user);
         }
       }
@@ -152,15 +153,20 @@ class Utils {
     );
   }
 
-  static buildUser(user, double size) {
-    return ListTile(
-      dense: true,
-      leading: Utils.buildUserAvatar(size, user),
-      title: Text(
+  static buildUser(user, double size, { Widget userTag }) {
+    List<Widget> title = [
+      Text(
         Utils.getUserNameByUser(user) ,
         style: TextStyle(fontSize: 15, color: Colors.black),
         textAlign: TextAlign.left,
-      ),
+      )
+    ];
+    if (userTag != null)
+      title.add(userTag);
+    return ListTile(
+      dense: true,
+      leading: Utils.buildUserAvatar(size, user),
+      title: Wrap(children: title),
       subtitle: Text(
         user.username ,
         style: TextStyle(fontSize: 12, color: Colors.black54),
