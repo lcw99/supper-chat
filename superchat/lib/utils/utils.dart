@@ -160,7 +160,7 @@ class Utils {
     ];
     if (userTag != null)
       title.add(userTag);
-    return Row(
+    return Container(child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
       Utils.buildUserAvatar(size, user),
@@ -177,7 +177,7 @@ class Utils {
         ),
         SizedBox(height: size / 5,),
       ])),
-    ]);
+    ]), decoration: BoxDecoration(border: Border.all(color: Colors.transparent)));
   }
 
 
@@ -312,7 +312,7 @@ class Utils {
       case 'discussion-created': newMessage = '$userName created discussion(${message.msg})'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
     }
-    message.msg = newMessage;
+    message.displayMessage = newMessage;
     return message;
   }
 

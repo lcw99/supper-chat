@@ -592,10 +592,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       return SizedBox();
     Message message = Utils.toDisplayMessage(room.lastMessage);
 
-    if ((message.msg == null || message.msg.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
-      message.msg = room.lastMessage.attachments.first.title;
+    if ((message.displayMessage == null || message.displayMessage.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
+      message.displayMessage = room.lastMessage.attachments.first.title;
 
-    if (message.msg == null)
+    if (message.displayMessage == null)
       return SizedBox();
 
     return Linkable(

@@ -402,7 +402,7 @@ class ChatItemViewState extends State<ChatItemView> {
 
   Widget buildMessageBody(Message message) {
     message = Utils.toDisplayMessage(message);
-    String newMessage = message.msg;
+    String newMessage = message.displayMessage;
     var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
     if (message.t != null)
       messageFontSize = MESSAGE_FONT_SIZE * 0.6;
