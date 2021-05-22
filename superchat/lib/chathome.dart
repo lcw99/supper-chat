@@ -400,23 +400,26 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           padding: EdgeInsets.zero,
           children: <Widget>[
             DrawerHeader(
-              child: Text('Super Chat'),
+              child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('SUPER CHAT', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w900, fontFamily: 'Audiowide'),),
+                Text('$version($buildNumber)', style: TextStyle(color: Colors.white, fontSize: 11, fontStyle: FontStyle.italic),),
+              ],),
               decoration: BoxDecoration(
                 color: Colors.blue,
               ),
             ),
             ListTile(
-              title: Text('My Profile'),
+              title: Wrap(children: [Icon(Icons.person_outline), SizedBox(width: 5,), Text('My Profile')],),
               onTap: () async {
                 Navigator.pop(context);
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => MyProfile(widget.user, widget.authRC)));
               },
             ),
             ListTile(
-              title: Text('Create Room'),
+              title: Wrap(children: [Icon(Icons.settings), SizedBox(width: 5,), Text('Settings')],),
               onTap: () async {
-                Navigator.pop(context);
-                await Navigator.push(context, MaterialPageRoute(builder: (context) => EditRoom(chatHomeState: this, user: widget.user)));
               },
             ),
 /*
