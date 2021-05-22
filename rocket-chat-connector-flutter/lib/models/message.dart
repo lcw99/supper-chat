@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:rocket_chat_connector_flutter/models/bot.dart';
-import 'package:rocket_chat_connector_flutter/models/mention.dart';
 import 'package:rocket_chat_connector_flutter/models/message_attachment.dart';
 import 'package:rocket_chat_connector_flutter/models/reaction.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
@@ -23,7 +22,7 @@ class Message {
   String? drid;
   DateTime? updatedAt;
   Map<String, Reaction>? reactions;
-  List<Mention>? mentions;
+  List<User>? mentions;
   List<String>? channels;
   List<String>? replies;
   String? emoji;
@@ -114,7 +113,7 @@ class Message {
             : json['mentions'];
         mentions = jsonList
             .where((json) => json != null)
-            .map((json) => Mention.fromMap(json))
+            .map((json) => User.fromMap(json))
             .toList();
       }
       channels =

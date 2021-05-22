@@ -698,9 +698,9 @@ packages:
   linkable:
     dependency: "direct main"
     description:
-      name: linkable
-      url: "https://pub.dartlang.org"
-    source: hosted
+      path: "../Linkable"
+      relative: true
+    source: path
     version: "1.0.9"
   linkify:
     dependency: transitive

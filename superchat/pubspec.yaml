@@ -41,7 +41,6 @@ dependencies:
   get_it:
   intl: ^0.17.0
   pinch_zoom: ^0.1.0
-  linkable: ^1.0.9
   flutter_link_previewer: ^2.0.0
   url_launcher: ^6.0.3
   extended_image: ^4.0.1
@@ -63,6 +62,8 @@ dependencies:
   flutter_dropzone: ^2.0.1
   fluro: ^2.0.3
   async: ^2.5.0
+  linkable:
+    path: ../Linkable
   emoji_picker_flutter:
     path: ../emoji_picker_flutter
   ss_image_editor:
