@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:linkable/linkable.dart';
+import 'package:linkable/constants.dart';
 import 'package:path_provider/path_provider.dart' as pp;
 import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/emojis.dart';
@@ -94,7 +95,7 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget buildChatItemMain(Message message) {
-    if(!message.isAttachment && widget.room.usersCount < 10) {
+    if(!message.isAttachment && widget.room.usersCount < 10 && !widget.onTapExit) {
       if (message.reactions == null ||
           !message.reactions.containsKey(readCountEmoji) ||
           !message.reactions[readCountEmoji].usernames.contains(widget.me.username))
@@ -157,12 +158,6 @@ class ChatItemViewState extends State<ChatItemView> {
     return message.starred != null && message.starred.length > 0;
   }
 
-/*
-  final Widget replyIcon = Transform.rotate(child: Icon(Icons.call_missed_outgoing, size: 25, color: Colors.blueAccent,),
-    angle: 0.785398,
-    alignment: Alignment.center,
-  );
-*/
   Widget _buildChatItem(Message message) {
     User user = Utils.getCachedUser(userId: message.user.id);
     bool roomChangedMessage = message.t != null;
@@ -181,37 +176,8 @@ class ChatItemViewState extends State<ChatItemView> {
           GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,), onTap: () => replyMessage(true))
           : SizedBox(),
         GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
-          onTap: () async {
-            bool ignoredUser = widget.room.subscription.ignored != null && widget.room.subscription.ignored.contains(user.id);
-            var actionChild = Column(children: [
-              InkWell(
-                onTap: () { Navigator.pop(context, 'im.create'); },
-                child: Wrap(children: <Widget>[
-                  Icon(Icons.chat_outlined, color: Colors.blueAccent),
-                  Text('Direct Message', style: TextStyle(color: Colors.blueAccent)),
-                ],)
-              ),
-              SizedBox(height: 5,),
-              InkWell(
-                  onTap: () { Navigator.pop(context, 'ignore.user'); },
-                  child: Wrap(children: <Widget>[
-                    Icon(Icons.notifications_off_outlined, color: Colors.redAccent,),
-                    Text(ignoredUser ? 'Un-ignore User' : 'Ignore User', style: TextStyle(color: Colors.blueAccent)),
-                  ],)
-              ),
-            ]);
-            String ret = await showDialogWithWidget(context, UserInfoWithAction(userInfo: user, actionChild: actionChild,), MediaQuery.of(context).size.height - 200);
-            if (ret == 'im.create') {
-              var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
-              Future.delayed(Duration(seconds: 2), () => widget.chatViewState.popToChatHome(resp.room.rid));
-            } else if (ret == 'ignore.user') {
-              bool setIgnore = true;
-              if (ignoredUser)
-                setIgnore = false;
-              var resp = await getChannelService().ignoreUser(widget.room.id, user.id, setIgnore, widget.authRC);
-              Utils.showToast(resp.success ? (setIgnore ? 'User ignored' : 'User Un-ignored') : 'error');
-            }
-        },),
+          onTap: () async { await userClickAction(user); },
+        ),
         SizedBox(width: 5,),
         Container(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,6 +188,38 @@ class ChatItemViewState extends State<ChatItemView> {
           ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize + (message.tmid != null ? 25 : 0)),),
         //SizedBox(width: 40,),
       ],);});
+  }
+
+  userClickAction(user) async {
+    bool ignoredUser = widget.room.subscription.ignored != null && widget.room.subscription.ignored.contains(user.id);
+    var actionChild = Column(children: [
+      InkWell(
+          onTap: () { Navigator.pop(context, 'im.create'); },
+          child: Wrap(children: <Widget>[
+            Icon(Icons.chat_outlined, color: Colors.blueAccent),
+            Text('Direct Message', style: TextStyle(color: Colors.blueAccent)),
+          ],)
+      ),
+      SizedBox(height: 5,),
+      InkWell(
+          onTap: () { Navigator.pop(context, 'ignore.user'); },
+          child: Wrap(children: <Widget>[
+            Icon(Icons.notifications_off_outlined, color: Colors.redAccent,),
+            Text(ignoredUser ? 'Un-ignore User' : 'Ignore User', style: TextStyle(color: Colors.blueAccent)),
+          ],)
+      ),
+    ]);
+    String ret = await showDialogWithWidget(context, UserInfoWithAction(userInfo: user, actionChild: actionChild,), MediaQuery.of(context).size.height - 200);
+    if (ret == 'im.create') {
+      var resp = await getChannelService().createDirectMessage(user.username, widget.authRC);
+      Future.delayed(Duration(seconds: 2), () => widget.chatViewState.popToChatHome(resp.room.rid));
+    } else if (ret == 'ignore.user') {
+      bool setIgnore = true;
+      if (ignoredUser)
+        setIgnore = false;
+      var resp = await getChannelService().ignoreUser(widget.room.id, user.id, setIgnore, widget.authRC);
+      Utils.showToast(resp.success ? (setIgnore ? 'User ignored' : 'User Un-ignored') : 'error');
+    }
   }
 
   Widget _buildUserNameLine(user) {
@@ -255,15 +253,6 @@ class ChatItemViewState extends State<ChatItemView> {
         alignment: Alignment.centerRight,
       )),
     ]);
-  }
-
-  _getUserName(Message message) {
-    String userName = '';
-    if (message.user.name != null)
-      userName += ' ' + message.user.name;
-    if (userName == '' && message.user.username != null)
-      userName += ' ' + message.user.username;
-    return userName;
   }
 
   Offset tabPosition;
@@ -412,24 +401,8 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget buildMessageBody(Message message) {
-    String userName = _getUserName(message);
-    var regExp = RegExp(r'\[ \]\(.*\)[\s]*');
-    if (message.msg != null && regExp.hasMatch(message.msg)) {
-      message.msg = message.msg.replaceAll(regExp, '');
-      message.urls = null;
-    }
+    message = Utils.toDisplayMessage(message);
     String newMessage = message.msg;
-    switch (message.t) {
-      case 'au': newMessage = '$userName added ${message.msg}'; break;
-      case 'ru': newMessage = '$userName removed ${message.msg}'; break;
-      case 'uj': newMessage = '$userName joined room'; break;
-      case 'ul': newMessage = '$userName leave room'; break;
-      case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
-      case 'room_changed_description': newMessage = '$userName change room description'; break;
-      case 'message_pinned': newMessage = '$userName pinned message'; break;
-      case 'discussion-created': newMessage = '$userName created discussion(${message.msg})'; break;
-      default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
-    }
     var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
     if (message.t != null)
       messageFontSize = MESSAGE_FONT_SIZE * 0.6;
@@ -459,12 +432,15 @@ class ChatItemViewState extends State<ChatItemView> {
                 children: [
                 MouseRegion(
                 cursor: SystemMouseCursors.text,
-                child: kIsWeb && !widget.onTapExit ? SelectableText(
-                  newMessage,
-                  style: TextStyle(fontSize: messageFontSize, color: Colors.black, fontWeight: FontWeight.normal),
-                ) : Linkable(
+                child: Linkable(
                   text: newMessage,
                   style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
+                  linkClickCallback: (String text, String type) {
+                    if (widget.onTapExit)
+                      Navigator.pop(context, message.id);
+                    else
+                      _launch(_getUrl(message, text, type));
+                  },
                 )),
                 message.editedBy != null ?
                   Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
@@ -476,6 +452,32 @@ class ChatItemViewState extends State<ChatItemView> {
               ? buildUrls(message)
               : SizedBox(),
         ]));
+  }
+
+  _launch(String url) async {
+    if (url == null)
+      return;
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
+  _getUrl(Message message, String text, String type) {
+    switch (type) {
+      case "http":
+        return text.substring(0, 4) == 'http' ? text : 'http://$text';
+      case "email":
+        return text.substring(0, 7) == 'mailto:' ? text : 'mailto:$text';
+      case "tel":
+        return text.substring(0, 4) == 'tel:' ? text : 'tel:$text';
+      case "mention":
+        userClickAction(message.mentions.where((e) => e.name == text).single);
+        return null;
+      default:
+        return text;
+    }
   }
 
   Widget buildUrls(Message message) {

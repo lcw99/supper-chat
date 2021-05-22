@@ -10,6 +10,7 @@ import 'package:rocket_chat_connector_flutter/models/authentication.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/filters/userid_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/image_dimensions.dart';
+import 'package:rocket_chat_connector_flutter/models/message.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
 import 'package:rocket_chat_connector_flutter/models/user.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
@@ -130,11 +131,7 @@ class Utils {
     String roomName = r.fname;
     if (roomName == null)
       roomName = r.name;
-    if (roomName == null) {
-      if (r.t == 'd')
-        roomName = r.usernames.toString();
-    }
-    if (r.name == null && r.t == 'd') {
+    if (roomName == null && r.t == 'd') {
       r.usernames.remove(owner.name);
       roomName = r.usernames.first;
     }
@@ -153,26 +150,34 @@ class Utils {
     );
   }
 
-  static buildUser(user, double size, { Widget userTag }) {
+  static buildUser(user, double size, { Widget userTag, bool compact = false }) {
     List<Widget> title = [
       Text(
         Utils.getUserNameByUser(user) ,
-        style: TextStyle(fontSize: 15, color: Colors.black),
+        style: TextStyle(fontSize: size / 2, color: Colors.black),
         textAlign: TextAlign.left,
       )
     ];
     if (userTag != null)
       title.add(userTag);
-    return ListTile(
-      dense: true,
-      leading: Utils.buildUserAvatar(size, user),
-      title: Wrap(children: title),
-      subtitle: Text(
-        user.username ,
-        style: TextStyle(fontSize: 12, color: Colors.black54),
-        textAlign: TextAlign.left,
-      ),
-    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+      Utils.buildUserAvatar(size, user),
+      Expanded(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+        Wrap(children: title),
+        compact ? SizedBox() : Text(
+          user.username ,
+          style: TextStyle(fontSize: 12, color: Colors.black54,),
+          textAlign: TextAlign.left,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        SizedBox(height: size / 5,),
+      ])),
+    ]);
   }
 
 
@@ -267,6 +272,49 @@ class Utils {
     launch(Uri.encodeFull(downloadUrl));
   }
 
+  static String _getUserName(Message message) {
+    String userName = '';
+    if (message.user == null)
+      return userName;
+    if (message.user.name != null)
+      userName += ' ' + message.user.name;
+    if (userName == '' && message.user.username != null)
+      userName += ' ' + message.user.username;
+    return userName;
+  }
+
+
+  static Message toDisplayMessage(Message message) {
+    String userName = _getUserName(message);
+    var regExp = RegExp(r'\[ \]\(.*\)[\s]*');
+    if (message.msg != null && regExp.hasMatch(message.msg)) {
+      message.msg = message.msg.replaceAll(regExp, '');
+      message.urls = null;
+    }
+    if (message.mentions != null && message.mentions.length > 0) {
+      for (User u in message.mentions) {
+        String name = u.name;
+        if (name == null)
+          name = u.username;
+        message.msg = message.msg.replaceAll(RegExp('@' + u.username + '\\b'), '%$name#');
+      }
+    }
+
+    String newMessage = message.msg;
+    switch (message.t) {
+      case 'au': newMessage = '$userName added ${message.msg}'; break;
+      case 'ru': newMessage = '$userName removed ${message.msg}'; break;
+      case 'uj': newMessage = '$userName joined room'; break;
+      case 'ul': newMessage = '$userName leave room'; break;
+      case 'room_changed_avatar': newMessage = '$userName change room avatar'; break;
+      case 'room_changed_description': newMessage = '$userName change room description'; break;
+      case 'message_pinned': newMessage = '$userName pinned message'; break;
+      case 'discussion-created': newMessage = '$userName created discussion(${message.msg})'; break;
+      default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
+    }
+    message.msg = newMessage;
+    return message;
+  }
 
 }
 

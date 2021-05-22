@@ -22,6 +22,7 @@ class User {
   dynamic? services;
   DateTime? lastLogin;
   String? avatarETag;
+  String? type;
 
   User({
     this.id,
@@ -40,6 +41,7 @@ class User {
     this.services,
     this.lastLogin,
     this.avatarETag,
+    this.type,
   });
 
   User.fromMap(Map<String, dynamic>? json) {
@@ -99,6 +101,7 @@ class User {
 
       lastLogin = jsonToDateTime(json['lastLogin']);
       avatarETag = json['avatarETag'];
+      type = json['type'] != null ? json['type'] : null;
     }
   }
 
@@ -159,6 +162,9 @@ class User {
 
     if (avatarETag != null) {
       map['avatarETag'] = avatarETag;
+    }
+    if (type != null) {
+      map['type'] = type;
     }
 
     return map;

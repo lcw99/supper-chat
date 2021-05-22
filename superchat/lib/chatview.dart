@@ -8,7 +8,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
 import 'package:moor/moor.dart' as moor;
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
+import 'package:rocket_chat_connector_flutter/models/response/spotlight_response.dart';
 import 'package:superchat/flatform_depended/platform_depended.dart';
+import 'package:superchat/widgets/user_search_result.dart';
 import 'package:universal_io/io.dart';
 import 'dart:ui';
 
@@ -166,7 +168,7 @@ class ChatItemData {
 class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerProviderStateMixin<ChatView>  {
   RC.Room room;
   TaskQueue taskQueueMarkMessageRead;
-  TextEditingController _teController = TextEditingController();
+  TextEditingController _tecMessageInput = TextEditingController();
   int chatItemOffset = 0;
   final int chatItemCount = 50;
 
@@ -190,6 +192,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   bool announcementExpand = false;
   final ItemScrollController itemScrollController = ItemScrollController();
 
+  GlobalKey<UserSearchResultState> userSearchPopupKey = GlobalKey();
+
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     print('+++++==== ChatView state=$state');
@@ -212,6 +216,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     Navigator.pop(context, roomId);
   }
 
+  OverlayEntry _overlayEntry;
+  GlobalKey messageInputState = GlobalKey();
   @override
   void initState() {
     room = widget.room;
@@ -221,9 +227,38 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     subscribeRoomEvent(room.id);
 
     var userTypingJob = RepeatedJobWaiter(sendUserTyping, waitingTime: 5000);
-    _teController.addListener(() {
-      if (_teController.text.isNotEmpty)
+    _tecMessageInput.addListener(() async {
+      String msg = _tecMessageInput.text;
+      var re = RegExp(r'@\w+');
+      if (msg.isNotEmpty) {
         userTypingJob.trigger();
+        if (re.hasMatch(msg)) {
+          var match = re.allMatches(msg).last;
+          if (match.end == msg.length) {
+            String text = msg.substring(match.start + 1, match.end);
+            if (_overlayEntry == null) {
+              _overlayEntry = buildMentionPopup(messageInputState.currentContext, (User user) {
+                _overlayEntry.remove();
+                _overlayEntry = null;
+                match = re.allMatches(_tecMessageInput.text).last;
+                _tecMessageInput.text = _tecMessageInput.text.replaceRange(match.start + 1, match.end, user.username + ' ');
+                caretToEnd();
+              }, text);
+              Overlay.of(context).insert(_overlayEntry);
+            } else
+              userSearchPopupKey.currentState.newSearch(text);
+          } else {
+            if (_overlayEntry != null) {
+              _overlayEntry.remove();
+              _overlayEntry = null;
+            }
+          }
+        }
+      }
+      if (_overlayEntry != null && !msg.contains("@")) {
+        _overlayEntry.remove();
+        _overlayEntry = null;
+      }
     });
 
     _hideFabAnimation = AnimationController(vsync: this, duration: kThemeAnimationDuration);
@@ -236,6 +271,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         setState(() {
           showEmojiKeyboard = false;
         });
+      }
+      if (!myFocusNode.hasFocus && _overlayEntry != null) {
+        _overlayEntry.remove();
+        _overlayEntry = null;
       }
     });
 
@@ -343,6 +382,29 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     });
   }
 
+  OverlayEntry buildMentionPopup(context, UserSelectCallback callback, text) {
+    RenderBox renderBox = context.findRenderObject();
+    var size = renderBox.size;
+    var offset = renderBox.localToGlobal(Offset.zero);
+
+    double searchListHeight = 250;
+    return OverlayEntry(
+        builder: (context) => Positioned(
+          left: offset.dx,
+          top: offset.dy - searchListHeight,
+          width: size.width + 50,
+          child: Material(
+            elevation: 4.0,
+            child: Container(
+              child: UserSearchResult(key: userSearchPopupKey, callback: callback, searchText: text, authRC: widget.authRC,),
+              height: searchListHeight,
+            ),
+          ),
+        )
+    );
+  }
+
+
   clearImageCacheAndUpdateAll() async {
     print('@@@@@ avatar changed, deleting cache');
     Utils.clearCache();
@@ -357,7 +419,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   void dispose() {
     taskQueueMarkMessageRead.clear();
     subscription.cancel();
-    _teController.dispose();
+    _tecMessageInput.dispose();
     _hideFabAnimation.dispose();
     myFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -463,8 +525,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           epf.EmojiPicker(
             onEmojiSelected: (category, emoji) {
               print(emoji);
-              _teController.text += emoji.emoji;
-              _teController.selection = TextSelection.fromPosition(TextPosition(offset: _teController.text.length));
+              _tecMessageInput.text += emoji.emoji;
+              caretToEnd();
             },
             config: epf.Config(
                 columns: 7,
@@ -541,6 +603,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         )
       ],)
     ));
+  }
+
+  caretToEnd() {
+    _tecMessageInput.selection = TextSelection.fromPosition(TextPosition(offset: _tecMessageInput.text.length));
   }
 
   buildQuotedMessage() {
@@ -838,14 +904,15 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           Expanded(child:
           Form(
             child: TextFormField(
+              key: messageInputState,
               textInputAction: TextInputAction.send,
               onFieldSubmitted: (value) {
-                _postMessage(_teController.text);
+                _postMessage(_tecMessageInput.text);
                 myFocusNode.requestFocus();
               },
               autofocus: false,
               focusNode: myFocusNode,
-              controller: _teController,
+              controller: _tecMessageInput,
               keyboardType: TextInputType.text,
               maxLines: null,
               decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
@@ -873,7 +940,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               margin: EdgeInsets.only(left: 10),
               child:
               InkWell(
-                onTap: () {_postMessage(_teController.text);},
+                onTap: () {_postMessage(_tecMessageInput.text);},
                 child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
               )),
         ])
@@ -901,7 +968,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       quotedMessage = null;
     }
     MessageNewResponse respMsg = await getMessageService().postMessage(msg, widget.authRC, sendMessage: useSendMessage);
-    _teController.text = '';
+    _tecMessageInput.text = '';
   }
 
   void _pickFile() async {
@@ -1150,9 +1217,10 @@ class UserTypingState extends State<UserTyping> {
     if (userName != '') {
       if (stayTime > 0) {
         t = Timer(Duration(seconds: stayTime), () {
-          setState(() {
-            typing = '';
-          });
+          if (mounted)
+            setState(() {
+              typing = '';
+            });
         });
       } else {
         t = null;

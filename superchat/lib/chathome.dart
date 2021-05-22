@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'package:linkable/linkable.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:superchat/create_direct_message.dart';
@@ -580,21 +581,27 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.announcement != null && room.announcement.isNotEmpty ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          getLastMessage(room) != null ? Text(getLastMessage(room), maxLines: 2, overflow: TextOverflow.fade, style: TextStyle(color: Colors.orange)) : SizedBox(),
+          getLastMessage(room),
           room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
     );
   }
 
-  String getLastMessage(RC.Room room) {
-    String lm;
-    if (room.lastMessage != null && room.lastMessage.msg != null)
-      lm = room.lastMessage.msg;
-    if ((lm == null || lm.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
-      lm = room.lastMessage.attachments.first.title;
-    if (lm != null)
-      lm = lm.replaceAll(RegExp(r'\[ \]\(.*\)[\s]*'), '');
-    return lm;
+  Widget getLastMessage(RC.Room room) {
+    if (room.lastMessage == null)
+      return SizedBox();
+    Message message = Utils.toDisplayMessage(room.lastMessage);
+
+    if ((message.msg == null || message.msg.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
+      message.msg = room.lastMessage.attachments.first.title;
+
+    if (message.msg == null)
+      return SizedBox();
+
+    return Linkable(
+      text: message.msg,
+      style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.normal),
+    );
   }
 
   void _onBottomNaviTapped(int index) {
