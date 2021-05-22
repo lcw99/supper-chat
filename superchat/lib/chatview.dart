@@ -922,7 +922,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               link: _layerLink,
               child: TextFormField(
                 key: messageInputState,
-                textInputAction: TextInputAction.none,
+                textInputAction: TextInputAction.newline,
                 onFieldSubmitted: (value) {
                   _postMessage(_tecMessageInput.text);
                   myFocusNode.requestFocus();
@@ -930,7 +930,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 autofocus: false,
                 focusNode: myFocusNode,
                 controller: _tecMessageInput,
-                keyboardType: TextInputType.text,
                 maxLines: null,
                 decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
               )
