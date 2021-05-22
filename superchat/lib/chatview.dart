@@ -164,6 +164,7 @@ class ChatItemData {
 }
 
 class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerProviderStateMixin<ChatView>  {
+  RC.Room room;
   TaskQueue taskQueueMarkMessageRead;
   TextEditingController _teController = TextEditingController();
   int chatItemOffset = 0;
@@ -204,7 +205,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   StreamSubscription subscription;
 
   Future<void> sendUserTyping() async {
-    webSocketService.sendUserTyping(widget.room.id, widget.me.username, true);
+    webSocketService.sendUserTyping(room.id, widget.me.username, true);
   }
 
   void popToChatHome(String roomId) {
@@ -213,10 +214,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   @override
   void initState() {
+    room = widget.room;
     taskQueueMarkMessageRead = TaskQueue(1000);
 
     quotedMessage = null;
-    subscribeRoomEvent(widget.room.id);
+    subscribeRoomEvent(room.id);
 
     var userTypingJob = RepeatedJobWaiter(sendUserTyping, waitingTime: 5000);
     _teController.addListener(() {
@@ -251,13 +253,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             var arg = event.notificationFields.notificationArgs[0];
             log('+++++stream-room-messages:' + jsonEncode(arg));
             Message roomMessage = Message.fromMap(arg);
-            if (roomMessage.rid != widget.room.id) {
+            if (roomMessage.rid != room.id) {
               print('not this room message~~~~~!!!');
               return;
             }
             //print(jsonEncode(roomMessage));
             if (roomMessage.t == 'room_changed_announcement') {
-              widget.room.announcement = roomMessage.msg;
+              room.announcement = roomMessage.msg;
             }
             int i = chatDataStore.findIndexByMessageId(roomMessage.id);
             if (i >= 0) {
@@ -307,9 +309,15 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         } else if (event.collection == 'stream-notify-user') {
           if (event.notificationFields.notificationArgs.length > 0) {
             if (event.notificationFields.eventName.endsWith('rooms-changed')) {
+              var arg = event.notificationFields.notificationArgs[1];
+              RC.Room r = RC.Room.fromMap(arg);
+              var sub = room.subscription;
+              room = r;
+              room.subscription = sub;
             } else if (event.notificationFields.eventName.endsWith('subscriptions-changed')) {
               var arg = event.notificationFields.notificationArgs[1];
               RC.Subscription sub = RC.Subscription.fromMap(arg);
+              room.subscription = sub;
               permissions = widget.chatHomeState.getPermissionsForRoles(sub.roles);
               print('++@@++permissions=$permissions');
             }
@@ -360,11 +368,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Widget build(BuildContext context) {
     var markAsReadJob = RepeatedJobWaiter(markAsRead);
 
-    String title = widget.room.id;
-    if (widget.room.name != null)
-      title = widget.room.name;
-    else if (widget.room.usernames != null)
-      title = widget.room.usernames.toString();
+    String title = room.id;
+    if (room.name != null)
+      title = room.name;
+    else if (room.usernames != null)
+      title = room.usernames.toString();
 
     return Phoenix(child: Scaffold(
       floatingActionButton: Visibility(
@@ -383,7 +391,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       key: chatViewKey,
       appBar: AppBar(
         leadingWidth: 25,
-        title: Utils.getRoomTitle(context, widget.room, widget.me),
+        title: Utils.getRoomTitle(context, room, widget.me),
         actions: <Widget>[
           IconButton(
             icon: const Icon(Icons.star_border_outlined),
@@ -403,20 +411,20 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 roomInformation();
               else if (value == 'pinned_messages') {}
               else if (value == 'room_files') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => RoomFiles(room: widget.room, authRC: widget.authRC,)));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => RoomFiles(room: room, authRC: widget.authRC,)));
               }
               else if (value == 'leave_room') {
-                var r = await getChannelService().leaveRoom(widget.room, widget.authRC);
+                var r = await getChannelService().leaveRoom(room, widget.authRC);
                 if (r.success)
                   Navigator.pop(context);
                 else
                   Utils.showToast(r.body);
               }
               else if (value == 'room_members')
-                Navigator.push(context, MaterialPageRoute(builder: (context) => RoomMembers(room: widget.room, authRC: widget.authRC,)));
+                Navigator.push(context, MaterialPageRoute(builder: (context) => RoomMembers(room: room, authRC: widget.authRC,)));
               else if (value == 'add_user') {
                 if (permissions != null && permissions.contains('add-user-to-joined-room'))
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => AddUser(room: widget.room, authRC: widget.authRC,)));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => AddUser(room: room, authRC: widget.authRC,)));
                 else
                   Utils.showToast('You are not allowed to add members');
               }
@@ -427,7 +435,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 PopupMenuItem(child: Text("Files..."), value: 'room_files',),
                 PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),
               ];
-              if (widget.room.t != 'd') {
+              if (room.t != 'd') {
                 menu.add(PopupMenuItem(child: Text("Room Members..."), value: 'room_members',));
                 menu.add(PopupMenuItem(child: Text("Add User..."), value: 'add_user',));
                 menu.add(PopupMenuItem(child: Text("Room Information..."), value: 'room_info',));
@@ -482,7 +490,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         ])),
       body: Column(children: [
         Container(
-          child: widget.room.announcement != null && widget.room.announcement.isNotEmpty ?
+          child: room.announcement != null && room.announcement.isNotEmpty ?
           Container(
             width: double.infinity,
             padding: EdgeInsets.only(left: 15, top: 5, bottom: 5, right: 20),
@@ -496,8 +504,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               child: AnimatedCrossFade(
                   duration: Duration(milliseconds: 200),
                   crossFadeState: !announcementExpand ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                  firstChild: Text(widget.room.announcement, style: TextStyle(fontSize: 12), maxLines: 2, overflow: TextOverflow.fade,),
-                  secondChild: Text(widget.room.announcement, style: TextStyle(fontSize: 12), maxLines: 100, overflow: TextOverflow.fade,),
+                  firstChild: Text(room.announcement, style: TextStyle(fontSize: 12), maxLines: 2, overflow: TextOverflow.fade,),
+                  secondChild: Text(room.announcement, style: TextStyle(fontSize: 12), maxLines: 100, overflow: TextOverflow.fade,),
               )
             )) : SizedBox()
         ),
@@ -537,7 +545,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   buildQuotedMessage() {
     return Container(child: Row(children: [
-      Expanded(child: ChatItemView(chatHomeState: widget.chatHomeState, me: widget.me, authRC: widget.authRC, message: quotedMessage, room: widget.room, chatViewState: this,)),
+      Expanded(child: ChatItemView(chatHomeState: widget.chatHomeState, me: widget.me, authRC: widget.authRC, message: quotedMessage, room: room, chatViewState: this,)),
       InkWell(child: Icon(Icons.cancel), onTap: () {
         setState(() {
           quotedMessage = null;
@@ -577,7 +585,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           Message message = chatDataStore.getMessageAt(index);
           // main list ChatItemView
           return ChatItemView(chatHomeState: widget.chatHomeState, key: chatDataStore.getGlobalKey(index),
-            message: message, me: widget.me, authRC: widget.authRC, index: index, room: widget.room, chatViewState: this,);
+            message: message, me: widget.me, authRC: widget.authRC, index: index, room: room, chatViewState: this,);
         }
     );
 
@@ -723,7 +731,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             itemCount: snapshot.data.messages.length,
             itemBuilder: (BuildContext c, int index) {
               var message = snapshot.data.messages[index];
-              return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: widget.room,);
+              return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: room,);
             });
         } else {
           return Center(child: CircularProgressIndicator());
@@ -779,7 +787,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                     itemCount: snapshot.data.messages.length,
                     itemBuilder: (BuildContext c, int index) {
                       var message = snapshot.data.messages[index];
-                      return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: widget.room,);
+                      return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: room,);
                   }))
                 ],));
               } else {
@@ -792,7 +800,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   Future<ChannelMessages> _getStarredMessages() {
-    return getChannelService().getStarredMessages(widget.room.id, widget.authRC);
+    return getChannelService().getStarredMessages(room.id, widget.authRC);
   }
 
   Future<ChannelMessages> _getSearchedMessages(String text) {
@@ -803,7 +811,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       text = text.replaceAll('/', '\x2f');
       text = '/.*$text.*/';
     }
-    return getChannelService().chatSearch(widget.room.id, text, 100, widget.authRC);
+    return getChannelService().chatSearch(room.id, text, 100, widget.authRC);
   }
 
   _buildInputBox() {
@@ -876,7 +884,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Future<void> _postMessage(String message) async {
     if (message == null || message.isEmpty)
       return;
-    MessageNew msg = MessageNew(roomId: widget.room.id, text: message);
+    MessageNew msg = MessageNew(roomId: room.id, text: message);
     bool useSendMessage = false;
     if (quotedMessage != null) {
       if (quotedMessage.isReply) {
@@ -885,7 +893,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         msg.text = null;
         useSendMessage = true;
       } else {
-        String url = serverUri.replace(path: '/channel/${widget.room.name}',
+        String url = serverUri.replace(path: '/channel/${room.name}',
             query: 'msg=${quotedMessage.id}').toString();
         message = '[ ]($url)  ' + message;
         msg.text = message;
@@ -962,7 +970,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     String tmid;
     if (quotedMessage != null && quotedMessage.isReply)
       tmid = quotedMessage.id;
-    return getMessageService().roomImageUpload(widget.room.id, widget.authRC, bytes: bytes, file: file, fileName: fileName, desc: desc, mimeType: mimeType, tmid: tmid);
+    return getMessageService().roomImageUpload(room.id, widget.authRC, bytes: bytes, file: file, fileName: fileName, desc: desc, mimeType: mimeType, tmid: tmid);
   }
 
   Future<void> _takePhoto() async {
@@ -981,8 +989,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     if (_getMoreMessages) {
       historyCallCount++;
       print('full history call=$historyCallCount');
-      var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoomMessage + widget.room.id);
-      var dbHistoryReadEnd = await locator<db.ChatDatabase>().getValueByKey(db.historyReadEnd + widget.room.id);
+      var lastUpdate = await locator<db.ChatDatabase>().getValueByKey(db.lastUpdateRoomMessage + room.id);
+      var dbHistoryReadEnd = await locator<db.ChatDatabase>().getValueByKey(db.historyReadEnd + room.id);
       DateTime updateSince;
       if (lastUpdate != null)
         updateSince = DateTime.tryParse(lastUpdate.value);
@@ -990,7 +998,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         _getMoreMessages = true;
       if (updateSince != null && syncMessages) {
         print('@@@ start syncMessages');
-        SyncMessages syncMessages = await getChannelService().syncMessages(widget.room.id, updateSince, widget.authRC);
+        SyncMessages syncMessages = await getChannelService().syncMessages(room.id, updateSince, widget.authRC);
         if (syncMessages.success) {
           for (Message m in syncMessages.result.updated) {
             print('updated message=${m.msg}');
@@ -1005,14 +1013,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       List<RoomMessage> roomMessages;
       bool fetchFromNetwork = false;
       if (_getMoreMessages) {
-        roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
+        roomMessages = await locator<db.ChatDatabase>().getRoomMessages(room.id, count, offset: offset);
         print('read database offset=$offset, count=$count, roomMessages.length = ${roomMessages.length}');
         if (roomMessages.length < count)
           fetchFromNetwork = true;
       }
       if (fetchFromNetwork && dbHistoryReadEnd == null) {
-        ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: widget.room.id, count: count, offset: offset);
-        ChannelMessages channelMessages = await getChannelService().roomHistory(filter, widget.authRC, widget.room.t);
+        ChannelHistoryFilter filter = ChannelHistoryFilter(roomId: room.id, count: count, offset: offset);
+        ChannelMessages channelMessages = await getChannelService().roomHistory(filter, widget.authRC, room.t);
         print('@@@ fetch from network, channelMessages.messages.length = ${channelMessages.messages.length}');
         if (channelMessages.messages.length < count) {
           print('!!!!!!!!!!!!history end!!!!!!!!!!!!!! roomMessages.length = ${channelMessages.messages.length}');
@@ -1025,15 +1033,15 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         }
       }
       if (fetchFromNetwork) {
-        roomMessages = await locator<db.ChatDatabase>().getRoomMessages(widget.room.id, count, offset: offset);
+        roomMessages = await locator<db.ChatDatabase>().getRoomMessages(room.id, count, offset: offset);
         print('@@@@ roomMessages.length after network fetch = ${roomMessages.length}');
       }
       if (roomMessages.length < count)
         historyEnd = true;
 
-      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoomMessage + widget.room.id, value: DateTime.now().toIso8601String()));
+      await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.lastUpdateRoomMessage + room.id, value: DateTime.now().toIso8601String()));
       if (historyEnd)
-        await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd + widget.room.id, value: 'yes'));
+        await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd + room.id, value: 'yes'));
 
       for (var rm in roomMessages) {
         if (!chatDataStore.containsMessage(rm.mid)) {
@@ -1069,13 +1077,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   Future<void> markAsRead() async {
-    await getChannelService().markAsRead(widget.room.id, widget.authRC);
-    debugPrint("----------- mark channel(${widget.room.id}) as read");
+    await getChannelService().markAsRead(room.id, widget.authRC);
+    debugPrint("----------- mark channel(${room.id}) as read");
   }
 
   Future<void> roomInformation() async {
     var ret = await Navigator.push(context, MaterialPageRoute(builder: (context) =>
-        RoomInfo(chatHomeState: widget.chatHomeState, user: widget.me, room: widget.room,)));
+        RoomInfo(chatHomeState: widget.chatHomeState, user: widget.me, room: room,)));
     if (ret == 'room deleted')
         Navigator.pop(context);
   }
