@@ -216,7 +216,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     Navigator.pop(context, roomId);
   }
 
-  OverlayEntry _overlayEntry;
+  OverlayEntry _oeSearchUser;
   GlobalKey messageInputState = GlobalKey();
   @override
   void initState() {
@@ -236,28 +236,28 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           var match = re.allMatches(msg).last;
           if (match.end == msg.length) {
             String text = msg.substring(match.start + 1, match.end);
-            if (_overlayEntry == null) {
-              _overlayEntry = buildMentionPopup(messageInputState.currentContext, (User user) {
-                _overlayEntry.remove();
-                _overlayEntry = null;
+            if (_oeSearchUser == null) {
+              _oeSearchUser = buildMentionPopup(messageInputState.currentContext, (User user) {
+                _oeSearchUser.remove();
+                _oeSearchUser = null;
                 match = re.allMatches(_tecMessageInput.text).last;
                 _tecMessageInput.text = _tecMessageInput.text.replaceRange(match.start + 1, match.end, user.username + ' ');
                 caretToEnd();
               }, text);
-              Overlay.of(context).insert(_overlayEntry);
+              Overlay.of(context).insert(_oeSearchUser);
             } else
               userSearchPopupKey.currentState.newSearch(text);
           } else {
-            if (_overlayEntry != null) {
-              _overlayEntry.remove();
-              _overlayEntry = null;
+            if (_oeSearchUser != null) {
+              _oeSearchUser.remove();
+              _oeSearchUser = null;
             }
           }
         }
       }
-      if (_overlayEntry != null && !msg.contains("@")) {
-        _overlayEntry.remove();
-        _overlayEntry = null;
+      if (_oeSearchUser != null && !msg.contains("@")) {
+        _oeSearchUser.remove();
+        _oeSearchUser = null;
       }
     });
 
@@ -272,9 +272,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           showEmojiKeyboard = false;
         });
       }
-      if (!myFocusNode.hasFocus && _overlayEntry != null) {
-        _overlayEntry.remove();
-        _overlayEntry = null;
+      if (!myFocusNode.hasFocus && _oeSearchUser != null) {
+        _oeSearchUser.remove();
+        _oeSearchUser = null;
       }
     });
 
@@ -382,6 +382,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     });
   }
 
+  final LayerLink _layerLink = LayerLink();
   OverlayEntry buildMentionPopup(context, UserSelectCallback callback, text) {
     RenderBox renderBox = context.findRenderObject();
     var size = renderBox.size;
@@ -389,18 +390,24 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
     double searchListHeight = 250;
     return OverlayEntry(
-        builder: (context) => Positioned(
-          left: offset.dx,
-          top: offset.dy - searchListHeight,
+      builder: (BuildContext context) {
+        return Positioned(
           width: size.width + 50,
+          height: searchListHeight,
+          child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          followerAnchor: Alignment.bottomLeft,
+          offset: Offset(0.0, -5),
           child: Material(
             elevation: 4.0,
             child: Container(
+              alignment: Alignment.topLeft,
               child: UserSearchResult(key: userSearchPopupKey, callback: callback, searchText: text, authRC: widget.authRC,),
               height: searchListHeight,
             ),
           ),
-        )
+        )); }
     );
   }
 
@@ -413,6 +420,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     print('@@@@@ avatar changed deleting cache done~~~~~');
     setState(() {});
     chatViewKey.currentContext ?? Phoenix.rebirth(chatViewKey.currentContext);
+  }
+
+  @override
+  void didChangeMetrics() {
+    final bottomInset = WidgetsBinding.instance.window.viewInsets.bottom;
+    final show = bottomInset > 0.0;
   }
 
   @override
@@ -517,7 +530,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             SizedBox(),
           Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Container(height: 50, color: Colors.white, child: _buildInputBox())
+            child: Container(color: Colors.white, child: _buildInputBox(), )
           ),
           showEmojiKeyboard && MediaQuery.of(context).viewInsets.bottom == 0 ? Container(
           height: 240,
@@ -884,7 +897,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     return Container(
         padding: EdgeInsets.only(left: 10, right: 10),
         child:
-        Row(children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
           InkWell(
             onTap: () {
               setState(() {
@@ -903,19 +918,22 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           ),
           Expanded(child:
           Form(
-            child: TextFormField(
-              key: messageInputState,
-              textInputAction: TextInputAction.send,
-              onFieldSubmitted: (value) {
-                _postMessage(_tecMessageInput.text);
-                myFocusNode.requestFocus();
-              },
-              autofocus: false,
-              focusNode: myFocusNode,
-              controller: _tecMessageInput,
-              keyboardType: TextInputType.text,
-              maxLines: null,
-              decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
+            child: CompositedTransformTarget(
+              link: _layerLink,
+              child: TextFormField(
+                key: messageInputState,
+                textInputAction: TextInputAction.none,
+                onFieldSubmitted: (value) {
+                  _postMessage(_tecMessageInput.text);
+                  myFocusNode.requestFocus();
+                },
+                autofocus: false,
+                focusNode: myFocusNode,
+                controller: _tecMessageInput,
+                keyboardType: TextInputType.text,
+                maxLines: null,
+                decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
+              )
             ),
           )),
           PopupMenuButton(
