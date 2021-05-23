@@ -541,51 +541,52 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         Container(color: Colors.blue.shade100, child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-          quotedMessage != null ?
+            quotedMessage != null ?
             buildQuotedMessage() :
             SizedBox(),
-          Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Container(color: Colors.white, child: _buildInputBox(), )
-          ),
-          showEmojiKeyboard && MediaQuery.of(context).viewInsets.bottom == 0 ? Container(
-          height: 240,
-          child:
-          epf.EmojiPicker(
-            onEmojiSelected: (category, emoji) {
-              print(emoji);
-              if (emoji.emoji.startsWith('/')) {
-                _postMessage(serverUri.replace(path: '/emoji-custom${emoji.emoji}').toString());
-              } else {
-                _tecMessageInput.text += emoji.emoji;
-                caretToEnd();
-              }
-            },
-            config: epf.Config(
-                showCustomsTab: true,
-                customEmojiUrlBase: serverUri.replace(path: '/emoji-custom').toString(),
-                customEmojis: customEmojis,
-                columns: 4,
-                emojiSizeMax: 50.0,
-                verticalSpacing: 0,
-                horizontalSpacing: 0,
-                initCategory: epf.Category.RECENT,
-                bgColor: Color(0xFFF2F2F2),
-                indicatorColor: Colors.blue,
-                iconColor: Colors.grey,
-                iconColorSelected: Colors.blue,
-                progressIndicatorColor: Colors.blue,
-                showRecentsTab: true,
-                recentsLimit: 28,
-                noRecentsText: "No Recents",
-                noRecentsStyle: const TextStyle(fontSize: 20, color: Colors.black26),
-                categoryIcons: const epf.CategoryIcons(),
-                buttonMode: epf.ButtonMode.MATERIAL
+            Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Container(color: Colors.white, child: _buildInputBox(), )
             ),
-          )
-          )
-          : SizedBox(height: 0,),
-        ])),
+            showEmojiKeyboard && MediaQuery.of(context).viewInsets.bottom == 0 ? Container(
+            height: 240,
+            child:
+            epf.EmojiPicker(
+              onEmojiSelected: (category, emoji) {
+                print(emoji);
+                if (emoji.emoji.startsWith('/')) {
+                  _postMessage(serverUri.replace(path: '/emoji-custom${emoji.emoji}').toString());
+                } else {
+                  _tecMessageInput.text += emoji.emoji;
+                  caretToEnd();
+                }
+              },
+              config: epf.Config(
+                  showCustomsTab: true,
+                  customEmojiUrlBase: serverUri.replace(path: '/emoji-custom').toString(),
+                  customEmojis: customEmojis,
+                  columns: 4,
+                  emojiSizeMax: 50.0,
+                  verticalSpacing: 0,
+                  horizontalSpacing: 0,
+                  initCategory: epf.Category.RECENT,
+                  bgColor: Color(0xFFF2F2F2),
+                  indicatorColor: Colors.blue,
+                  iconColor: Colors.grey,
+                  iconColorSelected: Colors.blue,
+                  progressIndicatorColor: Colors.blue,
+                  showRecentsTab: true,
+                  recentsLimit: 28,
+                  noRecentsText: "No Recents",
+                  noRecentsStyle: const TextStyle(fontSize: 20, color: Colors.black26),
+                  categoryIcons: const epf.CategoryIcons(),
+                  buttonMode: epf.ButtonMode.MATERIAL
+              ),
+            )
+            )
+            : SizedBox(height: 0,),
+          ]
+        )),
       body: Column(children: [
         Container(
           child: room.announcement != null && room.announcement.isNotEmpty ?
@@ -646,15 +647,20 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   buildQuotedMessage() {
-    return Container(child: Row(children: [
-      Expanded(child: ChatItemView(chatHomeState: widget.chatHomeState, me: widget.me, authRC: widget.authRC, message: quotedMessage, room: room, chatViewState: this,)),
+    return Container(constraints: BoxConstraints(maxHeight: 220), margin: EdgeInsets.only(bottom: 3),
+    padding: EdgeInsets.only(top: 10,), decoration: BoxDecoration(border: Border.all(color: Colors.purpleAccent, width: 2)),
+    clipBehavior: Clip.antiAlias,
+    child: Wrap(children: [Row( children: [
+      Expanded(child:
+        ChatItemView(chatHomeState: widget.chatHomeState, me: widget.me, authRC: widget.authRC, message: quotedMessage, room: room, chatViewState: this,),
+      ),
       InkWell(child: Icon(Icons.cancel), onTap: () {
         setState(() {
           quotedMessage = null;
         });
       },),
       SizedBox(width: 15),
-    ],), padding: EdgeInsets.only(top: 10), decoration: BoxDecoration(border: Border.all(color: Colors.purpleAccent, width: 2)),);
+    ])]));
   }
 
   bool onDropFile = false;
