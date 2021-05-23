@@ -223,7 +223,7 @@ class ChannelService {
     );
 
     var resp = utf8.decode(response.bodyBytes);
-    log("^^^^^^^^^^^^^^^^^^^^^channels.history^^^^^^^^^^^^ resp=$resp");
+    //log("^^^^^^^^^^^^^^^^^^^^^channels.history^^^^^^^^^^^^ resp=$resp");
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         return ChannelMessages.fromMap(jsonDecode(resp));
@@ -479,7 +479,7 @@ class ChannelService {
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
         var resp = utf8.decode(response.bodyBytes);
-        log("@@@@@@@ channels.list resp=$resp");
+        //log("@@@@@@@ channels.list resp=$resp");
         return ChannelListResponse.fromMap(jsonDecode(resp));
       }
     }
