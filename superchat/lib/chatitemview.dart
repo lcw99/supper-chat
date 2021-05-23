@@ -434,6 +434,7 @@ class ChatItemViewState extends State<ChatItemView> {
         message.urls.single.headers['contentType'].contains('image') &&
         message.msg == message.urls.single.url) {
       imageUrlBody = true;
+      message.imageUrlBody = true;
       newMessage = null;
     }
 
@@ -539,6 +540,11 @@ class ChatItemViewState extends State<ChatItemView> {
                   urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl'], cacheWidth: 500) : SizedBox(),
                   urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
                 ])
+                : urlInMessage.meta != null && urlInMessage.meta['pageTitle'] != null
+                ? Column (children: <Widget> [
+                  urlInMessage.meta['pageTitle'] != null ? Text(urlInMessage.meta['pageTitle'], style: TextStyle(fontWeight: FontWeight.bold),) : SizedBox(),
+                  urlInMessage.meta['description'] != null ? Text(urlInMessage.meta['description'], style: TextStyle(fontSize: 13),) : SizedBox(),
+                ])
                 : Linkable(text: urlInMessage.url),
         ));
   }
@@ -576,7 +582,9 @@ class ChatItemViewState extends State<ChatItemView> {
         Navigator.pop(context, emoji.name);
       },
       config: epf.Config(
-          showCustomsTab: false,
+          showCustomsTab: true,
+          customEmojiUrlBase: serverUri.replace(path: '/emoji-custom').toString(),
+          customEmojis: customEmojis,
           columns: 6,
           emojiSizeMax: 26.0,
           verticalSpacing: 0,
@@ -626,6 +634,8 @@ class ChatItemViewState extends State<ChatItemView> {
       imagePath = att.imageUrl;
       if (att.titleLinkDownload != null && att.titleLinkDownload)
         downloadPath = message.attachments.first.titleLink;
+    } else if (message.imageUrlBody) {
+      imagePath = Uri.parse(message.urls.single.url).path;
     }
     List<PopupMenuEntry<String>> items = [];
     items.add(PopupMenuItem(child: Text('Copy...'), value: 'copy'));
@@ -783,7 +793,9 @@ class _ReactionViewState extends State<ReactionView> {
             onTap: () { widget.chatItemViewState.onReactionTouch(widget.message, emoji, r); },
             child:Container(
                 child: Row(children: <Widget>[
-                  Text(emojis[emoji], style: TextStyle(fontSize: 17)),
+                  emojis[emoji] == null && customEmojis[emoji] != null
+                  ? Image.network(serverUri.replace(path: '/emoji-custom${customEmojis[emoji]}').toString())
+                  : Text(emojis[emoji], style: TextStyle(fontSize: 17)),
                   Text(r.usernames.length.toString(), style: TextStyle(fontSize: 10)),
                 ])
             ));
