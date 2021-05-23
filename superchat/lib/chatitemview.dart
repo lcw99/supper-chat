@@ -543,7 +543,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 : urlInMessage.meta != null && urlInMessage.meta['pageTitle'] != null
                 ? Column (children: <Widget> [
                   urlInMessage.meta['pageTitle'] != null ? Text(urlInMessage.meta['pageTitle'], style: TextStyle(fontWeight: FontWeight.bold),) : SizedBox(),
-                  urlInMessage.meta['description'] != null ? Text(urlInMessage.meta['description'], style: TextStyle(fontSize: 13),) : SizedBox(),
+                  urlInMessage.meta['description'] != null ? Text(urlInMessage.meta['description'], style: TextStyle(fontSize: 13), maxLines: 3, overflow: TextOverflow.fade,) : SizedBox(),
                 ])
                 : Linkable(text: urlInMessage.url),
         ));
