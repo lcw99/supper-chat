@@ -570,7 +570,7 @@ class ChatItemViewState extends State<ChatItemView> {
 
     return FullScreenWidget(
       child: Hero(
-        tag: attachment.imageUrl + message.id + message.isAttachment.toString(),
+        tag: attachment.imageUrl + message.id + message.isAttachment.toString() + widget.hashCode.toString(),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
           child: Utils.buildImageByLayout(widget.authRC, attachment.imageUrl, attachment.renderWidth, attachment.imageDimensions),
