@@ -166,6 +166,19 @@ class ChatItemViewState extends State<ChatItemView> {
       avatarSize = 20;
     else if (message.tmid != null || message.isAttachment)
       avatarSize = 30;
+
+    var reactions = message.reactions;
+    bool bReactions = reactions != null && reactions.length > 0;
+
+    int unreadCount = widget.room.usersCount;
+    if (bReactions) {
+      if (reactions.containsKey(readCountEmoji)) {
+        unreadCount -= reactions[readCountEmoji].usernames.length;
+        if (reactions.keys.length == 1)
+          bReactions = false;
+      }
+    }
+
     return LayoutBuilder(builder: (context, boxConstraint) {
       //print('boxConstraint=$boxConstraint');
       return Row(
@@ -183,7 +196,13 @@ class ChatItemViewState extends State<ChatItemView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildUserNameLine(user),
-            _buildMessage(message),
+            Stack(children: [
+              _buildMessage(message),
+              message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox()
+                  : Container(child: Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
+                alignment: Alignment.topRight, padding: EdgeInsets.only(right: 2),
+              ),
+            ]),
             SizedBox(height: 8,),
           ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize + (message.tmid != null ? 25 : 0)),),
         //SizedBox(width: 40,),
@@ -262,10 +281,8 @@ class ChatItemViewState extends State<ChatItemView> {
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
 
-    int unreadCount = widget.room.usersCount;
     if (bReactions) {
       if (reactions.containsKey(readCountEmoji)) {
-        unreadCount -= reactions[readCountEmoji].usernames.length;
         if (reactions.keys.length == 1)
           bReactions = false;
       }
@@ -288,15 +305,9 @@ class ChatItemViewState extends State<ChatItemView> {
               else
                 widget.chatViewState.findAndScroll(message.id);
             },
-            child: Stack(children: [
-                LayoutBuilder(builder: (context, boxConstraint) {
-                  return buildMessageBody(message, boxConstraint);
-                }),
-              message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox()
-                : Container(child: Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
-                    alignment: Alignment.topRight, padding: EdgeInsets.only(right: 2),
-                ),
-            ]),
+            child: LayoutBuilder(builder: (context, boxConstraint) {
+              return buildMessageBody(message, boxConstraint);
+            }),
           ),
           bAttachments ?
             LayoutBuilder(builder: (context, boxConstraint){
