@@ -2,6 +2,7 @@ import 'package:rocket_chat_connector_flutter/services/authentication_service.da
 import 'package:rocket_chat_connector_flutter/services/channel_service.dart';
 import 'package:rocket_chat_connector_flutter/services/message_service.dart';
 import 'package:rocket_chat_connector_flutter/services/user_service.dart';
+import 'package:rocket_chat_connector_flutter/services/etc_service.dart';
 import 'package:rocket_chat_connector_flutter/services/http_service.dart' as rc;
 
 Uri rocketServerUri = Uri();
@@ -32,4 +33,8 @@ ChannelService getChannelService() {
 
 AuthenticationService getAuthenticationService() {
       return AuthenticationService(rocketHttpService);
+}
+
+EtcService getEtcService() {
+      return EtcService(rocketHttpService);
 }

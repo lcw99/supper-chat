@@ -563,7 +563,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
             room.u != null && room.u.id == widget.user.id ?
             Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
           ]),
-          subtitle: buildSubTitle(room),
+          subtitle: AbsorbPointer(child: buildSubTitle(room)),
           trailing: UnreadCounter(unreadCount: unreadCount),
           dense: true,
           visualDensity: VisualDensity.compact,

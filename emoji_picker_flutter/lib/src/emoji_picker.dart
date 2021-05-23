@@ -20,6 +20,8 @@ enum Category {
   /// Recent emojis
   RECENT,
 
+  CUSTOMS,
+
   /// Smiley emojis
   SMILEYS,
 
@@ -102,6 +104,8 @@ class _EmojiPickerState extends State<EmojiPicker> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.config.showCustomsTab)
+      emoji_list.customs = widget.config.customEmojis!;
     if (!loaded) {
       // Load emojis
       _updateEmojis().then((value) =>
@@ -115,6 +119,7 @@ class _EmojiPickerState extends State<EmojiPicker> {
     if (widget.config.showRecentsTab) {
       categoryEmoji[0].emoji = recentEmoji.map((e) => e.emoji).toList();
     }
+
 
     var state = EmojiViewState(
       categoryEmoji,
@@ -152,6 +157,11 @@ class _EmojiPickerState extends State<EmojiPicker> {
       final recentEmojiMap = recentEmoji.map((e) => e.emoji).toList();
       categoryEmoji.add(CategoryEmoji(Category.RECENT, recentEmojiMap));
     }
+    if (widget.config.showCustomsTab) {
+      categoryEmoji
+      ..add(CategoryEmoji(Category.CUSTOMS,
+      await _getAvailableEmojis(emoji_list.customs!, title: 'customs')));
+    }
     categoryEmoji
       ..add(CategoryEmoji(Category.SMILEYS,
           await _getAvailableEmojis(emoji_list.smileys, title: 'smileys')))
@@ -171,6 +181,7 @@ class _EmojiPickerState extends State<EmojiPicker> {
           await _getAvailableEmojis(emoji_list.symbols, title: 'symbols')))
       ..add(CategoryEmoji(Category.FLAGS,
           await _getAvailableEmojis(emoji_list.flags, title: 'flags')));
+
   }
 
   // Get available emoji for given category title
@@ -179,11 +190,15 @@ class _EmojiPickerState extends State<EmojiPicker> {
     Map<String, String>? newMap;
 
     // Get Emojis cached locally if available
-    newMap = await _restoreFilteredEmojis(title);
+    if (title != 'customs') // lcw
+      newMap = await _restoreFilteredEmojis(title);
 
     if (newMap == null) {
       // Check if emoji is available on this platform
-      newMap = await _getPlatformAvailableEmoji(map);
+      if (title == 'customs')
+        newMap = map;
+      else
+        newMap = await _getPlatformAvailableEmoji(map);
       // Save available Emojis to local storage for faster loading next time
       if (newMap != null) {
         await _cacheFilteredEmojis(title, newMap);

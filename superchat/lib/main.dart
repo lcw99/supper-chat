@@ -26,7 +26,8 @@ import 'package:rocket_chat_connector_flutter/services/user_service.dart';
 
 import 'package:rocket_chat_connector_flutter/services/push_service.dart';
 import 'package:rocket_chat_connector_flutter/models/new/token_new.dart';
-
+import 'package:rocket_chat_connector_flutter/models/response/custom_emoji_response.dart' as RC;
+import 'package:rocket_chat_connector_flutter/models/custom_emoji.dart' as RC;
 import 'chathome.dart';
 import 'constants/constants.dart';
 import 'database/chatdb.dart';
@@ -62,6 +63,7 @@ JoinInfo joinInfo;
 //JoinInfo joinInfo = JoinInfo('yzYen4', null);
 
 String authTokenPrevious;
+Map<String, String> customEmojis = Map();
 
 void main() async {
   //emojiConvert();
@@ -531,6 +533,8 @@ class _LoginHomeState extends State<LoginHome> {
                 }
               }
 
+              loadCustomEmojis(auth);
+
               registerToken(auth);
               var _np = notificationPayload;
               notificationPayload = null;
@@ -589,6 +593,25 @@ class _LoginHomeState extends State<LoginHome> {
           ),
         )
       ])]))));
+  }
+
+  Future<void> loadCustomEmojis(Authentication authRC) async {
+    RC.CustomEmojiResponse r = await getEtcService().getCustomEmojiList(authRC);
+    if (!r.success)
+      return;
+    List<RC.CustomEmoji> update = r.emojis.update;
+    List<RC.CustomEmoji> remove = r.emojis.remove;
+
+    for (var e in update)
+      await locator<ChatDatabase>().upsertCustomEmoji(CustomEmoji(id: e.id, info: jsonEncode(e.toMap())));
+    for (var e in remove)
+      await locator<ChatDatabase>().deleteCustomEmoji(e.id);
+
+    List<CustomEmoji> dbCustomEmojis = await locator<ChatDatabase>().getAllCustomEmojis;
+    for (var e in dbCustomEmojis) {
+      RC.CustomEmoji r = RC.CustomEmoji.fromMap(jsonDecode(e.info));
+      customEmojis[':${r.name}:'] = '/${r.name}.${r.extension}';
+    }
   }
 
 }

@@ -46,18 +46,18 @@ class RoomMessages extends Table {
   Set<Column> get primaryKey => {mid};
 }
 
-class ChatUsers extends Table {
-  TextColumn get uid => text()();
-  TextColumn get uname => text()();
+class CustomEmojis extends Table {
+  TextColumn get id => text()();
+  TextColumn get info => text()();
 
   @override
-  Set<Column> get primaryKey => {uid};
+  Set<Column> get primaryKey => {id};
 }
 
 
 // this annotation tells moor to prepare a database class that uses both of the
 // tables we just defined. We'll see how to use that database class in a moment.
-@UseMoor(tables: [Rooms, Subscriptions, KeyValues, RoomMessages, ChatUsers])
+@UseMoor(tables: [Rooms, Subscriptions, KeyValues, RoomMessages, CustomEmojis])
 class ChatDatabase extends _$ChatDatabase {
   // we tell the database where to store the data with this constructor
   //ChatDatabase() : super(_openConnection());
@@ -65,7 +65,7 @@ class ChatDatabase extends _$ChatDatabase {
   // you should bump this number whenever you change or add a table definition. Migrations
   // are covered later in this readme.
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,7 +76,7 @@ class ChatDatabase extends _$ChatDatabase {
         print('migration from=$from, to=$to');
         if (from == 1) {
           await m.alterTable(TableMigration(rooms));
-        } else if (from == 11) {
+        } else if (from == 12) {
           for (final table in allTables) {
             await m.deleteTable(table.actualTableName);
             await m.createTable(table);
@@ -119,9 +119,9 @@ class ChatDatabase extends _$ChatDatabase {
   Future<RoomMessage> getMessage(String _mid) => (select(roomMessages)..where((t) => t.mid.equals(_mid))).getSingleOrNull();
   Future deleteMessage(String _mid) => (delete(roomMessages)..where((t) => t.mid.equals(_mid))).go();
 
-  Future<List<ChatUser>> get getAllChatUsers => select(chatUsers).get();
-  Future upsertChatUser(ChatUser chatUser) => into(chatUsers).insertOnConflictUpdate(chatUser);
-  Future deleteChatUser(String _uid) => (delete(chatUsers)..where((t) => t.uid.equals(_uid))).go();
-  Future<ChatUser> getChatUser(String _uid) => (select(chatUsers)..where((t) => t.uid.equals(_uid))).getSingleOrNull();
+  Future<List<CustomEmoji>> get getAllCustomEmojis => select(customEmojis).get();
+  Future upsertCustomEmoji(CustomEmoji customEmoji) => into(customEmojis).insertOnConflictUpdate(customEmoji);
+  Future deleteCustomEmoji(String _id) => (delete(customEmojis)..where((t) => t.id.equals(_id))).go();
+  Future<CustomEmoji> getCustomEmoji(String _id) => (select(customEmojis)..where((t) => t.id.equals(_id))).getSingleOrNull();
   
 }

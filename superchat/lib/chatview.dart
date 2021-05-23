@@ -538,12 +538,19 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           epf.EmojiPicker(
             onEmojiSelected: (category, emoji) {
               print(emoji);
-              _tecMessageInput.text += emoji.emoji;
-              caretToEnd();
+              if (emoji.emoji.startsWith('/')) {
+                _postMessage(serverUri.replace(path: '/emoji-custom/${emoji.emoji}').toString());
+              } else {
+                _tecMessageInput.text += emoji.emoji;
+                caretToEnd();
+              }
             },
             config: epf.Config(
-                columns: 7,
-                emojiSizeMax: 26.0,
+                showCustomsTab: true,
+                customEmojiUrlBase: serverUri.replace(path: '/emoji-custom').toString(),
+                customEmojis: customEmojis,
+                columns: 4,
+                emojiSizeMax: 55.0,
                 verticalSpacing: 0,
                 horizontalSpacing: 0,
                 initCategory: epf.Category.RECENT,
@@ -930,7 +937,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 autofocus: false,
                 focusNode: myFocusNode,
                 controller: _tecMessageInput,
-                maxLines: null,
+                minLines: 1,
+                maxLines: 10,
                 decoration: InputDecoration(hintText: 'New message', border: InputBorder.none, contentPadding: EdgeInsets.only(left: 5)),
               )
             ),
