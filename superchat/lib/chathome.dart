@@ -44,6 +44,7 @@ import 'package:rocket_chat_connector_flutter/services/http_service.dart' as roc
 import 'package:rocket_chat_connector_flutter/models/filters/updatesince_filter.dart';
 import 'package:rocket_chat_connector_flutter/models/permission.dart';
 import 'my_profile.dart';
+import 'widgets/simple_list_tile.dart';
 import 'widgets/unread_counter.dart';
 
 import 'chatview.dart';
@@ -559,21 +560,22 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           onTap: () {
             _setChannel(room);
           },
-          leading: Container(
-              child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain,)),
-          title: Row(children: [
+          leading: Container(child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain, ),),
+          minLeadingWidth: 0,
+          title: Container(child: Row(children: [
             roomType,
             SizedBox(width: 3,),
             Flexible(child: Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),)),
             room.u != null && room.u.id == widget.user.id ?
             Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
-          ]),
-          subtitle: AbsorbPointer(child: buildSubTitle(room)),
-          trailing: UnreadCounter(unreadCount: unreadCount),
+          ]), padding: EdgeInsets.only(top: 12),),
+          subtitle: AbsorbPointer(child: buildSubTitle(room, unreadCount)),
+          //trailing: Container(child: UnreadCounter(unreadCount: unreadCount), decoration: BoxDecoration(border: Border.all()), height: double.infinity,),
           dense: true,
           visualDensity: VisualDensity.compact,
           selectedTileColor: Colors.yellow.shade200,
-          horizontalTitleGap: 15,
+          horizontalTitleGap: 12,
+          minVerticalPadding: 0,
           selected: selectedRoom != null ? selectedRoom.id == room.id : false,
         );
       }, childCount: roomList.length,
@@ -581,7 +583,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     );
   }
 
-  buildSubTitle(RC.Room room) {
+  buildSubTitle(RC.Room room, unreadCount) {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -591,32 +593,22 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           room.announcement != null && room.announcement.isNotEmpty ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
           //getLastMessage(room),
           Container(child:
-            Card(child:
-              ChatItemView(chatHomeState: this, message: room.lastMessage, me: widget.user, authRC: widget.authRC, onTapExit: true, room: room,),
-              clipBehavior: Clip.antiAlias,
-              color: Colors.blue.shade100,
-            ),
-            //decoration: BoxDecoration(color: Colors.blue.shade100,),
+            Row(children: [
+              Expanded(child: Wrap(children: [
+                Card(child:
+                  ChatItemView(chatHomeState: this, message: room.lastMessage, me: widget.user, authRC: widget.authRC, onTapExit: true, room: room,),
+                  color: Colors.blue.shade100,
+                ),
+              ])),
+              SizedBox(width: 3,),
+              Container(child: UnreadCounter(unreadCount: unreadCount), margin: EdgeInsets.only(top: 5),),
+            ], crossAxisAlignment: CrossAxisAlignment.start,),
+            decoration: BoxDecoration(color: Colors.transparent,),
+            constraints: BoxConstraints(maxHeight: 80),
+            clipBehavior: Clip.antiAlias,
           ),
           room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
-    );
-  }
-
-  Widget getLastMessage(RC.Room room) {
-    if (room.lastMessage == null)
-      return SizedBox();
-    Message message = Utils.toDisplayMessage(room.lastMessage);
-
-    if ((message.displayMessage == null || message.displayMessage.isEmpty) && room.lastMessage != null && room.lastMessage.attachments != null && room.lastMessage.attachments.length > 0)
-      message.displayMessage = room.lastMessage.attachments.first.title;
-
-    if (message.displayMessage == null)
-      return SizedBox();
-
-    return Linkable(
-      text: message.msg,
-      style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.normal),
     );
   }
 

@@ -555,7 +555,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             onEmojiSelected: (category, emoji) {
               print(emoji);
               if (emoji.emoji.startsWith('/')) {
-                _postMessage(serverUri.replace(path: '/emoji-custom/${emoji.emoji}').toString());
+                _postMessage(serverUri.replace(path: '/emoji-custom${emoji.emoji}').toString());
               } else {
                 _tecMessageInput.text += emoji.emoji;
                 caretToEnd();
