@@ -289,7 +289,9 @@ class ChatItemViewState extends State<ChatItemView> {
                 widget.chatViewState.findAndScroll(message.id);
             },
             child: Stack(children: [
-              buildMessageBody(message),
+                LayoutBuilder(builder: (context, boxConstraint) {
+                  return buildMessageBody(message, boxConstraint);
+                }),
               message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox()
                 : Container(child: Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
                     alignment: Alignment.topRight, padding: EdgeInsets.only(right: 2),
@@ -400,7 +402,7 @@ class ChatItemViewState extends State<ChatItemView> {
     return haveIt;
   }
 
-  Widget buildMessageBody(Message message) {
+  Widget buildMessageBody(Message message, BoxConstraints boxConstraints) {
     message = Utils.toDisplayMessage(message);
     String newMessage = message.displayMessage;
     var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
@@ -415,43 +417,65 @@ class ChatItemViewState extends State<ChatItemView> {
     double messageBorderWidth = 0;
     if (message.isAttachment)
       messageBorderWidth = 1;
+    bool imageUrlBody = false;
+    if (message.urls != null && message.urls.length == 1 && message.urls.single.headers != null &&
+        message.urls.single.headers['contentType'] != null &&
+        message.urls.single.headers['contentType'].contains('image') &&
+        message.msg == message.urls.single.url) {
+      imageUrlBody = true;
+      newMessage = null;
+    }
+
     return Container(
-        child: Column(children: <Widget>[
-          newMessage == null || newMessage.isEmpty ? SizedBox() : Container(
-              padding: EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: messageBackgroundColor,
-                border: Border.all(color: Colors.blueAccent, width: messageBorderWidth),
-                borderRadius: BorderRadius.all(
-                    Radius.circular(2.0) //                 <--- border radius here
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+        newMessage == null || newMessage.isEmpty ? SizedBox() : Container(
+            padding: EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: messageBackgroundColor,
+              border: Border.all(color: Colors.blueAccent, width: messageBorderWidth),
+              borderRadius: BorderRadius.all(
+                  Radius.circular(2.0) //                 <--- border radius here
               ),
-              width: MediaQuery.of(context).size.width,
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.end,
-                children: [
-                MouseRegion(
-                cursor: SystemMouseCursors.text,
-                child: Linkable(
-                  text: newMessage,
-                  style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
-                  linkClickCallback: (String text, String type) {
-                    if (widget.onTapExit)
-                      Navigator.pop(context, message.id);
-                    else
-                      _launch(_getUrl(message, text, type));
-                  },
-                )),
-                message.editedBy != null ?
-                  Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
-                  SizedBox(),
-                  message.t == 'discussion-created' ? Icon(Icons.double_arrow_sharp, color: Colors.blueAccent,) : SizedBox(),
-              ])
-          ),
-          message.urls != null && message.urls.length > 0
-              ? buildUrls(message)
-              : SizedBox(),
-        ]));
+            ),
+            width: MediaQuery.of(context).size.width,
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: [
+              MouseRegion(
+              cursor: SystemMouseCursors.text,
+              child: Linkable(
+                text: newMessage,
+                style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
+                linkClickCallback: (String text, String type) {
+                  if (widget.onTapExit)
+                    Navigator.pop(context, message.id);
+                  else
+                    _launch(_getUrl(message, text, type));
+                },
+              )),
+              message.editedBy != null ?
+                Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
+                SizedBox(),
+                message.t == 'discussion-created' ? Icon(Icons.double_arrow_sharp, color: Colors.blueAccent,) : SizedBox(),
+            ])
+        ),
+        !imageUrlBody ? SizedBox() :
+        Container(width: boxConstraints.maxWidth, alignment: Alignment.topLeft,
+          child: FullScreenWidget(
+          child: Hero(
+            tag: message.urls.single.url + message.id,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(5), child:
+              Image.network(message.urls.single.url, width: boxConstraints.maxWidth, fit: BoxFit.contain, cacheWidth: 500,)
+            )
+          )),
+        ),
+        message.urls != null && message.urls.length > 0 && !imageUrlBody
+            ? buildUrls(message)
+            : SizedBox(),
+      ]));
   }
 
   _launch(String url) async {
@@ -541,6 +565,7 @@ class ChatItemViewState extends State<ChatItemView> {
         Navigator.pop(context, emoji.name);
       },
       config: epf.Config(
+          showCustomsTab: false,
           columns: 6,
           emojiSizeMax: 26.0,
           verticalSpacing: 0,

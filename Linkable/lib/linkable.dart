@@ -1,5 +1,6 @@
 library linkable;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:linkable/constants.dart';
@@ -53,7 +54,27 @@ class Linkable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     init();
-    return RichText(
+    return
+    kIsWeb ?
+    SelectableText.rich(
+      TextSpan(
+        text: '',
+        style: style,
+        children: _getTextSpans(),
+      ),
+      textAlign: textAlign,
+      textDirection: textDirection,
+      //softWrap: softWrap,
+      //overflow: overflow,
+      textScaleFactor: textScaleFactor,
+      maxLines: maxLines,
+      //locale: locale,
+      strutStyle: strutStyle,
+      textWidthBasis: textWidthBasis,
+      textHeightBehavior: textHeightBehavior,
+    )
+    :
+    RichText(
       textAlign: textAlign,
       textDirection: textDirection,
       softWrap: softWrap,

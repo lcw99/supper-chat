@@ -20,10 +20,10 @@ class HttpService {
               as Future<Map<String, String>?>));
 
   Future<http.Response> getWithQuery(
-      String uri, Map<String, dynamic> query, Authentication authentication) async =>
+      String uri, Map<String, dynamic>? query, Authentication authentication) async =>
       await http.get(
           Uri.parse(
-              _apiUrl.toString() + uri + '?' + _urlEncode(query)),
+              _apiUrl.toString() + uri + (query == null ? '' : '?' + _urlEncode(query))),
           headers: await (_getHeaders(authentication)
           as Future<Map<String, String>?>));
 

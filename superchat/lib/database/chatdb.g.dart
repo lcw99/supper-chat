@@ -911,197 +911,194 @@ class $RoomMessagesTable extends RoomMessages
   }
 }
 
-class ChatUser extends DataClass implements Insertable<ChatUser> {
-  final String uid;
-  final String uname;
-  ChatUser({@required this.uid, @required this.uname});
-  factory ChatUser.fromData(Map<String, dynamic> data, GeneratedDatabase db,
+class CustomEmoji extends DataClass implements Insertable<CustomEmoji> {
+  final String id;
+  final String info;
+  CustomEmoji({@required this.id, @required this.info});
+  factory CustomEmoji.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
     final stringType = db.typeSystem.forDartType<String>();
-    return ChatUser(
-      uid: stringType.mapFromDatabaseResponse(data['${effectivePrefix}uid']),
-      uname:
-          stringType.mapFromDatabaseResponse(data['${effectivePrefix}uname']),
+    return CustomEmoji(
+      id: stringType.mapFromDatabaseResponse(data['${effectivePrefix}id']),
+      info: stringType.mapFromDatabaseResponse(data['${effectivePrefix}info']),
     );
   }
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (!nullToAbsent || uid != null) {
-      map['uid'] = Variable<String>(uid);
+    if (!nullToAbsent || id != null) {
+      map['id'] = Variable<String>(id);
     }
-    if (!nullToAbsent || uname != null) {
-      map['uname'] = Variable<String>(uname);
+    if (!nullToAbsent || info != null) {
+      map['info'] = Variable<String>(info);
     }
     return map;
   }
 
-  ChatUsersCompanion toCompanion(bool nullToAbsent) {
-    return ChatUsersCompanion(
-      uid: uid == null && nullToAbsent ? const Value.absent() : Value(uid),
-      uname:
-          uname == null && nullToAbsent ? const Value.absent() : Value(uname),
+  CustomEmojisCompanion toCompanion(bool nullToAbsent) {
+    return CustomEmojisCompanion(
+      id: id == null && nullToAbsent ? const Value.absent() : Value(id),
+      info: info == null && nullToAbsent ? const Value.absent() : Value(info),
     );
   }
 
-  factory ChatUser.fromJson(Map<String, dynamic> json,
+  factory CustomEmoji.fromJson(Map<String, dynamic> json,
       {ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
-    return ChatUser(
-      uid: serializer.fromJson<String>(json['uid']),
-      uname: serializer.fromJson<String>(json['uname']),
+    return CustomEmoji(
+      id: serializer.fromJson<String>(json['id']),
+      info: serializer.fromJson<String>(json['info']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer serializer}) {
     serializer ??= moorRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'uid': serializer.toJson<String>(uid),
-      'uname': serializer.toJson<String>(uname),
+      'id': serializer.toJson<String>(id),
+      'info': serializer.toJson<String>(info),
     };
   }
 
-  ChatUser copyWith({String uid, String uname}) => ChatUser(
-        uid: uid ?? this.uid,
-        uname: uname ?? this.uname,
+  CustomEmoji copyWith({String id, String info}) => CustomEmoji(
+        id: id ?? this.id,
+        info: info ?? this.info,
       );
   @override
   String toString() {
-    return (StringBuffer('ChatUser(')
-          ..write('uid: $uid, ')
-          ..write('uname: $uname')
+    return (StringBuffer('CustomEmoji(')
+          ..write('id: $id, ')
+          ..write('info: $info')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(uid.hashCode, uname.hashCode));
+  int get hashCode => $mrjf($mrjc(id.hashCode, info.hashCode));
   @override
   bool operator ==(dynamic other) =>
       identical(this, other) ||
-      (other is ChatUser && other.uid == this.uid && other.uname == this.uname);
+      (other is CustomEmoji && other.id == this.id && other.info == this.info);
 }
 
-class ChatUsersCompanion extends UpdateCompanion<ChatUser> {
-  final Value<String> uid;
-  final Value<String> uname;
-  const ChatUsersCompanion({
-    this.uid = const Value.absent(),
-    this.uname = const Value.absent(),
+class CustomEmojisCompanion extends UpdateCompanion<CustomEmoji> {
+  final Value<String> id;
+  final Value<String> info;
+  const CustomEmojisCompanion({
+    this.id = const Value.absent(),
+    this.info = const Value.absent(),
   });
-  ChatUsersCompanion.insert({
-    @required String uid,
-    @required String uname,
-  })  : uid = Value(uid),
-        uname = Value(uname);
-  static Insertable<ChatUser> custom({
-    Expression<String> uid,
-    Expression<String> uname,
+  CustomEmojisCompanion.insert({
+    @required String id,
+    @required String info,
+  })  : id = Value(id),
+        info = Value(info);
+  static Insertable<CustomEmoji> custom({
+    Expression<String> id,
+    Expression<String> info,
   }) {
     return RawValuesInsertable({
-      if (uid != null) 'uid': uid,
-      if (uname != null) 'uname': uname,
+      if (id != null) 'id': id,
+      if (info != null) 'info': info,
     });
   }
 
-  ChatUsersCompanion copyWith({Value<String> uid, Value<String> uname}) {
-    return ChatUsersCompanion(
-      uid: uid ?? this.uid,
-      uname: uname ?? this.uname,
+  CustomEmojisCompanion copyWith({Value<String> id, Value<String> info}) {
+    return CustomEmojisCompanion(
+      id: id ?? this.id,
+      info: info ?? this.info,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (uid.present) {
-      map['uid'] = Variable<String>(uid.value);
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
     }
-    if (uname.present) {
-      map['uname'] = Variable<String>(uname.value);
+    if (info.present) {
+      map['info'] = Variable<String>(info.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('ChatUsersCompanion(')
-          ..write('uid: $uid, ')
-          ..write('uname: $uname')
+    return (StringBuffer('CustomEmojisCompanion(')
+          ..write('id: $id, ')
+          ..write('info: $info')
           ..write(')'))
         .toString();
   }
 }
 
-class $ChatUsersTable extends ChatUsers
-    with TableInfo<$ChatUsersTable, ChatUser> {
+class $CustomEmojisTable extends CustomEmojis
+    with TableInfo<$CustomEmojisTable, CustomEmoji> {
   final GeneratedDatabase _db;
   final String _alias;
-  $ChatUsersTable(this._db, [this._alias]);
-  final VerificationMeta _uidMeta = const VerificationMeta('uid');
-  GeneratedTextColumn _uid;
+  $CustomEmojisTable(this._db, [this._alias]);
+  final VerificationMeta _idMeta = const VerificationMeta('id');
+  GeneratedTextColumn _id;
   @override
-  GeneratedTextColumn get uid => _uid ??= _constructUid();
-  GeneratedTextColumn _constructUid() {
+  GeneratedTextColumn get id => _id ??= _constructId();
+  GeneratedTextColumn _constructId() {
     return GeneratedTextColumn(
-      'uid',
+      'id',
       $tableName,
       false,
     );
   }
 
-  final VerificationMeta _unameMeta = const VerificationMeta('uname');
-  GeneratedTextColumn _uname;
+  final VerificationMeta _infoMeta = const VerificationMeta('info');
+  GeneratedTextColumn _info;
   @override
-  GeneratedTextColumn get uname => _uname ??= _constructUname();
-  GeneratedTextColumn _constructUname() {
+  GeneratedTextColumn get info => _info ??= _constructInfo();
+  GeneratedTextColumn _constructInfo() {
     return GeneratedTextColumn(
-      'uname',
+      'info',
       $tableName,
       false,
     );
   }
 
   @override
-  List<GeneratedColumn> get $columns => [uid, uname];
+  List<GeneratedColumn> get $columns => [id, info];
   @override
-  $ChatUsersTable get asDslTable => this;
+  $CustomEmojisTable get asDslTable => this;
   @override
-  String get $tableName => _alias ?? 'chat_users';
+  String get $tableName => _alias ?? 'custom_emojis';
   @override
-  final String actualTableName = 'chat_users';
+  final String actualTableName = 'custom_emojis';
   @override
-  VerificationContext validateIntegrity(Insertable<ChatUser> instance,
+  VerificationContext validateIntegrity(Insertable<CustomEmoji> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('uid')) {
-      context.handle(
-          _uidMeta, uid.isAcceptableOrUnknown(data['uid'], _uidMeta));
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id'], _idMeta));
     } else if (isInserting) {
-      context.missing(_uidMeta);
+      context.missing(_idMeta);
     }
-    if (data.containsKey('uname')) {
+    if (data.containsKey('info')) {
       context.handle(
-          _unameMeta, uname.isAcceptableOrUnknown(data['uname'], _unameMeta));
+          _infoMeta, info.isAcceptableOrUnknown(data['info'], _infoMeta));
     } else if (isInserting) {
-      context.missing(_unameMeta);
+      context.missing(_infoMeta);
     }
     return context;
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {uid};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  ChatUser map(Map<String, dynamic> data, {String tablePrefix}) {
+  CustomEmoji map(Map<String, dynamic> data, {String tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
-    return ChatUser.fromData(data, _db, prefix: effectivePrefix);
+    return CustomEmoji.fromData(data, _db, prefix: effectivePrefix);
   }
 
   @override
-  $ChatUsersTable createAlias(String alias) {
-    return $ChatUsersTable(_db, alias);
+  $CustomEmojisTable createAlias(String alias) {
+    return $CustomEmojisTable(_db, alias);
   }
 }
 
@@ -1117,11 +1114,12 @@ abstract class _$ChatDatabase extends GeneratedDatabase {
   $RoomMessagesTable _roomMessages;
   $RoomMessagesTable get roomMessages =>
       _roomMessages ??= $RoomMessagesTable(this);
-  $ChatUsersTable _chatUsers;
-  $ChatUsersTable get chatUsers => _chatUsers ??= $ChatUsersTable(this);
+  $CustomEmojisTable _customEmojis;
+  $CustomEmojisTable get customEmojis =>
+      _customEmojis ??= $CustomEmojisTable(this);
   @override
   Iterable<TableInfo> get allTables => allSchemaEntities.whereType<TableInfo>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [rooms, subscriptions, keyValues, roomMessages, chatUsers];
+      [rooms, subscriptions, keyValues, roomMessages, customEmojis];
 }

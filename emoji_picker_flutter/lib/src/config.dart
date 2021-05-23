@@ -19,6 +19,9 @@ class Config {
       this.iconColorSelected = Colors.blue,
       this.progressIndicatorColor = Colors.blue,
       this.showRecentsTab = true,
+      this.showCustomsTab = true,
+      this.customEmojis,
+      this.customEmojiUrlBase,
       this.recentsLimit = 28,
       this.noRecentsText = 'No Recents',
       this.noRecentsStyle =
@@ -60,6 +63,9 @@ class Config {
 
   /// Show extra tab with recently used emoji
   final bool showRecentsTab;
+  final bool showCustomsTab;
+  final Map<String, String>? customEmojis;
+  final String? customEmojiUrlBase;
 
   /// Limit of recently used emoji that will be saved
   final int recentsLimit;
@@ -103,6 +109,8 @@ class Config {
         return categoryIcons.symbolIcon;
       case Category.FLAGS:
         return categoryIcons.flagIcon;
+      case Category.CUSTOMS:
+        return categoryIcons.customsIcon;
       default:
         throw Exception('Unsupported Category');
     }
