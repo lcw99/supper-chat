@@ -17,6 +17,6 @@ class UnreadCounter extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.blue,)
-    ) : Container(width: 1, height: 1,);
+    ) : SizedBox(width: 20,);
   }
 }

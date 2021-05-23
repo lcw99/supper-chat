@@ -249,12 +249,13 @@ class ChatItemViewState extends State<ChatItemView> {
       userNameColor = Colors.green.shade900;
     var usernameFontSize = USERNAME_FONT_SIZE;
     return Row(children: [
-      Text(
-        userName  + '(${widget.index.toString()})' ,
+      Expanded(child: Text(
+        userName /* + '(${widget.index.toString()})' */,
         style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
         textAlign: TextAlign.left,
-      ),
-      Wrap(alignment: WrapAlignment.end,
+        maxLines: 1, overflow: TextOverflow.clip,
+      )),
+      Expanded(child: Wrap(alignment: WrapAlignment.end,
           children: [
             _messageStarred(message) ? Wrap(children: [
               SizedBox(width: 2,),
@@ -266,11 +267,11 @@ class ChatItemViewState extends State<ChatItemView> {
               SizedBox(width: 1,),
               Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize),)
             ])  : SizedBox(),
-          ]),
-      Expanded(child: Container(child:
-      Text(dateStr, style: TextStyle(fontSize: usernameFontSize, color: Colors.blueGrey, fontStyle: FontStyle.italic),),
+          ])),
+      Container(child:
+      Text(dateStr, style: TextStyle(fontSize: usernameFontSize, color: Colors.blueGrey, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,),
         alignment: Alignment.centerRight,
-      )),
+      ),
     ]);
   }
 
@@ -316,16 +317,16 @@ class ChatItemViewState extends State<ChatItemView> {
             })
             : SizedBox(),
           Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 1, child: bReactions ?
-                Container(
-                  height: 30,
-                  width: MediaQuery.of(context).size.width,
-                  child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
-                ) : SizedBox()),
-              ]),
-        ]));
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 1, child: bReactions ?
+              Container(
+                height: 30,
+                width: MediaQuery.of(context).size.width,
+                child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
+              ) : SizedBox()),
+            ]),
+          ]));
   }
 
   String getDownloadLink(Message message) {
@@ -432,7 +433,10 @@ class ChatItemViewState extends State<ChatItemView> {
     if (message.urls != null && message.urls.length == 1 && message.urls.single.headers != null &&
         message.urls.single.headers['contentType'] != null &&
         message.urls.single.headers['contentType'].contains('image') &&
-        message.msg == message.urls.single.url) {
+        message.msg == message.urls.single.url ||
+        message.urls != null && message.urls.length == 1 &&
+        message.msg == message.urls.single.url &&
+        message.id == widget.room.lastMessage.id) {
       imageUrlBody = true;
       message.imageUrlBody = true;
       newMessage = null;
