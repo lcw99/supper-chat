@@ -7,6 +7,7 @@ export 'database/shared.dart';
 part 'chatdb.g.dart';
 
 const String lastUpdateRoom = 'lastUpdateRoom';
+const String lastUpdateCustomEmoji = 'lastUpdateCustomEmoji';
 
 const String lastUpdateRoomMessage = 'lastUpdateRoomMessage';
 const String historyReadEnd = 'historyReadEnd';
@@ -65,7 +66,7 @@ class ChatDatabase extends _$ChatDatabase {
   // you should bump this number whenever you change or add a table definition. Migrations
   // are covered later in this readme.
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,7 +77,7 @@ class ChatDatabase extends _$ChatDatabase {
         print('migration from=$from, to=$to');
         if (from == 1) {
           await m.alterTable(TableMigration(rooms));
-        } else if (from == 12) {
+        } else if (from <= 14) {
           for (final table in allTables) {
             await m.deleteTable(table.actualTableName);
             await m.createTable(table);

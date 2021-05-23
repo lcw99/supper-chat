@@ -596,7 +596,11 @@ class _LoginHomeState extends State<LoginHome> {
   }
 
   Future<void> loadCustomEmojis(Authentication authRC) async {
-    RC.CustomEmojiResponse r = await getEtcService().getCustomEmojiList(authRC);
+    var lastUpdate = await locator<ChatDatabase>().getValueByKey(lastUpdateCustomEmoji);
+    DateTime updateSince;
+    if (lastUpdate != null)
+      updateSince = DateTime.tryParse(lastUpdate.value);
+    RC.CustomEmojiResponse r = await getEtcService().getCustomEmojiList(authRC, updatedSince: updateSince);
     if (!r.success)
       return;
     List<RC.CustomEmoji> update = r.emojis.update;
@@ -606,8 +610,13 @@ class _LoginHomeState extends State<LoginHome> {
       await locator<ChatDatabase>().upsertCustomEmoji(CustomEmoji(id: e.id, info: jsonEncode(e.toMap())));
     for (var e in remove)
       await locator<ChatDatabase>().deleteCustomEmoji(e.id);
+    if (update.length > 0 || remove.length > 0)
+      await locator<ChatDatabase>().upsertKeyValue(KeyValue(key: lastUpdateCustomEmoji, value: DateTime.now().toIso8601String()));
 
     List<CustomEmoji> dbCustomEmojis = await locator<ChatDatabase>().getAllCustomEmojis;
+
+    Logger().e('update=${update.length}, remove=${remove.length}, db=${dbCustomEmojis.length}');
+
     for (var e in dbCustomEmojis) {
       RC.CustomEmoji r = RC.CustomEmoji.fromMap(jsonDecode(e.info));
       customEmojis[':${r.name}:'] = '/${r.name}.${r.extension}';

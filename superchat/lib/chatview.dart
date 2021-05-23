@@ -91,13 +91,20 @@ class ChatDataStore {
     return _chatData.indexWhere((element) => element.messageId == messageId) >= 0;
   }
 
-  insertNewOnTop(Message m) {
+  bool tryInsertNew(Message m) {
     if (m.tmid != null) {
       int i = findIndexByMessageId(m.tmid);
+      if (i < 0)
+        return false;
       _insertAt(i - _chatData[i].replyCount, m);
       _chatData[i].replyCount++;
-    } else
+      return true;
+    }
+    if (m.ts.isAfter(_chatData.first.timeStamp)) {
       _insertAt(0, m);
+      return true;
+    }
+    return false;
   }
 
   _insertAt(int index, Message m) async {
@@ -308,11 +315,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               chatDataStore.replaceMessage(i, roomMessage);
               userTypingKey.currentState.setTypingUser('');
             } else {  // new message
-              setState(() {
-                print('!!!new message');
-                needScrollToBottom = true;
-                chatDataStore.insertNewOnTop(roomMessage);
-              });
+              needScrollToBottom = chatDataStore.tryInsertNew(roomMessage);
+              if (needScrollToBottom)
+                setState(() {
+                  print('!!!new message inserted');
+                });
               userTypingKey.currentState.setTypingUser('');
             }
           }
@@ -550,7 +557,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 customEmojiUrlBase: serverUri.replace(path: '/emoji-custom').toString(),
                 customEmojis: customEmojis,
                 columns: 4,
-                emojiSizeMax: 55.0,
+                emojiSizeMax: 50.0,
                 verticalSpacing: 0,
                 horizontalSpacing: 0,
                 initCategory: epf.Category.RECENT,
