@@ -589,7 +589,15 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.announcement != null && room.announcement.isNotEmpty ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          getLastMessage(room),
+          //getLastMessage(room),
+          Container(child:
+            Card(child:
+              ChatItemView(chatHomeState: this, message: room.lastMessage, me: widget.user, authRC: widget.authRC, onTapExit: true, room: room,),
+              clipBehavior: Clip.antiAlias,
+              color: Colors.blue.shade100,
+            ),
+            //decoration: BoxDecoration(color: Colors.blue.shade100,),
+          ),
           room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
     );
