@@ -615,7 +615,7 @@ class _LoginHomeState extends State<LoginHome> {
 
     List<CustomEmoji> dbCustomEmojis = await locator<ChatDatabase>().getAllCustomEmojis;
 
-    Logger().e('update=${update.length}, remove=${remove.length}, db=${dbCustomEmojis.length}');
+    //Logger().e('update=${update.length}, remove=${remove.length}, db=${dbCustomEmojis.length}');
 
     for (var e in dbCustomEmojis) {
       RC.CustomEmoji r = RC.CustomEmoji.fromMap(jsonDecode(e.info));

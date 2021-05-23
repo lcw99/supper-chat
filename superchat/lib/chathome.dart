@@ -101,6 +101,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   List<SharedMediaFile> _sharedFiles;
   String _sharedText;
 
+  PageController pageController;
+
   bool isWebSocketClosed() => webSocketService.socketClosed;
 
   Authentication getAuthentication() => widget.authRC;
@@ -108,6 +110,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   @override
   void initState() {
     notificationController = StreamController<RC.Notification>.broadcast();
+    pageController = PageController(initialPage: selectedPage,);
     super.initState();
 
     if (kIsWeb) {
@@ -458,28 +461,30 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
 
   Widget _buildPage() {
     debugPrint("_buildPage=" + selectedPage.toString());
-    switch(selectedPage) {
-      case 0:
-        return buildMainScrollView(null, 'MY ROOMS', 'assets/images/nepal-2184940_1920.jpg');
-        break;
-      case 1:
-        return buildMainScrollView('c', 'PUBLIC', 'assets/images/sunrise-1634197_1920.jpg');
-        break;
-      case 2:
-        return buildMainScrollView('d', 'DIRECT', 'assets/images/mountains-1158269_1920.jpg');
-        break;
-    }
+    return PageView(
+      children: [
+        buildMainScrollView(null, 'MY ROOMS', 'assets/images/nepal-2184940_1920.jpg'),
+        buildMainScrollView('c', 'PUBLIC', 'assets/images/sunrise-1634197_1920.jpg'),
+        buildMainScrollView('d', 'DIRECT', 'assets/images/mountains-1158269_1920.jpg'),
+      ],
+      controller: pageController,
+      onPageChanged: (newPage) {
+        setState(() {
+          selectedPage = newPage;
+        });
+      }
+    );
   }
 
   buildMainScrollView(String roomType, String title, String imagePath) {
     return CustomScrollView(
-        slivers: <Widget>[
-          buildSilverAppbar(title, imagePath),
-          FutureBuilder<List<RC.Room>>(
-            future: _getMyRoomList(roomType: roomType, titleText: title, imagePath: imagePath),
-            builder: roomBuilder
-          )
-        ]
+      slivers: <Widget>[
+        buildSilverAppbar(title, imagePath),
+        FutureBuilder<List<RC.Room>>(
+          future: _getMyRoomList(roomType: roomType, titleText: title, imagePath: imagePath),
+          builder: roomBuilder
+        )
+      ]
     );
   }
 
@@ -608,10 +613,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   void _onBottomNaviTapped(int index) {
-    debugPrint("_onBottomNaviTapped =" + index.toString());
-    setState(() {
-      selectedPage = index;
-    });
+    pageController.animateToPage(index,duration: const Duration(milliseconds: 500),curve: Curves.easeInOut);
   }
 
   setChannelById(String rid) async {
