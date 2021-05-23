@@ -456,7 +456,16 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     else if (room.usernames != null)
       title = room.usernames.toString();
 
-    return Phoenix(child: Scaffold(
+    return WillPopScope(onWillPop: () async {
+        if (showEmojiKeyboard) {
+          setState(() {
+            showEmojiKeyboard = false;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Phoenix(child: Scaffold(
       floatingActionButton: Visibility(
         child: ScaleTransition(
         scale: _hideFabAnimation,
@@ -629,7 +638,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           )
         )
       ],)
-    ));
+    )));
   }
 
   caretToEnd() {

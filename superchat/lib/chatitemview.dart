@@ -631,8 +631,7 @@ class ChatItemViewState extends State<ChatItemView> {
     items.add(PopupMenuItem(child: Text('Copy...'), value: 'copy'));
     items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
     items.add(PopupMenuItem(child: Text('Quote...'), value: 'quote'));
-    if (message.tmid == null)
-      items.add(PopupMenuItem(child: Text('Reply...'), value: 'reply'));
+    items.add(PopupMenuItem(child: Text('Reply...'), value: 'reply'));
     items.add(PopupMenuItem(child: Text('Create Discussion...'), value: 'create_discussion'));
     if (_messageStarred(message))
       items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
