@@ -43,6 +43,7 @@ class Message {
   bool? isAttachment = false;
   bool? isReply = false;
   String? displayMessage;
+  bool? imageUrlBody = false;
 
   Message({
     this.id,
@@ -78,6 +79,7 @@ class Message {
 
     this.isAttachment,
     this.isReply,
+    this.imageUrlBody,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {
