@@ -56,9 +56,10 @@ class ChatItemView extends StatefulWidget {
   final int index;
   final Room room;
   final ChatViewState chatViewState;
+  final bool hideAvatar;
 
   ChatItemView({Key key, @required this.chatHomeState, @required this.me, @required this.authRC,
-    this.onTapExit = false, this.message, this.index = 0, this.room, this.chatViewState,
+    this.onTapExit = false, this.message, this.index = 0, this.room, this.chatViewState, this.hideAvatar = false
   }) : super(key: key);
 
   @override
@@ -107,8 +108,9 @@ class ChatItemViewState extends State<ChatItemView> {
     if (isThreadMessage)
       leftMargin = 15;
     return Container(child: _buildChatItem(message),
-        margin: EdgeInsets.only(right: 15, left: leftMargin),
-        width: MediaQuery.of(context).size.width - 15,);
+      margin: EdgeInsets.only(right: 15, left: leftMargin),
+      width: MediaQuery.of(context).size.width - 15,
+    );
   }
 
   bool testAttachmentUserIsCached(MessageAttachment attachment) {
@@ -158,6 +160,7 @@ class ChatItemViewState extends State<ChatItemView> {
     return message.starred != null && message.starred.length > 0;
   }
 
+
   Widget _buildChatItem(Message message) {
     User user = Utils.getCachedUser(userId: message.user.id);
     bool roomChangedMessage = message.t != null;
@@ -166,6 +169,9 @@ class ChatItemViewState extends State<ChatItemView> {
       avatarSize = 20;
     else if (message.tmid != null || message.isAttachment)
       avatarSize = 30;
+
+    if (widget.hideAvatar)
+      avatarSize = 0;
 
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
@@ -185,16 +191,19 @@ class ChatItemViewState extends State<ChatItemView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: 9,),
-        message.tmid != null ?
-          GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,), onTap: () => replyMessage(true))
-          : SizedBox(),
-        GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
-          onTap: () async { await userClickAction(user); },
-        ),
+        widget.hideAvatar ? SizedBox() : Row(children: [
+          message.tmid != null ?
+            GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,), onTap: () => replyMessage(true))
+            : SizedBox(),
+          GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
+            onTap: () async { await userClickAction(user); },
+          ),
+        ]),
         SizedBox(width: 5,),
         Container(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: 4,),
             _buildUserNameLine(user),
             Stack(children: [
               _buildMessage(message),
@@ -203,7 +212,7 @@ class ChatItemViewState extends State<ChatItemView> {
                 alignment: Alignment.topRight, padding: EdgeInsets.only(right: 2),
               ),
             ]),
-            SizedBox(height: 8,),
+            SizedBox(height: 4,),
           ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize + (message.tmid != null ? 25 : 0)),),
         //SizedBox(width: 40,),
       ],);});
@@ -249,29 +258,25 @@ class ChatItemViewState extends State<ChatItemView> {
       userNameColor = Colors.green.shade900;
     var usernameFontSize = USERNAME_FONT_SIZE;
     return Row(children: [
-      Expanded(child: Text(
+      Text(
         userName /* + '(${widget.index.toString()})' */,
         style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
         textAlign: TextAlign.left,
         maxLines: 1, overflow: TextOverflow.clip,
-      )),
-      Expanded(child: Wrap(alignment: WrapAlignment.end,
-          children: [
-            _messageStarred(message) ? Wrap(children: [
-              SizedBox(width: 2,),
-              Icon(Icons.star_border_outlined, size: 14, color: Colors.redAccent,),
-            ]) : SizedBox(),
-            message.pinnedBy != null ? Wrap(children: [
-              SizedBox(width: 4,),
-              Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12,), angle: 45 * 3.14 / 180,),
-              SizedBox(width: 1,),
-              Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize),)
-            ])  : SizedBox(),
-          ])),
-      Container(child:
+      ),
+      _messageStarred(message) ?
+        Icon(Icons.star_border_outlined, size: 14, color: Colors.redAccent,)
+        : SizedBox(),
+      message.pinnedBy != null ? Wrap(children: [
+        SizedBox(width: 4,),
+        Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12,), angle: 45 * 3.14 / 180,),
+        SizedBox(width: 1,),
+        Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize), overflow: TextOverflow.clip, maxLines: 1,)
+      ])  : SizedBox(),
+      Expanded(child: Container(child:
       Text(dateStr, style: TextStyle(fontSize: usernameFontSize, color: Colors.blueGrey, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,),
         alignment: Alignment.centerRight,
-      ),
+      )),
     ]);
   }
 
@@ -385,6 +390,8 @@ class ChatItemViewState extends State<ChatItemView> {
           isAttachment: true,
         );
         attachmentBody = Expanded(child: _buildChatItem(attachmentMessage));
+      } else if (message.t == 'message_pinned') {
+        attachmentBody = SizedBox();
       } else {
         log('unknown attachment type=$message');
       }
@@ -651,6 +658,10 @@ class ChatItemViewState extends State<ChatItemView> {
       items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
     else
       items.add(PopupMenuItem(child: Text('Star...'), value: 'star'));
+    if (message.pinned)
+      items.add(PopupMenuItem(child: Text('UnPin...'), value: 'unpin'));
+    else
+      items.add(PopupMenuItem(child: Text('Pin...'), value: 'pin'));
     items.add(PopupMenuItem(child: Text('Reaction...'), value: 'reaction'));
     if (downloadPath != null)
       items.add(PopupMenuItem(child: Text('Download...'), value: 'download'));
@@ -684,6 +695,12 @@ class ChatItemViewState extends State<ChatItemView> {
       getMessageService().starMessage(message.id, widget.authRC);
     } else if (value == 'unstar') {
       getMessageService().unStarMessage(message.id, widget.authRC);
+    } else if (value == 'pin') {
+      var resp = await getMessageService().pinMessage(message.id, widget.authRC);
+      if (!resp.success)
+        Utils.showToast('You are not allowed to pin message.');
+    } else if (value == 'unpin') {
+      getMessageService().unPinMessage(message.id, widget.authRC);
     } else if (value == 'reaction') {
       pickReaction(message);
     } else if (value == 'edit') {

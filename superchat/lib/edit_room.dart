@@ -27,7 +27,7 @@ class EditRoomState extends State<EditRoom> {
   TextEditingController _tecJoinCode = TextEditingController();
   String errorText;
   String hintText = 'Room_Name';
-  String helperText = 'alphanumeric, no space';
+  String helperText = 'alphanumeric, with space';
   bool roomCreated = false;
 
   bool isPrivate = true;

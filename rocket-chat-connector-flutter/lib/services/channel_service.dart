@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:rocket_chat_connector_flutter/exceptions/exception.dart';
@@ -21,6 +22,7 @@ import 'package:rocket_chat_connector_flutter/models/response/response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/response_base.dart';
 import 'package:rocket_chat_connector_flutter/models/response/room_members_response.dart';
 import 'package:rocket_chat_connector_flutter/models/response/spotlight_response.dart';
+import 'package:rocket_chat_connector_flutter/models/response/sync_threads_list.dart';
 import 'package:rocket_chat_connector_flutter/models/room_update.dart';
 import 'package:rocket_chat_connector_flutter/models/subscription_update.dart';
 import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
@@ -344,8 +346,8 @@ class ChannelService {
   }
 
 
-  Future<ChannelMessages> getStarredMessages(String roomId, Authentication authentication) async {
-    String path = '/api/v1/chat.getStarredMessages';
+  Future<ChannelMessages> getTaggedMessages(String api, String roomId, Authentication authentication) async {
+    String path = '/api/v1/chat.$api';
     http.Response response = await _httpService.getWithQuery(
       path,
       {'roomId': roomId},
@@ -450,6 +452,27 @@ class ChannelService {
     throw RocketChatException(response.body);
   }
 
+  Future<SyncThreadListResponse> syncThreadsList(String roomId, Authentication authentication, {DateTime? updatedSince}) async {
+    String path = '/api/v1/chat.syncThreadsList';
+    if (updatedSince == null)
+      updatedSince = DateTime.fromMillisecondsSinceEpoch(0);
+    http.Response response = await _httpService.getWithQuery(
+      path,
+      { 'rid': roomId, 'updatedSince': updatedSince.toIso8601String() },
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    log("####chat.syncThreadsList resp=$resp");
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return SyncThreadListResponse.fromMap(jsonDecode(resp));
+      } else {
+        return SyncThreadListResponse();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
 
   Future<ChannelCounters> counters(
     ChannelCountersFilter filter,

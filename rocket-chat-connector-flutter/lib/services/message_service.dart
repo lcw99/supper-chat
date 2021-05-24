@@ -97,6 +97,39 @@ class MessageService {
     throw RocketChatException(response.body);
   }
 
+  Future<Response> pinMessage(String messageId, Authentication authentication) async {
+    http.Response response = await _httpService.post(
+      '/api/v1/chat.pinMessage',
+      jsonEncode({ 'messageId': messageId }),
+      authentication,
+    );
+
+    var resp = utf8.decode(response.bodyBytes);
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return Response.fromMap(jsonDecode(resp));
+      }
+    }
+    return Response(success: false, body: resp);
+  }
+
+  Future<Response> unPinMessage(String messageId, Authentication authentication) async {
+    http.Response response = await _httpService.post(
+      '/api/v1/chat.unPinMessage',
+      jsonEncode({ 'messageId': messageId }),
+      authentication,
+    );
+
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        return Response.fromMap(jsonDecode(utf8.decode(response.bodyBytes)));
+      } else {
+        return Response();
+      }
+    }
+    throw RocketChatException(response.body);
+  }
+
   Future<ReceiptResponse> getMessageReadReceipts(String messageId, Authentication authentication) async {
     String path = '/api/v1/chat.getMessageReadReceipts';
     http.Response response = await _httpService.getWithQuery(
