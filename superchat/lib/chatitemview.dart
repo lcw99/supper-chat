@@ -311,7 +311,7 @@ class ChatItemViewState extends State<ChatItemView> {
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
 
-    const double endPaddingForDate = 70;
+    const double endPaddingForDate = 90;
 
     if (bReactions) {
       if (reactions.containsKey(readCountEmoji)) {
@@ -344,7 +344,7 @@ class ChatItemViewState extends State<ChatItemView> {
                   buildMessageBody(message, boxConstraint),
                   !bAttachments ? SizedBox() :
                   LayoutBuilder(builder: (context, boxConstraint){
-                    return Container(child: buildAttachments(message));
+                    return buildAttachments(message);
                   }),
                 ]),
                 constraints: BoxConstraints(maxWidth: boxConstraint.maxWidth - endPaddingForDate),),);
