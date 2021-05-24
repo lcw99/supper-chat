@@ -47,6 +47,7 @@ import 'package:superchat/main.dart';
 import 'add_user_to_room.dart';
 import 'chathome.dart';
 import 'chatitemview.dart';
+import 'message_search.dart';
 import 'room_files.dart';
 import 'room_info.dart';
 import 'room_members.dart';
@@ -60,7 +61,6 @@ import 'package:rocket_chat_connector_flutter/models/sync_messages.dart';
 import 'database/chatdb.dart' as db;
 import 'utils/utils.dart';
 
-typedef Widget MessageSearchBuilderCallBack();
 final String gotoBottomKey = ':gotoBottom:';
 Message quotedMessage;
 
@@ -100,7 +100,7 @@ class ChatDataStore {
       _chatData[i].replyCount++;
       return true;
     }
-    if (m.ts.isAfter(_chatData.first.timeStamp)) {
+    if (_chatData.length == 0 || m.ts.isAfter(_chatData.first.timeStamp)) {
       _insertAt(0, m);
       return true;
     }
@@ -487,31 +487,36 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           IconButton(
             icon: const Icon(Icons.star_border_outlined),
             onPressed: () {
-              _handleSearchedMessage('Starred Messages', _buildStarredMessage);
+              handleSearchedMessage('Starred Messages', buildTaggedMessage(widget, room,
+                  getChannelService().getTaggedMessages('getStarredMessages', room.id, widget.authRC))
+              );
             },
           ),
           IconButton(
             icon: const Icon(Icons.search_outlined),
             onPressed: () {
-              _handleSearchedMessage('Search Messages', _buildSearchMessage);
+              handleSearchedMessage('Search Messages', buildSearchMessage(widget, room));
             },
           ),
           PopupMenuButton(
             onSelected: (value) async {
               if (value == 'room_info')
                 roomInformation();
-              else if (value == 'pinned_messages') {}
-              else if (value == 'room_files') {
+              else if (value == 'pinned_messages') {
+                handleSearchedMessage('Pinned Messages', buildTaggedMessage(widget, room,
+                    getChannelService().getTaggedMessages('getPinnedMessages', room.id, widget.authRC))
+                );
+              } else if (value == 'thread_list') {
+                handleSearchedMessage('Thread List', buildThreadList(widget, room));
+              } else if (value == 'room_files') {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => RoomFiles(room: room, authRC: widget.authRC,)));
-              }
-              else if (value == 'leave_room') {
+              } else if (value == 'leave_room') {
                 var r = await getChannelService().leaveRoom(room, widget.authRC);
                 if (r.success)
                   Navigator.pop(context);
                 else
                   Utils.showToast(r.body);
-              }
-              else if (value == 'room_members')
+              } else if (value == 'room_members')
                 Navigator.push(context, MaterialPageRoute(builder: (context) => RoomMembers(room: room, authRC: widget.authRC,)));
               else if (value == 'add_user') {
                 if (permissions != null && permissions.contains('add-user-to-joined-room'))
@@ -523,6 +528,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             itemBuilder: (context){
               var menu = [
                 PopupMenuItem(child: Text("Pinned Messages..."), value: 'pinned_messages',),
+                PopupMenuItem(child: Text("Thread List..."), value: 'thread_list',),
                 PopupMenuItem(child: Text("Files..."), value: 'room_files',),
                 PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),
               ];
@@ -776,7 +782,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       _controller.animateTo(offset + 1000, duration: Duration(milliseconds: 30), curve: Curves.ease);
   }
 
-  _handleSearchedMessage(String title, MessageSearchBuilderCallBack messageSearchBuilderCallBack) async {
+  handleSearchedMessage(String title, Widget content) async {
     String messageId = await showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -785,7 +791,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             insetPadding: EdgeInsets.all(5),
             contentPadding: EdgeInsets.all(5),
             content: Container(height: MediaQuery.of(context).size.height * .7, width: MediaQuery.of(context).size.width, child:
-              messageSearchBuilderCallBack(),
+              content,
             )
           );
         }
@@ -828,98 +834,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     if (scrollIndex >= 0)
       userTypingKey.currentState.setTypingUser(gotoBottomKey, stayTime: 0);
     Future.delayed(Duration(seconds: 1), () { Fluttertoast.cancel(); } );
-  }
-
-  Widget _buildStarredMessage() {
-    return FutureBuilder(
-      future: _getStarredMessages(),
-      builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
-        if(snapshot.hasData) {
-          return ListView.builder(
-            itemCount: snapshot.data.messages.length,
-            itemBuilder: (BuildContext c, int index) {
-              var message = snapshot.data.messages[index];
-              return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: room,);
-            });
-        } else {
-          return Center(child: CircularProgressIndicator());
-        }
-      }
-    );
-  }
-
-  String searchText;
-  CancelableOperation<void> cancellableOperation;
-  String helpText;
-
-  Future<dynamic> fromCancelable(Future<dynamic> future) async {
-    cancellableOperation?.cancel();
-    cancellableOperation = CancelableOperation.fromFuture(future, onCancel: () {
-      print('Operation Cancelled');
-      cancellableOperation = null;
-    });
-    return cancellableOperation.value;
-  }
-
-  Future<dynamic> getTranslation(String text) async {
-    return Future.delayed(const Duration(milliseconds: 1000), () {
-      return text;
-    });
-  }
-
-  Widget _buildSearchMessage() {
-    return StatefulBuilder(builder: (context, setState) {
-      return Column(children: [
-        Container(child: TextFormField(
-          autofocus: true,
-          keyboardType: TextInputType.text,
-          maxLines: 1,
-          decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.only(left: 5),),
-          onChanged: (text) {
-            if (text == null || text.isEmpty)
-              return;
-            fromCancelable(getTranslation(text)).then((value) {
-              print("Then called: $value");
-              setState(() { searchText = text; });
-            });
-          },
-        ), margin: EdgeInsets.only(left: 15, top:10, bottom: 0, right: 15),),
-        FutureBuilder(
-            future: _getSearchedMessages(searchText),
-            builder: (context, AsyncSnapshot<ChannelMessages> snapshot) {
-              if(snapshot.hasData && snapshot.data.messages != null) {
-                return Expanded(child: Column(children: [
-                  Container(child: Text('count = ${snapshot.data.messages.length}', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
-                    alignment: Alignment.centerLeft, margin: EdgeInsets.only(left: 15, bottom: 10),),
-                  Expanded(child: ListView.builder(
-                    itemCount: snapshot.data.messages.length,
-                    itemBuilder: (BuildContext c, int index) {
-                      var message = snapshot.data.messages[index];
-                      return ChatItemView(chatHomeState: widget.chatHomeState, message: message, me: widget.me, authRC: widget.authRC, onTapExit: true, room: room,);
-                  }))
-                ],));
-              } else {
-                return Text('no result\nregular expression possible, like /.*text.*/', style: TextStyle(fontSize: 12,), );
-              }
-            }
-        ),
-      ],);
-    });
-  }
-
-  Future<ChannelMessages> _getStarredMessages() {
-    return getChannelService().getStarredMessages(room.id, widget.authRC);
-  }
-
-  Future<ChannelMessages> _getSearchedMessages(String text) {
-    if (text == null || text.isEmpty)
-      return Future.value(ChannelMessages());
-    bool isRegular = text.startsWith('/') && (text.endsWith('/') || text.endsWith('/i'));
-    if (!isRegular || text.length < 3) {
-      text = text.replaceAll('/', '\x2f');
-      text = '/.*$text.*/';
-    }
-    return getChannelService().chatSearch(room.id, text, 100, widget.authRC);
   }
 
   _buildInputBox() {

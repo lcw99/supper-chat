@@ -84,7 +84,7 @@ class Message {
 
   Message.fromMap(Map<String, dynamic>? json) {
     if (json != null) {
-      pinned = json['pinned'];
+      pinned = json['pinned'] == null ? false : json['pinned'];
       tshow = json['tshow'];
       tmid = json['tmid'];
       tcount = json['tcount'];

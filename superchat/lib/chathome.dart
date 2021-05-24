@@ -484,7 +484,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         FutureBuilder<List<RC.Room>>(
           future: _getMyRoomList(roomType: roomType, titleText: title, imagePath: imagePath),
           builder: roomBuilder
-        )
+        ),
+        SliverToBoxAdapter(child: SizedBox(height: 20,))
       ]
     );
   }
@@ -537,7 +538,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
     );
   }
 
-  buildSilverList(roomList) {
+  buildSilverList(List<RC.Room> roomList) {
+    print('building Silver list=${roomList.length}');
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         RC.Room room = roomList[index];
@@ -556,27 +558,36 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         else
           roomType = Icon(Icons.device_unknown, color: Colors.yellow, size: 17);
 
-        return ListTile(
-          onTap: () {
-            _setChannel(room);
-          },
-          leading: Container(child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain, ),),
-          minLeadingWidth: 0,
-          title: Container(child: Row(children: [
-            roomType,
-            SizedBox(width: 3,),
-            Flexible(child: Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700),)),
-            room.u != null && room.u.id == widget.user.id ?
-            Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
-          ]), padding: EdgeInsets.only(top: 12),),
-          subtitle: AbsorbPointer(child: buildSubTitle(room, unreadCount)),
-          //trailing: Container(child: UnreadCounter(unreadCount: unreadCount), decoration: BoxDecoration(border: Border.all()), height: double.infinity,),
-          dense: true,
-          visualDensity: VisualDensity.compact,
-          selectedTileColor: Colors.yellow.shade200,
-          horizontalTitleGap: 12,
-          minVerticalPadding: 0,
-          selected: selectedRoom != null ? selectedRoom.id == room.id : false,
+        return Container(
+          child: SimpleListTile(
+            onTap: () {
+              _setChannel(room);
+            },
+            leading: Container(child: Image.network(room.roomAvatarUrl, fit: BoxFit.contain, ), margin: EdgeInsets.only(top: 0),),
+            title: Container(child: Row(children: [
+              roomType,
+              SizedBox(width: 3,),
+              Flexible(child: Text(roomName, style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 15),)),
+              room.u != null && room.u.id == widget.user.id ?
+              Icon(Icons.perm_identity, size: 17, color: Colors.indigo) : SizedBox(),
+            ]), padding: EdgeInsets.only(top: 12),),
+            subtitle: AbsorbPointer(child: buildSubTitle(room, unreadCount)),
+            leadingWidth: 60,
+            leadingHeight: 100,
+            horizontalTitleGap: 6,
+            selectedTileColor: Colors.yellow.shade200,
+            selected: selectedRoom != null ? selectedRoom.id == room.id : false,
+  /*
+            trailing: Container(width: 10, height: 10, decoration: BoxDecoration(border: Border.all()),),
+            trailingWidth: 10,
+            trailingHeight: 10,
+
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            minLeadingWidth: 0,
+            minVerticalPadding: 0,
+  */
+          )
         );
       }, childCount: roomList.length,
       ),
@@ -591,24 +602,29 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
           room.description != null && room.description.isNotEmpty ? Text(room.description, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.topic != null && room.topic.isNotEmpty ? Text(room.topic, style: TextStyle(color: Colors.blue)) : SizedBox(),
           room.announcement != null && room.announcement.isNotEmpty ? Text(room.announcement, style: TextStyle(color: Colors.blue)) : SizedBox(),
-          //getLastMessage(room),
-          Container(child:
-            Row(children: [
-              Expanded(child: Wrap(children: [
-                Card(child:
-                  ChatItemView(chatHomeState: this, message: room.lastMessage, me: widget.user, authRC: widget.authRC, onTapExit: true, room: room,),
-                  color: Colors.blue.shade100,
-                ),
-              ])),
-              SizedBox(width: 3,),
-              Container(child: UnreadCounter(unreadCount: unreadCount), margin: EdgeInsets.only(top: 5),),
-            ], crossAxisAlignment: CrossAxisAlignment.start,),
-            decoration: BoxDecoration(color: Colors.transparent,),
-            constraints: BoxConstraints(maxHeight: 80),
-            clipBehavior: Clip.antiAlias,
-          ),
+          buildLastMessage(room, unreadCount),
           room.subscription != null && room.subscription.blocked != null && room.subscription.blocked ? Text('blocked', style: TextStyle(color: Colors.red)) : SizedBox(),
         ]
+    );
+  }
+
+  Widget buildLastMessage(RC.Room room, unreadCount) {
+    return Container(
+      decoration: BoxDecoration(color: Colors.transparent,),
+      constraints: BoxConstraints(maxHeight: 80),
+      clipBehavior: Clip.antiAlias,
+      child:Row(children: [
+        Expanded(child: Wrap(children: [
+          Card(
+            color: Colors.blue.shade100,
+            child: room.lastMessage == null ? Container(height: 40,) :
+              ChatItemView(chatHomeState: this, message: room.lastMessage, me: widget.user, authRC: widget.authRC, onTapExit: true, room: room, hideAvatar: true,),
+              //Container(height: 50,)
+          ),
+        ])),
+        SizedBox(width: 3,),
+        Container(child: UnreadCounter(unreadCount: unreadCount), margin: EdgeInsets.only(top: 5),),
+      ], crossAxisAlignment: CrossAxisAlignment.start,),
     );
   }
 
@@ -744,11 +760,14 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       }
       if (roomType == null || (roomType != null && room.t == roomType)) {
         room.roomAvatarUrl = await Utils.getRoomAvatarUrl(room, widget.authRC);
-        if (room.t != 'd' || room.subscription.open)
+        if (room.t != 'd' || room.subscription.open) {
+          print('added room=${room.name}');
           roomList.add(room);
+        }
       }
     }
     roomList.sort((b, a) { return a.lm != null && b.lm != null ? a.lm.compareTo(b.lm) : a.updatedAt.compareTo(b.updatedAt); });
+    print('_getMyRoomList done');
     return roomList;
   }
 
