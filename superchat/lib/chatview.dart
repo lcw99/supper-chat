@@ -639,7 +639,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 return buildChatList();
               } else {
                 print('***** builder has no data');
-                return SizedBox();
+                if (chatDataStore.length == 0)
+                  return SizedBox();
+                else
+                  return buildChatList();
               }
             }
           )

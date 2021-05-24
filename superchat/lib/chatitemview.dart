@@ -164,15 +164,52 @@ class ChatItemViewState extends State<ChatItemView> {
   Widget _buildChatItem(Message message) {
     User user = Utils.getCachedUser(userId: message.user.id);
     bool roomChangedMessage = message.t != null;
-    double avatarSize = 40;
+    double avatarSize = DEFAULT_AVATAR_SIZE;
     if (roomChangedMessage)
-      avatarSize = 20;
+      avatarSize = DEFAULT_AVATAR_SIZE / 2;
     else if (message.tmid != null || message.isAttachment)
-      avatarSize = 30;
+      avatarSize = DEFAULT_AVATAR_SIZE * 3 / 4;
 
     if (widget.hideAvatar)
       avatarSize = 0;
 
+    return LayoutBuilder(builder: (context, boxConstraint) {
+      //print('boxConstraint=$boxConstraint');
+      const double avatarLeftPadding = 9;
+      const double avatarRightPadding = 5;
+      const double messageEndPadding = DEFAULT_AVATAR_SIZE;
+      double messageBodyWidth = boxConstraint.maxWidth -
+          (avatarLeftPadding + avatarRightPadding + avatarSize + (message.tmid != null ? 25 : 0));
+      return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: avatarLeftPadding,),
+        widget.hideAvatar ? SizedBox() : Row(children: [
+          message.tmid == null ? SizedBox() :
+          GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,),
+            onTap: () => replyMessage(true)
+          ),
+          GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
+            onTap: () async { await userClickAction(user); },
+          ),
+        ]),
+        SizedBox(width: avatarRightPadding,),
+        Container(
+          width: messageBodyWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 4,),
+              _buildUserNameLine(user),
+              Container(child: _buildMessage(message), /*decoration: BoxDecoration(border: Border.all()),*/),
+              SizedBox(height: 4,),
+            ],
+          )
+        ),
+      ],);});
+  }
+
+  Widget buildUnreadCount() {
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
 
@@ -185,37 +222,21 @@ class ChatItemViewState extends State<ChatItemView> {
       }
     }
 
-    return LayoutBuilder(builder: (context, boxConstraint) {
-      //print('boxConstraint=$boxConstraint');
-      return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(width: 9,),
-        widget.hideAvatar ? SizedBox() : Row(children: [
-          message.tmid != null ?
-            GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,), onTap: () => replyMessage(true))
-            : SizedBox(),
-          GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
-            onTap: () async { await userClickAction(user); },
-          ),
-        ]),
-        SizedBox(width: 5,),
-        Container(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 4,),
-            _buildUserNameLine(user),
-            Stack(children: [
-              _buildMessage(message),
-              message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox()
-                  : Container(child: Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
-                alignment: Alignment.topRight, padding: EdgeInsets.only(right: 2),
-              ),
-            ]),
-            SizedBox(height: 4,),
-          ],), width: boxConstraint.maxWidth - (9 + 5 + avatarSize + (message.tmid != null ? 25 : 0)),),
-        //SizedBox(width: 40,),
-      ],);});
+    return  message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox() :
+      Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.yellow.shade800));
+  }
+
+  Widget buildTimeDisplay() {
+    List<String> dateStr = Utils.getDateString(message.ts);
+    List<Widget> children = [];
+    String date = dateStr.first;
+    Color dateColor = Colors.blueAccent;
+    if (dateStr.length == 2 && dateStr[1] == 'YD')
+      dateColor = Colors.blueGrey;
+    else if (dateStr.length > 1)
+      date = dateStr.reversed.join(' ');
+    children.add(Text(date, style: TextStyle(fontSize: 9, color: dateColor, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,));
+    return Column(children: children, crossAxisAlignment: CrossAxisAlignment.start,);
   }
 
   userClickAction(user) async {
@@ -251,7 +272,6 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget _buildUserNameLine(user) {
-    String dateStr = Utils.getDateString(message.ts);
     String userName = Utils.getUserNameByUser(user);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
@@ -273,10 +293,12 @@ class ChatItemViewState extends State<ChatItemView> {
         SizedBox(width: 1,),
         Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize), overflow: TextOverflow.clip, maxLines: 1,)
       ])  : SizedBox(),
+/*
       Expanded(child: Container(child:
       Text(dateStr, style: TextStyle(fontSize: usernameFontSize, color: Colors.blueGrey, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,),
         alignment: Alignment.centerRight,
       )),
+*/
     ]);
   }
 
@@ -312,7 +334,16 @@ class ChatItemViewState extends State<ChatItemView> {
                 widget.chatViewState.findAndScroll(message.id);
             },
             child: LayoutBuilder(builder: (context, boxConstraint) {
-              return buildMessageBody(message, boxConstraint);
+              return Wrap(
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: [
+                Container(child: buildMessageBody(message, boxConstraint), constraints: BoxConstraints(maxWidth: boxConstraint.maxWidth - 70),),
+                SizedBox(width: 2,),
+                Column(children: [
+                  buildUnreadCount(),
+                  buildTimeDisplay(),
+                ], crossAxisAlignment: CrossAxisAlignment.start,)
+              ],);
             }),
           ),
           bAttachments ?
@@ -357,8 +388,8 @@ class ChatItemViewState extends State<ChatItemView> {
       if (attachment.type == 'file' && attachment.imageUrl == null) {
         downloadLink = attachment.titleLink;
         attachmentBody = attachment.description != null
-            ? Text(attachment.description, style: TextStyle(fontSize: 10),)
-            : Text(attachment.title, style: TextStyle(fontSize: 10),);
+            ? Text(attachment.description, style: TextStyle(fontSize: MESSAGE_FONT_SIZE),)
+            : Text(attachment.title, style: TextStyle(fontSize: MESSAGE_FONT_SIZE),);
       } else if (attachment.imageUrl != null) {
         //downloadLink = attachment.imageUrl;
         attachmentBody = LayoutBuilder(builder: (context, bc) {
@@ -453,37 +484,38 @@ class ChatItemViewState extends State<ChatItemView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-        newMessage == null || newMessage.isEmpty ? SizedBox() : Container(
-            padding: EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: messageBackgroundColor,
-              border: Border.all(color: Colors.blueAccent, width: messageBorderWidth),
-              borderRadius: BorderRadius.all(
-                  Radius.circular(2.0) //                 <--- border radius here
-              ),
+        newMessage == null || newMessage.isEmpty ? SizedBox() :
+        SizedBox(child: Container(
+          padding: EdgeInsets.only(left:10, right: 10, top:3, bottom: 3),
+          decoration: BoxDecoration(
+            color: messageBackgroundColor,
+            //border: Border.all(color: Colors.blueAccent, width: messageBorderWidth),
+            borderRadius: BorderRadius.all(
+                Radius.circular(3.0) //                 <--- border radius here
             ),
-            width: MediaQuery.of(context).size.width,
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.end,
-              children: [
-              MouseRegion(
-              cursor: SystemMouseCursors.text,
-              child: Linkable(
-                text: newMessage,
-                style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
-                linkClickCallback: (String text, String type) {
-                  if (widget.onTapExit)
-                    Navigator.pop(context, message.id);
-                  else
-                    _launch(_getUrl(message, text, type));
-                },
-              )),
-              message.editedBy != null ?
-                Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
-                SizedBox(),
-                message.t == 'discussion-created' ? Icon(Icons.double_arrow_sharp, color: Colors.blueAccent,) : SizedBox(),
-            ])
-        ),
+          ),
+          //width: MediaQuery.of(context).size.width,
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            children: [
+            MouseRegion(
+            cursor: SystemMouseCursors.text,
+            child: Linkable(
+              text: newMessage,
+              style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
+              linkClickCallback: (String text, String type) {
+                if (widget.onTapExit)
+                  Navigator.pop(context, message.id);
+                else
+                  _launch(_getUrl(message, text, type));
+              },
+            )),
+            message.editedBy != null ?
+              Text('(${message.editedBy.username} edited)', style: TextStyle(fontSize: 9, color: Colors.purple),) :
+              SizedBox(),
+              message.t == 'discussion-created' ? Icon(Icons.double_arrow_sharp, color: Colors.blueAccent,) : SizedBox(),
+          ])
+        )),
         !imageUrlBody ? SizedBox() :
         Container(width: boxConstraints.maxWidth, alignment: Alignment.topLeft,
           child: FullScreenWidget(
@@ -498,7 +530,7 @@ class ChatItemViewState extends State<ChatItemView> {
         message.urls != null && message.urls.length > 0 && !imageUrlBody
             ? buildUrls(message)
             : SizedBox(),
-      ]));
+      ]), /*decoration: BoxDecoration(border: Border.all())*/);
   }
 
   _launch(String url) async {
@@ -539,20 +571,18 @@ class ChatItemViewState extends State<ChatItemView> {
         child: Container(
             width: MediaQuery.of(context).size.width * 0.7,
             child: urlInMessage.meta != null && urlInMessage.meta['ogImage'] != null
-                ? Column (
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget> [
+                ? Column (crossAxisAlignment: CrossAxisAlignment.start, children: <Widget> [
                   urlInMessage.meta['ogImage'] != null ? Image.network(urlInMessage.meta['ogImage'], cacheWidth: 500,) : SizedBox(),
-                  urlInMessage.meta['ogTitle'] != null ? Text(urlInMessage.meta['ogTitle'], style: TextStyle(fontWeight: FontWeight.bold)) : SizedBox(),
-                  urlInMessage.meta['ogDescription'] != null ? Text(urlInMessage.meta['ogDescription'], style: TextStyle(fontSize: 11, color: Colors.blue)) : SizedBox(),
+                  urlInMessage.meta['ogTitle'] != null ? Text(urlInMessage.meta['ogTitle'], style: TextStyle(fontWeight: FontWeight.bold),  maxLines: 3, overflow: TextOverflow.fade,) : SizedBox(),
+                  urlInMessage.meta['ogDescription'] != null ? Text(urlInMessage.meta['ogDescription'], style: TextStyle(fontSize: 11, color: Colors.blue), maxLines: 3, overflow: TextOverflow.fade,) : SizedBox(),
                 ])
                 : urlInMessage.meta != null && urlInMessage.meta['oembedThumbnailUrl'] != null
-                ? Column (children: <Widget> [
+                ? Column (crossAxisAlignment: CrossAxisAlignment.start, children: <Widget> [
                   urlInMessage.meta['oembedThumbnailUrl'] != null ? Image.network(urlInMessage.meta['oembedThumbnailUrl'], cacheWidth: 500) : SizedBox(),
-                  urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle']) : SizedBox(),
+                  urlInMessage.meta['oembedTitle'] != null ? Text(urlInMessage.meta['oembedTitle'], maxLines: 3, overflow: TextOverflow.fade,) : SizedBox(),
                 ])
                 : urlInMessage.meta != null && urlInMessage.meta['pageTitle'] != null
-                ? Column (children: <Widget> [
+                ? Column (crossAxisAlignment: CrossAxisAlignment.start, children: <Widget> [
                   urlInMessage.meta['pageTitle'] != null ? Text(urlInMessage.meta['pageTitle'], style: TextStyle(fontWeight: FontWeight.bold),) : SizedBox(),
                   urlInMessage.meta['description'] != null ? Text(urlInMessage.meta['description'], style: TextStyle(fontSize: 13), maxLines: 3, overflow: TextOverflow.fade,) : SizedBox(),
                 ])

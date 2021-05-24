@@ -198,23 +198,26 @@ class Utils {
     );
   }
 
-  static String getDateString(DateTime ts) {
+  static List<String> getDateString(DateTime ts) {
+    List<String> dates = [];
     ts = ts.toLocal();
+    String mmdd = '';
     var now = DateTime.now().toLocal();
-    String dateStr = '';
     if (now.year != ts.year)
-      dateStr += DateFormat('yyyy-').format(ts);
+      dates.add(DateFormat('yyyy').format(ts));
     if (now.month != ts.month)
-      dateStr += DateFormat('MM-').format(ts);
+      mmdd += DateFormat('MM-').format(ts);
     if (now.day != ts.day) {
       if (now.day - ts.day == 1)
-        dateStr += 'yesterday ';
+        mmdd += 'YD';
       else
-        dateStr += DateFormat('dd ').format(ts);
+        mmdd += DateFormat('dd').format(ts);
     }
-    dateStr += DateFormat('jm').format(ts);
+    if (mmdd.isNotEmpty)
+      dates.add(mmdd);
+    dates.add(DateFormat('jm').format(ts));
 
-    return dateStr;
+    return dates.reversed.toList();
   }
 
   static buildImageByLayout(Authentication authRC, String imagePath, double imageWidth, ImageDimensions imageDimensions) {
