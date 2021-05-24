@@ -385,8 +385,8 @@ class _LoginHomeState extends State<LoginHome> {
     }
 
     if (user != null) {
-      var ss = user.email.split("@");
-      UserNew userNew = UserNew(username: ss[0], name: user.displayName, email: user.email, pass: generatePassword(true, true, true, true, 10));
+      var userName = user.email.replaceFirst("@", '.');
+      UserNew userNew = UserNew(username: userName, name: user.displayName, email: user.email, pass: generatePassword(true, true, true, true, 10));
       RC.User userRC = await UserService(rocketHttpService).register(userNew);
       print("user=" + userRC.toString());
     }

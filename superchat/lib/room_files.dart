@@ -107,7 +107,7 @@ class _RoomFilesState extends State<RoomFiles> {
     User user = file.user;
     Color userNameColor = Colors.black;
     var usernameFontSize = USERNAME_FONT_SIZE;
-    String dateStr = Utils.getDateString(file.uploadedAt);
+    String dateStr = Utils.getDateString(file.uploadedAt).reversed.join(' ');
     return Container(child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
