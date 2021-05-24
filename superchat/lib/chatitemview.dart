@@ -170,7 +170,9 @@ class ChatItemViewState extends State<ChatItemView> {
     else if (message.tmid != null || message.isAttachment)
       avatarSize = DEFAULT_AVATAR_SIZE * 3 / 4;
 
-    if (widget.hideAvatar)
+    bool myMessage = message.user.id == widget.me.id && !(message.tmid != null || message.isAttachment);
+
+    if (widget.hideAvatar || myMessage)
       avatarSize = 0;
 
     return LayoutBuilder(builder: (context, boxConstraint) {
@@ -184,7 +186,7 @@ class ChatItemViewState extends State<ChatItemView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(width: avatarLeftPadding,),
-        widget.hideAvatar ? SizedBox() : Row(children: [
+        widget.hideAvatar || myMessage ? SizedBox() : Row(children: [
           message.tmid == null ? SizedBox() :
           GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,),
             onTap: () => replyMessage(true)
@@ -197,11 +199,11 @@ class ChatItemViewState extends State<ChatItemView> {
         Container(
           width: messageBodyWidth,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: myMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               SizedBox(height: 4,),
-              _buildUserNameLine(user),
-              Container(child: _buildMessage(message), /*decoration: BoxDecoration(border: Border.all()),*/),
+              _buildUserNameLine(user, myMessage),
+              Container(child: _buildMessage(message, myMessage), /*decoration: BoxDecoration(border: Border.all()),*/),
               SizedBox(height: 4,),
             ],
           )
@@ -223,7 +225,7 @@ class ChatItemViewState extends State<ChatItemView> {
     }
 
     return  message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox() :
-      Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.yellow.shade800));
+      Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.deepOrange));
   }
 
   Widget buildTimeDisplay() {
@@ -271,14 +273,14 @@ class ChatItemViewState extends State<ChatItemView> {
     }
   }
 
-  Widget _buildUserNameLine(user) {
+  Widget _buildUserNameLine(user, bool myMessage) {
     String userName = Utils.getUserNameByUser(user);
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
     var usernameFontSize = USERNAME_FONT_SIZE;
-    return Row(children: [
-      Text(
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      myMessage ? SizedBox() : Text(
         userName /* + '(${widget.index.toString()})' */,
         style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
         textAlign: TextAlign.left,
@@ -292,7 +294,7 @@ class ChatItemViewState extends State<ChatItemView> {
         Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12,), angle: 45 * 3.14 / 180,),
         SizedBox(width: 1,),
         Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize), overflow: TextOverflow.clip, maxLines: 1,)
-      ])  : SizedBox(),
+      ]) : SizedBox(),
 /*
       Expanded(child: Container(child:
       Text(dateStr, style: TextStyle(fontSize: usernameFontSize, color: Colors.blueGrey, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,),
@@ -303,11 +305,13 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Offset tabPosition;
-  Widget _buildMessage(Message message) {
+  Widget _buildMessage(Message message, bool myMessage) {
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
+
+    const double endPaddingForDate = 70;
 
     if (bReactions) {
       if (reactions.containsKey(readCountEmoji)) {
@@ -334,35 +338,34 @@ class ChatItemViewState extends State<ChatItemView> {
                 widget.chatViewState.findAndScroll(message.id);
             },
             child: LayoutBuilder(builder: (context, boxConstraint) {
+              List<Widget> children = [];
+              children.add(Container(child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  buildMessageBody(message, boxConstraint),
+                  !bAttachments ? SizedBox() :
+                  LayoutBuilder(builder: (context, boxConstraint){
+                    return Container(child: buildAttachments(message));
+                  }),
+                ]),
+                constraints: BoxConstraints(maxWidth: boxConstraint.maxWidth - endPaddingForDate),),);
+              children.add(SizedBox(width: 2,));
+              children.add(Column(children: [
+                buildUnreadCount(),
+                buildTimeDisplay(),
+              ], crossAxisAlignment: myMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,));
+              if (myMessage)
+                children = children.reversed.toList();
               return Wrap(
               crossAxisAlignment: WrapCrossAlignment.end,
-              children: [
-                Container(child: buildMessageBody(message, boxConstraint), constraints: BoxConstraints(maxWidth: boxConstraint.maxWidth - 70),),
-                SizedBox(width: 2,),
-                Column(children: [
-                  buildUnreadCount(),
-                  buildTimeDisplay(),
-                ], crossAxisAlignment: CrossAxisAlignment.start,)
-              ],);
+              children: children);
             }),
           ),
-          bAttachments ?
-            LayoutBuilder(builder: (context, boxConstraint){
-              //print('bAttachments boxConstraint=$boxConstraint');
-              return Container(child: buildAttachments(message), width: boxConstraint.maxWidth,);
-            })
-            : SizedBox(),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 1, child: bReactions ?
-              Container(
-                height: 30,
-                width: MediaQuery.of(context).size.width,
-                child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
-              ) : SizedBox()),
-            ]),
-          ]));
+          !bReactions ? SizedBox() :
+          Container(
+            height: 30,
+            child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
+          )
+      ]));
   }
 
   String getDownloadLink(Message message) {
@@ -388,8 +391,8 @@ class ChatItemViewState extends State<ChatItemView> {
       if (attachment.type == 'file' && attachment.imageUrl == null) {
         downloadLink = attachment.titleLink;
         attachmentBody = attachment.description != null
-            ? Text(attachment.description, style: TextStyle(fontSize: MESSAGE_FONT_SIZE),)
-            : Text(attachment.title, style: TextStyle(fontSize: MESSAGE_FONT_SIZE),);
+            ? Text(attachment.description, style: TextStyle(fontSize: MESSAGE_FONT_SIZE), maxLines: 3, overflow: TextOverflow.fade,)
+            : Text('!'+attachment.title, style: TextStyle(fontSize: MESSAGE_FONT_SIZE), maxLines: 1, overflow: TextOverflow.clip, softWrap: false,);
       } else if (attachment.imageUrl != null) {
         //downloadLink = attachment.imageUrl;
         attachmentBody = LayoutBuilder(builder: (context, bc) {
@@ -420,7 +423,7 @@ class ChatItemViewState extends State<ChatItemView> {
           ts: attachment.ts,
           isAttachment: true,
         );
-        attachmentBody = Expanded(child: _buildChatItem(attachmentMessage));
+        attachmentBody = _buildChatItem(attachmentMessage);
       } else if (message.t == 'message_pinned') {
         attachmentBody = SizedBox();
       } else {
@@ -432,7 +435,7 @@ class ChatItemViewState extends State<ChatItemView> {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
-            attachmentBody,
+            Container(child: attachmentBody, width: bc.maxWidth - (downloadLink != null ? 30 : 0)),
             //SizedBox(width: 5,),
             downloadLink != null ? InkWell(
               child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
@@ -457,7 +460,7 @@ class ChatItemViewState extends State<ChatItemView> {
     String newMessage = message.displayMessage;
     var messageFontSize = MESSAGE_FONT_SIZE * textScaleFactor;
     if (message.t != null)
-      messageFontSize = MESSAGE_FONT_SIZE * 0.6;
+      messageFontSize = MESSAGE_FONT_SIZE * 0.9;
     else if (message.tmid != null || message.isAttachment)
       messageFontSize = MESSAGE_FONT_SIZE * 0.8;
     var messageBackgroundColor = Colors.white;
