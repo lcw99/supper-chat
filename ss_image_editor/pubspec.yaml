@@ -30,7 +30,7 @@ dependencies:
   pull_to_refresh_notification: any
   url_launcher: any
   vm_service: any
-  wechat_assets_picker: any
+  #wechat_assets_picker: any
   universal_io: ^2.0.4
 
 

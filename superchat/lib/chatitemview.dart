@@ -59,7 +59,7 @@ class ChatItemView extends StatefulWidget {
   final bool hideAvatar;
 
   ChatItemView({Key key, @required this.chatHomeState, @required this.me, @required this.authRC,
-    this.onTapExit = false, this.message, this.index = 0, this.room, this.chatViewState, this.hideAvatar = false
+    this.onTapExit = false, this.message, this.index = 0, this.room, this.chatViewState, this.hideAvatar = false,
   }) : super(key: key);
 
   @override
@@ -107,10 +107,13 @@ class ChatItemViewState extends State<ChatItemView> {
     bool isThreadMessage = message.tmid != null;
     if (isThreadMessage)
       leftMargin = 15;
-    return Container(child: _buildChatItem(message),
+    Widget m = Container(child: _buildChatItem(message),
       margin: EdgeInsets.only(right: 15, left: leftMargin),
       width: MediaQuery.of(context).size.width - 15,
     );
+    if (widget.onTapExit)
+      return GestureDetector(onTap: () => Navigator.pop(context, message.id), child: AbsorbPointer(child: m));
+    return m;
   }
 
   bool testAttachmentUserIsCached(MessageAttachment attachment) {
@@ -170,7 +173,8 @@ class ChatItemViewState extends State<ChatItemView> {
     else if (message.tmid != null || message.isAttachment)
       avatarSize = DEFAULT_AVATAR_SIZE * 3 / 4;
 
-    bool myMessage = message.user.id == widget.me.id && !(message.tmid != null || message.isAttachment);
+    //bool myMessage = message.user.id == widget.me.id && !(message.tmid != null || message.isAttachment);
+    bool myMessage = false;
 
     if (widget.hideAvatar || myMessage)
       avatarSize = 0;
@@ -180,8 +184,9 @@ class ChatItemViewState extends State<ChatItemView> {
       const double avatarLeftPadding = 9;
       const double avatarRightPadding = 5;
       const double messageEndPadding = DEFAULT_AVATAR_SIZE;
+      const double attachmentMessageUpArrowSize = 17;
       double messageBodyWidth = boxConstraint.maxWidth -
-          (avatarLeftPadding + avatarRightPadding + avatarSize + (message.tmid != null ? 25 : 0));
+          (avatarLeftPadding + avatarRightPadding + avatarSize + (message.tmid != null ? 25 : 0) + (message.isAttachment ? attachmentMessageUpArrowSize : 0));
       return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -191,6 +196,7 @@ class ChatItemViewState extends State<ChatItemView> {
           GestureDetector(child: Icon(Icons.subdirectory_arrow_right_rounded, color: Colors.blueAccent,),
             onTap: () => replyMessage(true)
           ),
+          message.isAttachment ? Icon(Icons.arrow_upward_sharp, color: Colors.blueAccent, size: attachmentMessageUpArrowSize,) : SizedBox(),
           GestureDetector(child: Utils.buildUserAvatar(avatarSize, user),
             onTap: () async { await userClickAction(user); },
           ),
@@ -225,17 +231,15 @@ class ChatItemViewState extends State<ChatItemView> {
     }
 
     return  message.isAttachment || unreadCount <= 0 || widget.room.usersCount >= 10 ? SizedBox() :
-      Text('$unreadCount', style: TextStyle(fontSize: 8, color: Colors.deepOrange));
+      Text('$unreadCount', style: TextStyle(fontSize: 8, color: chatUnreadCountColor));
   }
 
   Widget buildTimeDisplay() {
     List<String> dateStr = Utils.getDateString(message.ts);
     List<Widget> children = [];
     String date = dateStr.first;
-    Color dateColor = Colors.blueAccent;
-    if (dateStr.length == 2 && dateStr[1] == 'YD')
-      dateColor = Colors.blueGrey;
-    else if (dateStr.length > 1)
+    Color dateColor = chatChatTimeColor;
+    if (dateStr.length > 1)
       date = dateStr.reversed.join(' ');
     children.add(Text(date, style: TextStyle(fontSize: 9, color: dateColor, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,));
     return Column(children: children, crossAxisAlignment: CrossAxisAlignment.start,);
@@ -291,16 +295,10 @@ class ChatItemViewState extends State<ChatItemView> {
         : SizedBox(),
       message.pinnedBy != null ? Wrap(children: [
         SizedBox(width: 4,),
-        Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12,), angle: 45 * 3.14 / 180,),
+        Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12, color: Colors.redAccent), angle: 45 * 3.14 / 180,),
         SizedBox(width: 1,),
-        Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize), overflow: TextOverflow.clip, maxLines: 1,)
+        //Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize), overflow: TextOverflow.clip, maxLines: 1,)
       ]) : SizedBox(),
-/*
-      Expanded(child: Container(child:
-      Text(dateStr, style: TextStyle(fontSize: usernameFontSize, color: Colors.blueGrey, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,),
-        alignment: Alignment.centerRight,
-      )),
-*/
     ]);
   }
 
@@ -308,10 +306,11 @@ class ChatItemViewState extends State<ChatItemView> {
   Widget _buildMessage(Message message, bool myMessage) {
     var attachments = message.attachments;
     bool bAttachments = attachments != null && attachments.length > 0;
+    bool bMessageAttachment = bAttachments && attachments.first.imageUrl == null && attachments.first.messageLink != null;
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
 
-    const double endPaddingForDate = 90;
+    final double endPaddingForDate = widget.hideAvatar ? 0 : 80;
 
     if (bReactions) {
       if (reactions.containsKey(readCountEmoji)) {
@@ -321,17 +320,16 @@ class ChatItemViewState extends State<ChatItemView> {
     }
     return GestureDetector (
       onTapDown: (tabDownDetails) { tabPosition = tabDownDetails.globalPosition; },
-      onLongPress: () { if (!widget.onTapExit) messagePopupMenu(context, tabPosition, message); },
+      onLongPress: () { messagePopupMenu(context, tabPosition, message); },
       child:
       Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: myMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisAlignment: myMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: <Widget>[
           GestureDetector (
             onTap: () {
               if (message.t == 'discussion-created')
                 Navigator.pop(context, message.drid);
-              else if (widget.onTapExit)
-                Navigator.pop(context, message.id);
               else if (!message.isAttachment)
                 pickReaction(message);
               else
@@ -341,23 +339,26 @@ class ChatItemViewState extends State<ChatItemView> {
               List<Widget> children = [];
               children.add(Container(child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  buildMessageBody(message, boxConstraint),
+                  Wrap(crossAxisAlignment: WrapCrossAlignment.end,
+                    children: [
+                    Container(constraints: BoxConstraints(maxWidth: boxConstraint.maxWidth - (!bMessageAttachment ? 0 : endPaddingForDate)),
+                      child: buildMessageBody(message, boxConstraint),
+                    ),
+                    !bMessageAttachment ? SizedBox() : buildTimeAndUnreadCount(myMessage),
+                  ],),
                   !bAttachments ? SizedBox() :
                   LayoutBuilder(builder: (context, boxConstraint){
                     return buildAttachments(message);
                   }),
                 ]),
-                constraints: BoxConstraints(maxWidth: boxConstraint.maxWidth - endPaddingForDate),),);
-              children.add(SizedBox(width: 2,));
-              children.add(Column(children: [
-                buildUnreadCount(),
-                buildTimeDisplay(),
-              ], crossAxisAlignment: myMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,));
+                constraints: BoxConstraints(maxWidth: boxConstraint.maxWidth - (bMessageAttachment ? 0 : endPaddingForDate)),),);
+              if (!bMessageAttachment)
+                children.add(buildTimeAndUnreadCount(myMessage));
               if (myMessage)
                 children = children.reversed.toList();
               return Wrap(
-              crossAxisAlignment: WrapCrossAlignment.end,
-              children: children);
+                crossAxisAlignment: WrapCrossAlignment.end,
+                children: children);
             }),
           ),
           !bReactions ? SizedBox() :
@@ -366,6 +367,15 @@ class ChatItemViewState extends State<ChatItemView> {
             child: ReactionView(key: keyReactionView, chatItemViewState: this, message: message, reactions: reactions),
           )
       ]));
+  }
+
+  Widget buildTimeAndUnreadCount(myMessage) {
+    return Container(
+      padding: EdgeInsets.only(left: 4),
+      child: Column(children: [
+      buildUnreadCount(),
+      buildTimeDisplay(),
+    ], crossAxisAlignment: myMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,));
   }
 
   String getDownloadLink(Message message) {
@@ -465,7 +475,7 @@ class ChatItemViewState extends State<ChatItemView> {
       messageFontSize = MESSAGE_FONT_SIZE * 0.8;
     var messageBackgroundColor = Colors.white;
     if (message.user.id == widget.me.id)
-      messageBackgroundColor = Colors.amber.shade100;
+      messageBackgroundColor = chatMyMessageColor;
 
     double messageBorderWidth = 0;
     if (message.isAttachment)
@@ -494,7 +504,7 @@ class ChatItemViewState extends State<ChatItemView> {
             color: messageBackgroundColor,
             //border: Border.all(color: Colors.blueAccent, width: messageBorderWidth),
             borderRadius: BorderRadius.all(
-                Radius.circular(3.0) //                 <--- border radius here
+                Radius.circular(10.0) //                 <--- border radius here
             ),
           ),
           //width: MediaQuery.of(context).size.width,
@@ -507,10 +517,7 @@ class ChatItemViewState extends State<ChatItemView> {
               text: newMessage,
               style: TextStyle(fontSize: messageFontSize, color: Colors.black54, fontWeight: FontWeight.normal),
               linkClickCallback: (String text, String type) {
-                if (widget.onTapExit)
-                  Navigator.pop(context, message.id);
-                else
-                  _launch(_getUrl(message, text, type));
+                _launch(_getUrl(message, text, type));
               },
             )),
             message.editedBy != null ?
@@ -566,10 +573,7 @@ class ChatItemViewState extends State<ChatItemView> {
     UrlInMessage urlInMessage = message.urls.first;
     return GestureDetector(
         onTap: () async {
-          if (widget.onTapExit)
-            Navigator.pop(context, message.id);
-          else
-            await canLaunch(urlInMessage.url) ? launch(urlInMessage.url) : print('url launch failed${urlInMessage.url}');
+          await canLaunch(urlInMessage.url) ? launch(urlInMessage.url) : print('url launch failed${urlInMessage.url}');
         },
         child: Container(
             width: MediaQuery.of(context).size.width * 0.7,
@@ -594,16 +598,13 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget getImage(Message message, MessageAttachment attachment) {
-    if (widget.onTapExit || message.isAttachment) {
+    if (message.isAttachment) {
       return InkWell(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
           child: Utils.buildImageByLayout(widget.authRC, attachment.imageUrl, attachment.renderWidth, attachment.imageDimensions)),
         onTap: () {
-          if (widget.onTapExit)
-            Navigator.pop(context, message.id);
-          else
-            widget.chatViewState.findAndScroll(message.id);
+          widget.chatViewState.findAndScroll(message.id);
         },
       );
     }
@@ -836,6 +837,7 @@ class _ReactionViewState extends State<ReactionView> {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
+      shrinkWrap: true,
       scrollDirection: Axis.horizontal,
       itemCount: reactions.keys.length,
       itemBuilder: (context, index) {

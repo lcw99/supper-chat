@@ -42,6 +42,8 @@ class _SSImageEditorState extends State<SSImageEditor> {
   ];
   AspectRatioItem? _aspectRatio;
   bool _cropping = false;
+  Uint8List? _memoryImage;
+
 
   EditorCropLayerPainter? _cropLayerPainter;
 
@@ -455,7 +457,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
     }
   }
 
-  Uint8List? _memoryImage;
+/*
   Future<void> _getImage() async {
     _memoryImage = await pickImage(context);
     //when back to current page, may be editorKey.currentState is not ready.
@@ -465,6 +467,7 @@ class _SSImageEditorState extends State<SSImageEditor> {
       });
     });
   }
+*/
 }
 
 class CustomEditorCropLayerPainter extends EditorCropLayerPainter {

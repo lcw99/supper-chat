@@ -5,8 +5,8 @@ import 'dart:typed_data';
 //import 'package:image_picker/image_picker.dart' as picker;
 import 'package:flutter/cupertino.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
+/*
 Future<dynamic?> pickImage(BuildContext context, {bool fileResult = false}) async {
   List<AssetEntity> assets = <AssetEntity>[];
   final List<AssetEntity>? result = await AssetPicker.pickAssets(
@@ -32,6 +32,7 @@ Future<dynamic?> pickImage(BuildContext context, {bool fileResult = false}) asyn
   //     await picker.ImagePicker.pickImage(source: picker.ImageSource.gallery);
   // return file.readAsBytes();
 }
+*/
 
 class ImageSaver {
   static Future<String?> save(String name, Uint8List fileData) async {
@@ -42,6 +43,8 @@ class ImageSaver {
   }
 }
 
+
+/*
 class PickerTextDelegate implements AssetsPickerTextDelegate {
   factory PickerTextDelegate() => _instance;
 
@@ -90,3 +93,4 @@ class PickerTextDelegate implements AssetsPickerTextDelegate {
     return '$minute$separator$second';
   }
 }
+*/
