@@ -213,7 +213,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     }
   }
 
-  AnimationController _hideFabAnimation;
+  AnimationController actionButtonAnimationController;
   StreamSubscription subscription;
 
   Future<void> sendUserTyping() async {
@@ -269,7 +269,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       }
     });
 
-    _hideFabAnimation = AnimationController(vsync: this, duration: kThemeAnimationDuration);
+    actionButtonAnimationController = AnimationController(vsync: this, duration: kThemeAnimationDuration);
 
     getMoreMessages = false;
     needScrollToBottom = true;
@@ -314,7 +314,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               if (keyChatItem.currentState != null)
                   keyChatItem.currentState.setNewMessage(roomMessage);
               chatDataStore.replaceMessage(i, roomMessage);
-              //userTypingKey.currentState.setTypingUser('');
             } else {  // new message
               needScrollToBottom = chatDataStore.tryInsertNew(roomMessage);
               if (roomMessage.user.id == widget.me.id) {
@@ -323,7 +322,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                     print('!!!new message inserted');
                   });
               } else {
-                if(itemScrollController.scrollController.offset != 0)
+                if(itemScrollController.scrollController.offset != itemScrollController.scrollController.position.minScrollExtent)
                   userTypingKey.currentState.setTypingUser(newMessageKey, stayTime: -1);
                 else
                   if (needScrollToBottom)
@@ -450,7 +449,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     taskQueueMarkMessageRead.clear();
     subscription.cancel();
     _tecMessageInput.dispose();
-    _hideFabAnimation.dispose();
+    actionButtonAnimationController.dispose();
     myFocusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -478,7 +477,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       child: Phoenix(child: Scaffold(
       floatingActionButton: Visibility(
         child: ScaleTransition(
-        scale: _hideFabAnimation,
+        scale: actionButtonAnimationController,
         alignment: Alignment.bottomCenter,
         child: FloatingActionButton(onPressed: (){
           if (userTypingKey.currentState.typing == gotoBottomKey || userTypingKey.currentState.typing == newMessageKey) {
@@ -487,7 +486,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               itemScrollController.jumpTo(index: 0);
             });
           }
-        }, backgroundColor: Colors.amber, child: UserTyping(key: userTypingKey, hideFabAnimation: _hideFabAnimation,)))),
+        }, backgroundColor: Colors.amber, child: UserTyping(key: userTypingKey, hideFabAnimation: actionButtonAnimationController,)))),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       key: chatViewKey,
       appBar: AppBar(
@@ -721,7 +720,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     return NotificationListener<ScrollEndNotification>(
         onNotification: (notification) {
           print('list drag=${notification.metrics.pixels}');
-          if (notification.metrics.pixels > 0)
+          if (notification.metrics.pixels > notification.metrics.minScrollExtent + 100)
             userTypingKey.currentState.setTypingUser(gotoBottomKey, stayTime: 0);
           if (notification.metrics.atEdge) {
             print('*****listview Scrollend = ${notification.metrics.pixels}');
@@ -733,7 +732,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               });
             } else if (notification.metrics.pixels == notification.metrics.minScrollExtent) {
               print('on minScrollExtent');
-              userTypingKey.currentState.setTypingUser('');
+              Future.delayed(Duration(milliseconds: 100), () {actionButtonAnimationController.reverse();});
             }
           }
           return true;
@@ -1205,6 +1204,8 @@ class UserTypingState extends State<UserTyping> {
       } else {
         t = null;
       }
+    } else {
+      widget.hideFabAnimation.reverse();
     }
   }
 
