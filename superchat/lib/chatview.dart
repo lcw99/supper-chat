@@ -314,16 +314,23 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               if (keyChatItem.currentState != null)
                   keyChatItem.currentState.setNewMessage(roomMessage);
               chatDataStore.replaceMessage(i, roomMessage);
-              userTypingKey.currentState.setTypingUser('');
+              //userTypingKey.currentState.setTypingUser('');
             } else {  // new message
               needScrollToBottom = chatDataStore.tryInsertNew(roomMessage);
-/*
-              if (needScrollToBottom)
-                setState(() {
-                  print('!!!new message inserted');
-                });
-*/
-              userTypingKey.currentState.setTypingUser(newMessageKey);
+              if (roomMessage.user.id == widget.me.id) {
+                if (needScrollToBottom)
+                  setState(() {
+                    print('!!!new message inserted');
+                  });
+              } else {
+                if(itemScrollController.scrollController.offset != 0)
+                  userTypingKey.currentState.setTypingUser(newMessageKey, stayTime: -1);
+                else
+                  if (needScrollToBottom)
+                    setState(() {
+                      print('!!!new message inserted');
+                    });
+              }
             }
           }
         } else if (event.collection == 'stream-notify-room') {
@@ -725,6 +732,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 chatItemOffset += chatItemCount;
               });
             } else if (notification.metrics.pixels == notification.metrics.minScrollExtent) {
+              print('on minScrollExtent');
               userTypingKey.currentState.setTypingUser('');
             }
           }
