@@ -68,7 +68,7 @@ class Message {
     this.editedBy,
     this.editedAt,
     this.urls,
-    this.pinned,
+    this.pinned = false,
     this.pinnedAt,
     this.pinnedBy,
     this.updatedAt,
@@ -77,9 +77,9 @@ class Message {
     this.tcount,
     this.tlm,
 
-    this.isAttachment,
-    this.isReply,
-    this.imageUrlBody,
+    this.isAttachment = false,
+    this.isReply = false,
+    this.imageUrlBody = false,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {

@@ -616,7 +616,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       child:Row(children: [
         Expanded(child: Wrap(children: [
           Card(
-            color: Colors.blue.shade100,
+            color: chatBackgroundColor,
             child: room.lastMessage == null ? Container(height: 40,) :
               ChatItemView(chatHomeState: this, message: room.lastMessage, me: widget.user, authRC: widget.authRC, onTapExit: true, room: room, hideAvatar: true,),
               //Container(height: 50,)

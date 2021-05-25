@@ -62,6 +62,7 @@ import 'database/chatdb.dart' as db;
 import 'utils/utils.dart';
 
 final String gotoBottomKey = ':gotoBottom:';
+final String newMessageKey = ':newMessage:';
 Message quotedMessage;
 
 class ChatView extends StatefulWidget {
@@ -316,11 +317,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               userTypingKey.currentState.setTypingUser('');
             } else {  // new message
               needScrollToBottom = chatDataStore.tryInsertNew(roomMessage);
+/*
               if (needScrollToBottom)
                 setState(() {
                   print('!!!new message inserted');
                 });
-              userTypingKey.currentState.setTypingUser('');
+*/
+              userTypingKey.currentState.setTypingUser(newMessageKey);
             }
           }
         } else if (event.collection == 'stream-notify-room') {
@@ -471,7 +474,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         scale: _hideFabAnimation,
         alignment: Alignment.bottomCenter,
         child: FloatingActionButton(onPressed: (){
-          if (userTypingKey.currentState.typing == gotoBottomKey) {
+          if (userTypingKey.currentState.typing == gotoBottomKey || userTypingKey.currentState.typing == newMessageKey) {
             Future.delayed(Duration.zero, () {
               userTypingKey.currentState.setTypingUser('');
               itemScrollController.jumpTo(index: 0);
@@ -544,7 +547,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       resizeToAvoidBottomInset: true,
       extendBody: false,
       bottomNavigationBar:
-        Container(color: Colors.blue.shade100, child: Column(
+        Container(color: chatBackgroundColor, child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             quotedMessage != null ?
@@ -710,6 +713,9 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
     return NotificationListener<ScrollEndNotification>(
         onNotification: (notification) {
+          print('list drag=${notification.metrics.pixels}');
+          if (notification.metrics.pixels > 0)
+            userTypingKey.currentState.setTypingUser(gotoBottomKey, stayTime: 0);
           if (notification.metrics.atEdge) {
             print('*****listview Scrollend = ${notification.metrics.pixels}');
             if (!historyEnd && notification.metrics.pixels != notification.metrics.minScrollExtent) { // bottom
@@ -727,7 +733,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         child:
         Container(
           decoration: BoxDecoration(
-            color: Colors.blue.shade100,
+            color: chatBackgroundColor,
             border: !onDropFile ? Border.all(width: 0) : Border.all(color: Colors.purpleAccent, width: 8),
           ),
           child: Stack(children: [
@@ -834,8 +840,10 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       needScrollToBottom = false;
       scrollIndex = index;
     });
+/*
     if (scrollIndex >= 0)
       userTypingKey.currentState.setTypingUser(gotoBottomKey, stayTime: 0);
+*/
     Future.delayed(Duration(seconds: 1), () { Fluttertoast.cancel(); } );
   }
 
@@ -1197,6 +1205,8 @@ class UserTypingState extends State<UserTyping> {
     Widget actionButton;
     if (typing == gotoBottomKey)
       actionButton = CircleAvatar(radius: 20, child: Icon(Icons.arrow_downward));
+    else if (typing == newMessageKey)
+      actionButton = CircleAvatar(radius: 20, child: Icon(Icons.message_outlined));
     else {
       String avatarPath = '/avatar/$typing';
       String url = serverUri.replace(path: avatarPath, query: 'format=png').toString();
