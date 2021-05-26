@@ -175,23 +175,28 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   }
 
   StreamSubscription subscriptionWebSocketStream;
+  String prevEvent;
   attachWebSocketHandler() {
     if (subscriptionWebSocketStream != null)
       return;
     subscriptionWebSocketStream = webSocketService.getStreamController().stream.listen((e) async {
       var json = jsonDecode(e);
+      if (e == prevEvent && json['msg'] != 'ping') {
+        print('#### same message again?? why??? = $e');
+        return;
+      }
+      prevEvent = e;
       //log('event=$e');
-      print('event=$e');
+      if (json['id'] != 'getPermissions')
+        log('chat home event=$e');
       RC.Notification event = RC.Notification.fromMap(json);
       if (event.msg == WebSocketService.connectedMessage){
         webSocketService.getPermissions();
         webSocketService.subscribeNotifyUser(widget.user);
         webSocketService.subscribeStreamNotifyLogged();
         webSocketService.sendUserPresence("online");
-/*
         if (bChatScreenOpen && selectedRoom != null)
           subscribeRoomEvent(selectedRoom.id);
-*/
         return;
       }
       if (event.msg == WebSocketService.networkErrorMessage){
@@ -765,7 +770,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
       if (roomType == null || (roomType != null && room.t == roomType)) {
         room.roomAvatarUrl = await Utils.getRoomAvatarUrl(room, widget.authRC);
         if (room.t != 'd' || room.subscription.open) {
-          print('added room=${room.name}');
+          //print('added room=${room.name}');
           roomList.add(room);
         }
       }

@@ -150,7 +150,8 @@ class ChatItemViewState extends State<ChatItemView> {
 
   setNewMessage(Message newMessage) {
     print('set newMessage=${newMessage.msg}');
-    if (keyReactionView.currentState != null && newMessage.reactions != null && message.msg == newMessage.msg) {  // reaction case
+    if (message.id == newMessage.id &&
+      keyReactionView.currentState != null && newMessage.reactions != null && message.msg == newMessage.msg) {  // reaction case
        keyReactionView.currentState.setNewReaction(newMessage.reactions);
     } else {
       setState(() {
