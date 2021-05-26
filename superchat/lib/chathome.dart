@@ -156,8 +156,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   Future<void> unsubscribeAndClose() async {
     print('_+_+_+_+_+_ disconnecting web socket');
     webSocketService.sendUserPresence("offline");
+/*
     if (bChatScreenOpen && selectedRoom != null)
       unsubscribeRoomEvent(selectedRoom.id);
+*/
     Future.delayed(Duration(seconds: 3), () => webSocketService.close());
   }
 
@@ -186,8 +188,10 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         webSocketService.subscribeNotifyUser(widget.user);
         webSocketService.subscribeStreamNotifyLogged();
         webSocketService.sendUserPresence("online");
+/*
         if (bChatScreenOpen && selectedRoom != null)
           subscribeRoomEvent(selectedRoom.id);
+*/
         return;
       }
       if (event.msg == WebSocketService.networkErrorMessage){
