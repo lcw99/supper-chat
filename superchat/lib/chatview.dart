@@ -287,6 +287,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     });
 
     subscription = widget.notificationController.stream.listen((event) {
+      print('chatview event=${event.toMap()}');
       if (event.msg == 'request_close') {
         if (this.mounted)
           Navigator.pop(context, event.collection);
@@ -357,7 +358,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
           if (event.notificationFields.notificationArgs.length > 0) {
             var eventName = event.notificationFields.eventName;
             print('+++++stream-notify-logged:' + eventName);
-            if (eventName == 'updateAvatar') {
+            if (eventName == 'updateAvatar' || eventName == 'Users:NameChanged') {
               clearImageCacheAndUpdateAll();
             }
           }
@@ -366,15 +367,34 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             if (event.notificationFields.eventName.endsWith('rooms-changed')) {
               var arg = event.notificationFields.notificationArgs[1];
               RC.Room r = RC.Room.fromMap(arg);
+              if (r.id != room.id) {
+                print('!!!!!!!!!@@@@ not my room message');
+                return;
+              }
               var sub = room.subscription;
               room = r;
               room.subscription = sub;
             } else if (event.notificationFields.eventName.endsWith('subscriptions-changed')) {
               var arg = event.notificationFields.notificationArgs[1];
               RC.Subscription sub = RC.Subscription.fromMap(arg);
+              if (sub.rid != room.id) {
+                print('!!!!!!!!!@@@@ not my room sub message');
+                return;
+              }
               room.subscription = sub;
               permissions = widget.chatHomeState.getPermissionsForRoles(sub.roles);
+              print('!!!!!!!!!@@@@ sub changed ');
+/*
+              setState(() {
+                Utils.userCache.clear();
+              });
+*/
               print('++@@++permissions=$permissions');
+            } else if (event.notificationFields.eventName.endsWith('userData')) {
+              print('!!!!!!!!!@@@@ user data changed');
+              setState(() {
+                Utils.userCache.clear();
+              });
             }
           }
         }
@@ -446,6 +466,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   @override
   void dispose() {
+    unsubscribeRoomEvent(room.id);
     taskQueueMarkMessageRead.clear();
     subscription.cancel();
     _tecMessageInput.dispose();
