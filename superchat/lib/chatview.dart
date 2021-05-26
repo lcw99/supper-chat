@@ -201,6 +201,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   final ItemScrollController itemScrollController = ItemScrollController();
 
   GlobalKey<UserSearchResultState> userSearchPopupKey = GlobalKey();
+  Message myLastSentMessage;
+  Message myLastReceivedMessage;
 
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
@@ -299,8 +301,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         if (event.collection == 'stream-room-messages') {
           if (event.notificationFields.notificationArgs.length > 0) {
             var arg = event.notificationFields.notificationArgs[0];
-            log('+++++stream-room-messages:' + jsonEncode(arg));
             Message roomMessage = Message.fromMap(arg);
+            log('+++++stream-room-messages:${roomMessage.id}');
             if (roomMessage.rid != room.id) {
               print('not this room message~~~~~!!!');
               return;
@@ -318,9 +320,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
             } else {  // new message
               needScrollToBottom = chatDataStore.tryInsertNew(roomMessage);
               if (roomMessage.user.id == widget.me.id) {
+                myLastReceivedMessage = roomMessage;
+                if (myLastSentMessage != null && myLastSentMessage.id == roomMessage.id) {
+                  myLastSentMessage.messageReturn = true;
+                  print ('my message turn back ok!=${roomMessage.id}');
+                }
                 if (needScrollToBottom)
                   setState(() {
-                    print('!!!new message inserted');
+                    print('!!!new my message inserted');
                   });
               } else {
                 if(itemScrollController.scrollController.offset != itemScrollController.scrollController.position.minScrollExtent)
@@ -909,7 +916,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                   _postMessage(_tecMessageInput.text);
                   myFocusNode.requestFocus();
                 },
-                autofocus: false,
+                autofocus: true,
                 focusNode: myFocusNode,
                 controller: _tecMessageInput,
                 minLines: 1,
@@ -968,6 +975,20 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
       quotedMessage = null;
     }
     MessageNewResponse respMsg = await getMessageService().postMessage(msg, widget.authRC, sendMessage: useSendMessage);
+    if (respMsg.success) {
+      if (myLastReceivedMessage != null && myLastReceivedMessage.id == respMsg.message.id) {  // message already arrived. how fast!
+        print('message already arrived!! = ${myLastReceivedMessage.id}');
+      } else {
+        myLastSentMessage = respMsg.message;
+        myLastSentMessage.messageReturn = false;
+        print('my message sent! = ${myLastSentMessage.id}');
+        Future.delayed(Duration(milliseconds: 800), () {
+          if (!myLastSentMessage.messageReturn) {
+            widget.chatHomeState.showNetworkAlertDialog();
+          }
+        });
+      }
+    }
     _tecMessageInput.text = '';
   }
 

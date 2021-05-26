@@ -44,6 +44,7 @@ class Message {
   bool? isReply = false;
   String? displayMessage;
   bool? imageUrlBody = false;
+  bool? messageReturn = false;
 
   Message({
     this.id,
@@ -80,6 +81,7 @@ class Message {
     this.isAttachment = false,
     this.isReply = false,
     this.imageUrlBody = false,
+    this.messageReturn = false,
   });
 
   Message.fromMap(Map<String, dynamic>? json) {

@@ -244,6 +244,7 @@ class WebSocketService {
 
   void subscribeStreamNotifyLogged() {
     subscribeStreamNotifyLoggedEvent('Users:NameChanged');
+    subscribeStreamNotifyLoggedEvent('Users:Deleted');
     subscribeStreamNotifyLoggedEvent('updateAvatar');
     subscribeStreamNotifyLoggedEvent('updateEmojiCustom');
     subscribeStreamNotifyLoggedEvent('deleteEmojiCustom');
