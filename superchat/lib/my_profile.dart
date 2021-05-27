@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:superchat/chathome.dart';
 import 'package:superchat/database/chatdb.dart';
+import 'package:superchat/utils/dialogs.dart';
 import 'utils/utils.dart';
 import 'package:universal_io/io.dart';
 
@@ -149,9 +150,11 @@ class _MyProfileState extends State<MyProfile> {
             padding: EdgeInsets.only(top: 20),
             child: logoutStarted ? SizedBox() : InkWell(
                 onTap: () {
-                  logout(widget.authRC);
-                  setState(() {
-                    logoutStarted = true;
+                  showSimpleAlertDialog(context, 'Logout', 'Are you sure?', () {
+                    logout(widget.authRC);
+                    setState(() {
+                      logoutStarted = true;
+                    });
                   });
                 },
                 child: Wrap(children: <Widget>[
