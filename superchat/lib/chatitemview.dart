@@ -492,11 +492,15 @@ class ChatItemViewState extends State<ChatItemView> {
         message.msg == message.urls.single.url ||
         message.urls != null && message.urls.length == 1 &&
         message.msg == message.urls.single.url &&
-        message.id == widget.room.lastMessage.id) {
+        message.id == widget.room.lastMessage.id &&
+        message.msg.startsWith(serverUri.replace(path: '/emoji-custom').toString())) {
       imageUrlBody = true;
       message.imageUrlBody = true;
       newMessage = null;
     }
+
+    if (message.urls != null && message.urls.length == 1 && message.msg == message.urls.single.url)
+      newMessage = null;
 
     return Container(
       child: Column(
