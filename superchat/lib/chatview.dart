@@ -397,7 +397,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               });
 */
               print('++@@++permissions=$permissions');
-            } else if (event.notificationFields.eventName.endsWith('userData')) {
+            } else if (event.notificationFields.eventName.endsWith('/userData')) {
               print('!!!!!!!!!@@@@ user data changed');
               setState(() {
                 Utils.userCache.clear();
@@ -456,12 +456,13 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
 
   clearImageCacheAndUpdateAll() async {
-    print('@@@@@ avatar changed, deleting cache');
-    Utils.clearCache();
-    imageCache.clear();
-    imageCache.clearLiveImages();
+    print('@@@@@ avatar or username changed, deleting cache');
     print('@@@@@ avatar changed deleting cache done~~~~~');
-    setState(() {});
+    setState(() {
+      Utils.clearCache();
+      imageCache.clear();
+      imageCache.clearLiveImages();
+    });
     chatViewKey.currentContext ?? Phoenix.rebirth(chatViewKey.currentContext);
   }
 
@@ -916,7 +917,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                   _postMessage(_tecMessageInput.text);
                   myFocusNode.requestFocus();
                 },
-                autofocus: true,
+                autofocus: false,
                 focusNode: myFocusNode,
                 controller: _tecMessageInput,
                 minLines: 1,

@@ -101,13 +101,48 @@ class UserService {
       authentication,
     );
 
+    var respBody = utf8.decode(response.bodyBytes);
     if (response.statusCode == 200) {
       if (response.body.isNotEmpty == true) {
-        print("resp usersUpdate=" + response.body);
-        return User.fromMap(jsonDecode(response.body)['user']);
+        print("resp usersUpdate=" + respBody);
+        return User.fromMap(jsonDecode(respBody)['user']);
       }
     }
-    return User();
+    print('usersUpdate error = $respBody');
+    return User(success: false, );
+  }
+
+  Future<User> updateOwnBasicInfo(Authentication authentication,
+      { String? email, String? name, String? currentPassword, String? newPassword, String? username, Map<String, String>? customFields }) async {
+    Map<String, dynamic> payload = Map();
+    Map<String, dynamic> data = Map();
+    if (email != null) data['email'] = email;
+    if (name != null) data['name'] = name;
+    if (currentPassword != null) data['currentPassword'] = currentPassword;
+    if (newPassword != null) data['newPassword'] = newPassword;
+    if (username != null) data['username'] = username;
+    payload['data'] = data;
+    if (customFields != null) payload['customFields'] = customFields; else payload['customFields'] = Map();
+
+    if (data.isEmpty && customFields!.isEmpty) {
+      print('updateOwnBasicInfo nothing to update');
+      return User(success: false);
+    }
+    http.Response response = await _httpService.post(
+      '/api/v1/users.updateOwnBasicInfo',
+      jsonEncode(payload),
+      authentication,
+    );
+
+    var respBody = utf8.decode(response.bodyBytes);
+    if (response.statusCode == 200) {
+      if (response.body.isNotEmpty == true) {
+        print("resp updateOwnBasicInfo=" + respBody);
+        return User.fromMap(jsonDecode(respBody)['user']);
+      }
+    }
+    print('updateOwnBasicInfo error = $respBody');
+    return User(success: false, );
   }
 
 

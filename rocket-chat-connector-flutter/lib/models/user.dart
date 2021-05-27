@@ -97,7 +97,7 @@ class User {
       if (json['customFields'] != null) {
         customFields = Map<String, String>.from(json['customFields']);
       }
-      success = json['success'];
+      success = true;
 
       lastLogin = jsonToDateTime(json['lastLogin']);
       avatarETag = json['avatarETag'];

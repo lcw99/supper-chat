@@ -278,19 +278,23 @@ class ChatItemViewState extends State<ChatItemView> {
     }
   }
 
-  Widget _buildUserNameLine(user, bool myMessage) {
-    String userName = Utils.getUserNameByUser(user);
+  Widget _buildUserNameLine(User user, bool myMessage) {
     Color userNameColor = Colors.black;
     if (message.user.id == widget.me.id)
       userNameColor = Colors.green.shade900;
     var usernameFontSize = USERNAME_FONT_SIZE;
+    List<TextSpan> userNameLine = [];
+    userNameLine.add(TextSpan(text: user.username,
+      style: TextStyle(fontSize: usernameFontSize, color: userNameColor)));
+    if (user.name != null && user.name.isNotEmpty)
+      userNameLine.add(TextSpan(text: ' ' + user.name,
+          style: TextStyle(fontSize: usernameFontSize * 0.8, color: displayNameColor)));
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      myMessage ? SizedBox() : Text(
-        userName /* + '(${widget.index.toString()})' */,
-        style: TextStyle(fontSize: usernameFontSize, color: userNameColor),
+      myMessage ? SizedBox() : Expanded(child: Text.rich(
+        TextSpan(children: userNameLine),
         textAlign: TextAlign.left,
         maxLines: 1, overflow: TextOverflow.clip,
-      ),
+      )),
       _messageStarred(message) ?
         Icon(Icons.star_border_outlined, size: 14, color: Colors.redAccent,)
         : SizedBox(),
