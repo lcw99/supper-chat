@@ -242,7 +242,7 @@ class ChatItemViewState extends State<ChatItemView> {
     Color dateColor = chatChatTimeColor;
     if (dateStr.length > 1)
       date = dateStr.reversed.join(' ');
-    children.add(Text(date, style: TextStyle(fontSize: 9, color: dateColor, fontStyle: FontStyle.italic), maxLines: 1, overflow: TextOverflow.clip,));
+    children.add(Text(date, style: TextStyle(fontSize: 9, color: dateColor, ), maxLines: 1, overflow: TextOverflow.clip,));
     return Column(children: children, crossAxisAlignment: CrossAxisAlignment.start,);
   }
 
