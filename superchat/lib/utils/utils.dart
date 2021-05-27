@@ -60,11 +60,17 @@ class Utils {
   }
 
   static String getUserNameByUser(User user) {
+/*
     String userName = '';
     if (user.name != null)
       userName += ' ' + user.name;
     if (userName == '' && user.username != null)
       userName += ' ' + user.username;
+    return userName;
+*/
+    String userName = user.username;
+    if (user.name != null)
+      userName += '(${user.name})';
     return userName;
   }
 

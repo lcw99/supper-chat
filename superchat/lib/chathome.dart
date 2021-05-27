@@ -156,10 +156,8 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   Future<void> unsubscribeAndClose() async {
     print('_+_+_+_+_+_ disconnecting web socket');
     webSocketService.sendUserPresence("offline");
-/*
     if (bChatScreenOpen && selectedRoom != null)
       unsubscribeRoomEvent(selectedRoom.id);
-*/
     Future.delayed(Duration(seconds: 3), () => webSocketService.close());
   }
 
@@ -179,16 +177,16 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
   attachWebSocketHandler() {
     if (subscriptionWebSocketStream != null)
       return;
-    subscriptionWebSocketStream = webSocketService.getStreamController().stream.listen((e) async {
-      var json = jsonDecode(e);
-      if (e == prevEvent && json['msg'] != 'ping') {
-        print('#### same message again?? why??? = $e');
+    subscriptionWebSocketStream = webSocketService.getStreamController().stream.listen((eventStr) async {
+      var json = jsonDecode(eventStr);
+      if (eventStr == prevEvent && json['msg'] != 'ping') {
+        print('#### same message again?? why??? = $eventStr');
         return;
       }
-      prevEvent = e;
+      prevEvent = eventStr;
       //log('event=$e');
       if (json['id'] != 'getPermissions')
-        log('chat home event=$e');
+        log('chat home event=$eventStr');
       RC.Notification event = RC.Notification.fromMap(json);
       if (event.msg == WebSocketService.connectedMessage){
         webSocketService.getPermissions();
@@ -258,8 +256,13 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
             } else if (eventName.endsWith('/message')) {
               if (event.notificationFields.notificationArgs[0]['msg'] != null)
               Utils.showToast(event.notificationFields.notificationArgs[0]['msg']);
+            } else if (eventName.endsWith('/userData')) {
+              print('user data changed = $eventStr');
+              setState(() {
+                Utils.userCache.clear();
+              });
             } else {
-              print('**************** unknown eventName=$eventName');
+              print('**************** unknown event=$eventStr');
             }
           }
           else if (event.collection == 'stream-notify-logged' && event.notificationFields != null) {
