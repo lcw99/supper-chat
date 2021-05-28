@@ -138,7 +138,7 @@ class Utils {
     if (roomName == null)
       roomName = r.name;
     if (roomName == null && r.t == 'd') {
-      r.usernames.remove(owner.name);
+      r.usernames.remove(owner.username);
       roomName = r.usernames.first;
     }
     return roomName;

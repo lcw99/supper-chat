@@ -488,12 +488,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Widget build(BuildContext context) {
     var markAsReadJob = RepeatedJobWaiter(markAsRead);
 
-    String title = room.id;
-    if (room.name != null)
-      title = room.name;
-    else if (room.usernames != null)
-      title = room.usernames.toString();
-
     return WillPopScope(onWillPop: () async {
         if (showEmojiKeyboard) {
           setState(() {
