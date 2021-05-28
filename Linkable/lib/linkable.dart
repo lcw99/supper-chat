@@ -127,11 +127,11 @@ class Linkable extends StatelessWidget {
       return TextSpan(
         text: text,
         style: TextStyle(color: linkColor),
-        recognizer: TapGestureRecognizer()
+        recognizer: linkClickCallback == null ? null : (TapGestureRecognizer()
           ..onTap = () {
             if (linkClickCallback != null)
               linkClickCallback(text, type);
-          }
+          })
       );
   }
 
