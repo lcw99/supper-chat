@@ -12,5 +12,5 @@ The detailed build method will be posted later.
 
 https://chat.smallet.co/chat/#/
 
-Androiod build on google play
+Android build on google play
 https://play.google.com/store/apps/details?id=co.smallet.superchat
