@@ -1,4 +1,4 @@
-# Rocket.Chat fullter client
+# SuperChat - Rocket.Chat flutter client
 
 ## Getting Started
 
