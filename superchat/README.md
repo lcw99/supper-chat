@@ -1,16 +1,14 @@
-# example
-
-A new Flutter project.
+# Rocket.Chat fullter client
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+Inspired by rocket-chat-connector-flutter, it is a flutter-based Rocet.chat client written from scratch.
+Android and web have been tested, but iOS has not been built. Looking for someone to help with iOS.
 
-A few resources to get you started if this is your first Flutter project:
+You can try the web version directly from the url below. 
+Currently, only Google sign-in is supported. 
+For firebase and google login, google-services.json is required. 
+The detailed build method will be posted later.
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+https://chat.smallet.co/chat/#/
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
