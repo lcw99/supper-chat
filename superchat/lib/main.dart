@@ -39,10 +39,9 @@ import 'model/join_info.dart';
 import 'utils/password_generator.dart';
 import 'utils/utils.dart';
 
-final String serverUrl = "https://chat.smallet.co";
 final String username = "support@semaphore.kr";
 //final String username = "changlee99@gmail.com";
-final String password = "enter99!";
+final String password = "";
 
 final authFirebase = FBA.FirebaseAuth.instance;
 final googleSignIn = GoogleSignIn(scopes: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']);
