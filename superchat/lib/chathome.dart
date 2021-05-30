@@ -427,14 +427,14 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               ),
             ),
             ListTile(
-              title: Wrap(children: [Icon(Icons.person_outline), SizedBox(width: 5,), Text('My Profile')],),
+              title: Wrap(children: [Icon(Icons.person_outline, color: Colors.blueAccent,), SizedBox(width: 5,), Text('My Profile')],),
               onTap: () async {
                 Navigator.pop(context);
                 await Navigator.push(context, MaterialPageRoute(builder: (context) => MyProfile(widget.user, widget.authRC)));
               },
             ),
             ListTile(
-              title: Wrap(children: [Icon(Icons.settings), SizedBox(width: 5,), Text('Settings')],),
+              title: Wrap(children: [Icon(Icons.settings, color: Colors.blueAccent), SizedBox(width: 5,), Text('Settings')],),
               onTap: () async {
               },
             ),

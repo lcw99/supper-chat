@@ -12,5 +12,5 @@ final Color chatUnreadCountColor = Color(0xfff9ea4c);
 final Color chatChatTimeColor = Color(0xff5a6673);
 final Color displayNameColor = Color(0xff5a6673);
 
-
+final Widget rotatedPin = Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12, color: Colors.redAccent), angle: 45 * 3.14 / 180,);
 

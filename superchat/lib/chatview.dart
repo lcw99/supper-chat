@@ -88,8 +88,11 @@ class ChatDataStore {
     _chatData.add(data);
   }
 
-  bool containsMessage(String messageId) {
-    return _chatData.indexWhere((element) => element.messageId == messageId) >= 0;
+  Message containsMessage(String messageId) {
+    var i = _chatData.indexWhere((element) => element.messageId == messageId);
+    if (i <= 0)
+      return null;
+    return getMessageAt(i);
   }
 
   bool tryInsertNew(Message m) {
@@ -204,6 +207,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   Message myLastSentMessage;
   Message myLastReceivedMessage;
 
+  var markAsReadJob;
+
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     print('+++++==== ChatView state=$state');
@@ -235,6 +240,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
     quotedMessage = null;
     subscribeRoomEvent(room.id);
+    markAsReadJob = RepeatedJobWaiter(markAsRead);
 
     var userTypingJob = RepeatedJobWaiter(sendUserTyping, waitingTime: 5000);
     _tecMessageInput.addListener(() async {
@@ -333,10 +339,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 if(itemScrollController.scrollController.offset != itemScrollController.scrollController.position.minScrollExtent)
                   userTypingKey.currentState.setTypingUser(newMessageKey, stayTime: -1);
                 else
-                  if (needScrollToBottom)
+                  if (needScrollToBottom) {
+                    markAsReadJob.trigger();
                     setState(() {
                       print('!!!new message inserted');
                     });
+                  }
               }
             }
           }
@@ -486,7 +494,6 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   @override
   Widget build(BuildContext context) {
-    var markAsReadJob = RepeatedJobWaiter(markAsRead);
 
     return WillPopScope(onWillPop: () async {
         if (showEmojiKeyboard) {
@@ -558,16 +565,15 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               }
             },
             itemBuilder: (context){
-              var menu = [
-                PopupMenuItem(child: Text("Pinned Messages..."), value: 'pinned_messages',),
-                PopupMenuItem(child: Text("Thread List..."), value: 'thread_list',),
-                PopupMenuItem(child: Text("Files..."), value: 'room_files',),
-                PopupMenuItem(child: Text("Leave Room..."), value: 'leave_room',),
-              ];
+              List<PopupMenuEntry<dynamic>> menu = [];
+              menu.add(Utils.buildPopupMenuItem(Icons.push_pin_outlined, "Pinned Messages...", 'pinned_messages'));
+              menu.add(Utils.buildPopupMenuItem(Icons.forum_outlined, "Thread List...", 'thread_list',));
+              menu.add(Utils.buildPopupMenuItem(Icons.file_copy_outlined, "Files...", 'room_files',));
+              menu.add(Utils.buildPopupMenuItem(Icons.logout, "Leave Room...", 'leave_room',));
               if (room.t != 'd') {
-                menu.add(PopupMenuItem(child: Text("Room Members..."), value: 'room_members',));
-                menu.add(PopupMenuItem(child: Text("Add User..."), value: 'add_user',));
-                menu.add(PopupMenuItem(child: Text("Room Information..."), value: 'room_info',));
+                menu.add(Utils.buildPopupMenuItem(Icons.people_alt_outlined, 'Room Members...', 'room_members'));
+                menu.add(Utils.buildPopupMenuItem(Icons.perm_identity, "Add User...", 'add_user',));
+                menu.add(Utils.buildPopupMenuItem(Icons.info_outline, "Room Information...", 'room_info',));
               }
               return menu;
           }),
@@ -1127,7 +1133,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
         await locator<db.ChatDatabase>().upsertKeyValue(db.KeyValue(key: db.historyReadEnd + room.id, value: 'yes'));
 
       for (var rm in roomMessages) {
-        if (!chatDataStore.containsMessage(rm.mid)) {
+        if (chatDataStore.containsMessage(rm.mid) == null) {
           //log('@@@@ add new message=${rm.info}');
           Message m = Message.fromMap(jsonDecode(rm.info));
           Utils.getUserInfo(widget.authRC, userId: m.user.id);

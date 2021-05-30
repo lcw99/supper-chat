@@ -325,6 +325,15 @@ class Utils {
     return message;
   }
 
+  static buildPopupMenuItem(IconData icon, String menuText, String value) {
+    List<Widget> cc = [];
+    if (icon != null) {
+      cc.add(Icon(icon, color: Colors.blueAccent,));
+      cc.add(SizedBox(width: 5,));
+    }
+    cc.add(Text(menuText));
+    return PopupMenuItem(child: Wrap(children: cc,), value: value);
+  }
 }
 
 class UserCache {

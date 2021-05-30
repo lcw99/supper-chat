@@ -300,7 +300,7 @@ class ChatItemViewState extends State<ChatItemView> {
         : SizedBox(),
       message.pinnedBy != null ? Wrap(children: [
         SizedBox(width: 4,),
-        Transform.rotate(child: Icon(Icons.push_pin_outlined, size: 12, color: Colors.redAccent), angle: 45 * 3.14 / 180,),
+        rotatedPin,
         SizedBox(width: 1,),
         //Text(message.pinnedBy.username, style: TextStyle(fontSize: usernameFontSize), overflow: TextOverflow.clip, maxLines: 1,)
       ]) : SizedBox(),
@@ -428,16 +428,23 @@ class ChatItemViewState extends State<ChatItemView> {
           print('############ attachment.authorName = ${attachment.authorName}');
         String attachmentText = attachment.text;
 
-        Message attachmentMessage = Message(
-          id: attachmentMessageId,
-          rid: widget.room.id,
-          msg: attachmentText,
-          user: attachmentAuthor,
-          updatedAt: attachment.ts,
-          attachments: attachment.attachments,
-          ts: attachment.ts,
-          isAttachment: true,
-        );
+        Message attachmentMessage;
+        if (widget.chatViewState != null)
+          if (widget.chatViewState.chatDataStore.containsMessage(attachmentMessageId) != null)
+            attachmentMessage = Message.fromMap(widget.chatViewState.chatDataStore.containsMessage(attachmentMessageId).toMap());
+        if (attachmentMessage == null) {
+          attachmentMessage = Message(
+            id: attachmentMessageId,
+            rid: widget.room.id,
+            msg: attachmentText,
+            user: attachmentAuthor,
+            updatedAt: attachment.ts,
+            attachments: attachment.attachments,
+            ts: attachment.ts,
+            isAttachment: true,
+          );
+        }
+        attachmentMessage.isAttachment = true;
         attachmentBody = _buildChatItem(attachmentMessage);
       } else if (message.t == 'message_pinned') {
         attachmentBody = SizedBox();
@@ -482,9 +489,6 @@ class ChatItemViewState extends State<ChatItemView> {
     if (message.user.id == widget.me.id)
       messageBackgroundColor = chatMyMessageColor;
 
-    double messageBorderWidth = 0;
-    if (message.isAttachment)
-      messageBorderWidth = 1;
     bool imageUrlBody = false;
     if (message.urls != null && message.urls.length == 1 && message.urls.single.headers != null &&
         message.urls.single.headers['contentType'] != null &&
@@ -692,30 +696,30 @@ class ChatItemViewState extends State<ChatItemView> {
       imagePath = Uri.parse(message.urls.single.url).path;
     }
     List<PopupMenuEntry<String>> items = [];
-    items.add(PopupMenuItem(child: Text('Copy...'), value: 'copy'));
-    items.add(PopupMenuItem(child: Text('Share...'), value: 'share'));
-    items.add(PopupMenuItem(child: Text('Quote...'), value: 'quote'));
-    items.add(PopupMenuItem(child: Text('Reply...'), value: 'reply'));
-    items.add(PopupMenuItem(child: Text('Create Discussion...'), value: 'create_discussion'));
+    items.add(Utils.buildPopupMenuItem(Icons.copy_outlined, 'Copy...', 'copy'));
+    items.add(Utils.buildPopupMenuItem(Icons.share_outlined, 'Share...', 'share'));
+    items.add(Utils.buildPopupMenuItem(Icons.format_quote_outlined, 'Quote...', 'quote'));
+    items.add(Utils.buildPopupMenuItem(Icons.reply_outlined, 'Reply...', 'reply'));
+    items.add(Utils.buildPopupMenuItem(Icons.add_comment_outlined, 'Create Discussion...', 'create_discussion'));
     if (_messageStarred(message))
-      items.add(PopupMenuItem(child: Text('UnStar...'), value: 'unstar'));
+      items.add(Utils.buildPopupMenuItem(Icons.remove_circle_outlined, 'UnStar...', 'unstar'));
     else
-      items.add(PopupMenuItem(child: Text('Star...'), value: 'star'));
+      items.add(Utils.buildPopupMenuItem(Icons.star_border_outlined, 'Star...', 'star'));
     if (message.pinned)
-      items.add(PopupMenuItem(child: Text('UnPin...'), value: 'unpin'));
+      items.add(Utils.buildPopupMenuItem(Icons.remove_circle_outlined, 'UnPin...', 'unpin'));
     else
-      items.add(PopupMenuItem(child: Text('Pin...'), value: 'pin'));
-    items.add(PopupMenuItem(child: Text('Reaction...'), value: 'reaction'));
+      items.add(Utils.buildPopupMenuItem(Icons.push_pin_outlined, 'Pinn...', 'pin'));
+    items.add(Utils.buildPopupMenuItem(Icons.add_reaction_outlined, 'Reaction...', 'reaction'));
     if (downloadPath != null)
-      items.add(PopupMenuItem(child: Text('Download...'), value: 'download'));
+      items.add(Utils.buildPopupMenuItem(Icons.download_outlined, 'Download...', 'download'));
     if (imagePath != null && !kIsWeb)
-      items.add(PopupMenuItem(child: Text('Set as Profile...'), value: 'set_profile'));
+      items.add(Utils.buildPopupMenuItem(Icons.person_outline, 'Set as Profile...', 'set_profile'));
     if (message.user.id == widget.me.id) {
-      items.add(PopupMenuItem(child: Text('Delete...'), value: 'delete'));
-      items.add(PopupMenuItem(child: Text('Edit...'), value: 'edit'));
+      items.add(Utils.buildPopupMenuItem(Icons.delete_outline, 'Delete...', 'delete'));
+      items.add(Utils.buildPopupMenuItem(Icons.edit_outlined, 'Edit...', 'Edit'));
     }
     if (widget.room.t != 'd')
-      items.add(PopupMenuItem(child: Text('Read receipts...'), value: 'read_receipts'));
+      items.add(Utils.buildPopupMenuItem(Icons.receipt_long_outlined, 'Read receipts...', 'read_receipts'));
 
     var pos = RelativeRect.fromLTRB(0,0,0,0);
     if (tabPosition != null)
