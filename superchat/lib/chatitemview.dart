@@ -48,6 +48,7 @@ import 'widgets/full_screen_image.dart';
 import 'read_receipt.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as epf;
 import 'database/chatdb.dart' as db;
+import 'widgets/video_thumbnail.dart';
 
 class ChatItemView extends StatefulWidget {
   final User me;
@@ -72,6 +73,12 @@ class ChatItemViewState extends State<ChatItemView> {
   Message message;
   GlobalKey<_ReactionViewState> keyReactionView = GlobalKey();
 
+  @override
+  void dispose() {
+    if (httpClient != null)
+      httpClient.close();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     User messageUser;
@@ -408,7 +415,18 @@ class ChatItemViewState extends State<ChatItemView> {
       //log(attachment.toString());
       if (attachment.type == 'file' && attachment.imageUrl == null) {
         downloadLink = attachment.titleLink;
-        attachmentBody = Column(children: [
+        attachmentBody = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          attachment.videoUrl != null && !kIsWeb ?
+            LayoutBuilder(builder: (context, bc) {
+              return GestureDetector(
+                onTap: () async {
+                  String filePath = await fileExists(attachment.title);
+                  if (filePath != null)
+                    OpenFile.open(filePath);
+                },
+                child: VideoThumbnailView(videoFileName: attachment.title, width: bc.maxWidth.toInt(),)
+              );
+            }) : SizedBox(),
           attachment.description != null
             ? Text(attachment.description, style: TextStyle(fontSize: MESSAGE_FONT_SIZE), maxLines: 3, overflow: TextOverflow.fade,)
             : Text(attachment.title, style: TextStyle(fontSize: MESSAGE_FONT_SIZE), maxLines: 1, overflow: TextOverflow.clip, softWrap: false,),
@@ -470,22 +488,7 @@ class ChatItemViewState extends State<ChatItemView> {
             downloadLink != null ? InkWell(
               child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
               onTap: () async {
-                if (kIsWeb)
-                  Utils.downloadFile(widget.authRC, downloadLink);
-                else {
-                  String filePath = await fileExists(attachment.title);
-                  if (filePath != null) {
-                    showSimpleAlertDialog(context, 'File warning', 'File already exists, overwrite?', () {
-                      Navigator.pop(context);
-                      downloadAttachmentFile(downloadLink, attachment.title, forceDownload: true);
-                    }, onCancel: () {
-                      Navigator.pop(context);
-                      OpenFile.open(filePath);
-                    });
-                  } else {
-                    downloadAttachmentFile(downloadLink, attachment.title);
-                  }
-                }
+                downloadAttachmentFile(downloadLink, attachment.title);
               },
             ) : SizedBox(),
           ]);}));
@@ -495,15 +498,36 @@ class ChatItemViewState extends State<ChatItemView> {
       return Container(child: Column(children: widgets), width: bc.maxWidth,);});
   }
 
-  void downloadAttachmentFile(String downloadLink, String fileName, {bool forceDownload = false}) {
-    downloadFile(Utils.buildDownloadUrl(widget.authRC, downloadLink), fileName, (String filePath) {
+  Future<void> downloadAttachmentFile(String downloadLink, String fileName) async {
+    if (kIsWeb)
+      Utils.downloadFile(widget.authRC, downloadLink);
+    else {
+      String filePath = await fileExists(fileName);
+      if (filePath != null) {
+        showSimpleAlertDialog(context, 'File warning', 'File already exists, overwrite?', () {
+          Navigator.pop(context);
+          downloadAttachmentFileProgress(downloadLink, fileName, forceDownload: true);
+        }, onCancel: () {
+          Navigator.pop(context);
           OpenFile.open(filePath);
-        }, forceDownload: forceDownload,
-        onProgress: (percent) {
-          setState(() {
-            downloadPercent = percent;
-          });
-        });
+        }, yesNo: true);
+      } else {
+        downloadAttachmentFileProgress(downloadLink, fileName);
+      }
+    }
+  }
+
+  http.Client httpClient;
+  Future<void> downloadAttachmentFileProgress(String downloadLink, String fileName, {bool forceDownload = false}) async {
+    httpClient = await downloadFile(Utils.buildDownloadUrl(widget.authRC, downloadLink), fileName, (String filePath) {
+      httpClient = null;
+      OpenFile.open(filePath);
+    }, forceDownload: forceDownload,
+    onProgress: (percent) {
+      setState(() {
+        downloadPercent = percent;
+      });
+    });
   }
 
   bool messageHasMessageAttachments(List<MessageAttachment> attachments) {
@@ -723,8 +747,9 @@ class ChatItemViewState extends State<ChatItemView> {
   Future<void> messagePopupMenu(context, Offset tabPosition, Message message) async {
     String imagePath;
     String downloadPath;
+    MessageAttachment att;
     if (message.attachments != null && message.attachments.length > 0) {
-      var att = message.attachments.first;
+      att = message.attachments.first;
       imagePath = att.imageUrl;
       if (att.titleLinkDownload != null && att.titleLinkDownload)
         downloadPath = message.attachments.first.titleLink;
@@ -789,7 +814,7 @@ class ChatItemViewState extends State<ChatItemView> {
     } else if (value == 'edit') {
       handleUpdateMessage(message);
     } else if (value == 'download') {
-      Utils.downloadFile(widget.authRC, downloadPath);
+      downloadAttachmentFile(downloadPath, att.title);
     } else if (value == 'set_profile') {
       setProfilePicture(imagePath);
     } else if (value == 'read_receipts') {

@@ -17,10 +17,10 @@ Future<dynamic> showDialogWithWidget(context, Widget content, double height, {bo
   return response;
 }
 
-showSimpleAlertDialog(context, String title, String content, void onOk(), { void onCancel() }) async {
+showSimpleAlertDialog(context, String title, String content, void onOk(), { void onCancel(), bool yesNo = false }) async {
   var buttons = [
     TextButton(
-      child: Text("OK"),
+      child: Text(yesNo ? 'Yes' : "OK"),
       onPressed: () {
         onOk();
       },
@@ -28,7 +28,7 @@ showSimpleAlertDialog(context, String title, String content, void onOk(), { void
   ];
   if (onCancel != null) {
     buttons.insert(0, TextButton(
-        child: Text("Cancel"),
+        child: Text(yesNo ? 'No' : "Cancel"),
         onPressed: () {
           onCancel();
         },

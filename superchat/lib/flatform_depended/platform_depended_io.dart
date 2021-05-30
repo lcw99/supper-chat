@@ -60,7 +60,7 @@ Future<String> fileExists(String filename) async {
     return null;
 }
 
-void downloadFile(String url, String filename, onDone(String path), {onProgress(double percent), bool forceDownload = false}) async {
+Future<http.Client> downloadFile(String url, String filename, onDone(String path), {onProgress(double percent), bool forceDownload = false}) async {
   var httpClient = http.Client();
   var request = new http.Request('GET', Uri.parse(url));
   var response = httpClient.send(request);
@@ -69,7 +69,7 @@ void downloadFile(String url, String filename, onDone(String path), {onProgress(
   File file = File('$dir/$filename');
   if (await file.exists() && !forceDownload) {
     onDone(FILE_EXISTS);
-    return;
+    return null;
   }
 
   List<List<int>> chunks = [];
@@ -89,6 +89,8 @@ void downloadFile(String url, String filename, onDone(String path), {onProgress(
       //print('downloadPercentage: ${downloaded / r.contentLength * 100}');
 
       // Save the file
+      if (downloaded == 0)
+        return;
       final Uint8List bytes = Uint8List(r.contentLength);
       int offset = 0;
       for (List<int> chunk in chunks) {
@@ -97,6 +99,10 @@ void downloadFile(String url, String filename, onDone(String path), {onProgress(
       }
       await file.writeAsBytes(bytes);
       onDone(file.path);
+    }, onError: (e) {
+      downloaded = 0;
+      print('download error=$e');
     });
   });
+  return httpClient;
 }
