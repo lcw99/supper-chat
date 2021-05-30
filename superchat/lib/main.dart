@@ -162,7 +162,7 @@ androidNotification(RemoteMessage message) async {
   if (messageStr == null) {
     messageStr = 'no message';
   }
-  final String fromAvatar = await downloadAndSaveFile(serverUri.replace(path: '/avatar/${payload.sender.username}', query: 'format=png').toString(), payload.sender.username);
+  final String fromAvatar = await downloadAndSaveImageFile(serverUri.replace(path: '/avatar/${payload.sender.username}', query: 'format=png').toString(), payload.sender.username);
   //final String fromAvatar = await Utils.downloadAndSaveFile('https://via.placeholder.com/48x48', 'largeIcon');
 
   final Person from = Person(name: payload.sender.name, icon: BitmapFilePathAndroidIcon(fromAvatar));

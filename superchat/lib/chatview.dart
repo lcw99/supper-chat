@@ -90,7 +90,7 @@ class ChatDataStore {
 
   Message containsMessage(String messageId) {
     var i = _chatData.indexWhere((element) => element.messageId == messageId);
-    if (i <= 0)
+    if (i < 0)
       return null;
     return getMessageAt(i);
   }
@@ -325,6 +325,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               chatDataStore.replaceMessage(i, roomMessage);
             } else {  // new message
               needScrollToBottom = chatDataStore.tryInsertNew(roomMessage);
+              print('@@@@ new message inserted=${roomMessage.msg}');
               if (roomMessage.user.id == widget.me.id) {
                 myLastReceivedMessage = roomMessage;
                 if (myLastSentMessage != null && myLastSentMessage.id == roomMessage.id) {
@@ -407,9 +408,11 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               print('++@@++permissions=$permissions');
             } else if (event.notificationFields.eventName.endsWith('/userData')) {
               print('!!!!!!!!!@@@@ user data changed');
+/*
               setState(() {
                 Utils.userCache.clear();
               });
+*/
             }
           }
         }
@@ -467,7 +470,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     print('@@@@@ avatar or username changed, deleting cache');
     print('@@@@@ avatar changed deleting cache done~~~~~');
     setState(() {
-      Utils.clearCache();
+      Utils.clearUserCache();
       imageCache.clear();
       imageCache.clearLiveImages();
     });

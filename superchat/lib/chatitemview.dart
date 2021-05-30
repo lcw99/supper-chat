@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:open_file/open_file.dart';
+import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/image_dimensions.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
@@ -396,6 +398,7 @@ class ChatItemViewState extends State<ChatItemView> {
     return downloadLink;
   }
 
+  double downloadPercent = 0;
   buildAttachments(Message message) {
     var attachments = message.attachments;
     List<Widget> widgets = [];
@@ -405,9 +408,14 @@ class ChatItemViewState extends State<ChatItemView> {
       //log(attachment.toString());
       if (attachment.type == 'file' && attachment.imageUrl == null) {
         downloadLink = attachment.titleLink;
-        attachmentBody = attachment.description != null
+        attachmentBody = Column(children: [
+          attachment.description != null
             ? Text(attachment.description, style: TextStyle(fontSize: MESSAGE_FONT_SIZE), maxLines: 3, overflow: TextOverflow.fade,)
-            : Text('!'+attachment.title, style: TextStyle(fontSize: MESSAGE_FONT_SIZE), maxLines: 1, overflow: TextOverflow.clip, softWrap: false,);
+            : Text(attachment.title, style: TextStyle(fontSize: MESSAGE_FONT_SIZE), maxLines: 1, overflow: TextOverflow.clip, softWrap: false,),
+          LinearPercentIndicator(percent: downloadPercent, backgroundColor: Colors.transparent,
+            padding: EdgeInsets.zero, progressColor: Colors.green,
+          ),
+        ],);
       } else if (attachment.imageUrl != null) {
         //downloadLink = attachment.imageUrl;
         attachmentBody = LayoutBuilder(builder: (context, bc) {
@@ -461,13 +469,41 @@ class ChatItemViewState extends State<ChatItemView> {
             //SizedBox(width: 5,),
             downloadLink != null ? InkWell(
               child: Icon(Icons.download_sharp, color: Colors.blueAccent, size: 30),
-              onTap: () async { Utils.downloadFile(widget.authRC, downloadLink); },
+              onTap: () async {
+                if (kIsWeb)
+                  Utils.downloadFile(widget.authRC, downloadLink);
+                else {
+                  String filePath = await fileExists(attachment.title);
+                  if (filePath != null) {
+                    showSimpleAlertDialog(context, 'File warning', 'File already exists, overwrite?', () {
+                      Navigator.pop(context);
+                      downloadAttachmentFile(downloadLink, attachment.title, forceDownload: true);
+                    }, onCancel: () {
+                      Navigator.pop(context);
+                      OpenFile.open(filePath);
+                    });
+                  } else {
+                    downloadAttachmentFile(downloadLink, attachment.title);
+                  }
+                }
+              },
             ) : SizedBox(),
           ]);}));
     }
     return LayoutBuilder(builder: (context, bc) {
       //print('return Column bc=$bc');
       return Container(child: Column(children: widgets), width: bc.maxWidth,);});
+  }
+
+  void downloadAttachmentFile(String downloadLink, String fileName, {bool forceDownload = false}) {
+    downloadFile(Utils.buildDownloadUrl(widget.authRC, downloadLink), fileName, (String filePath) {
+          OpenFile.open(filePath);
+        }, forceDownload: forceDownload,
+        onProgress: (percent) {
+          setState(() {
+            downloadPercent = percent;
+          });
+        });
   }
 
   bool messageHasMessageAttachments(List<MessageAttachment> attachments) {

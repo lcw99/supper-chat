@@ -258,9 +258,11 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
               Utils.showToast(event.notificationFields.notificationArgs[0]['msg']);
             } else if (eventName.endsWith('/userData')) {
               print('user data changed = $eventStr');
+/*
               setState(() {
-                Utils.userCache.clear();
+                Utils.clearUserCache();
               });
+*/
             } else {
               print('**************** unknown event=$eventStr');
             }

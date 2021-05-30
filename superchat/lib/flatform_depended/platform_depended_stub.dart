@@ -9,7 +9,15 @@ Widget pickedImage(String path, {double imageWidth, double imageHeight, cacheWid
   throw UnimplementedError('Unsupported');
 }
 
-Future<String> downloadAndSaveFile(String url, String fileName) async {
+Future<String> downloadAndSaveImageFile(String url, String fileName) async {
+  throw UnimplementedError('Unsupported');
+}
+
+Future<String> fileExists(String filename) async {
+  throw UnimplementedError('Unsupported');
+}
+
+void downloadFile(String url, String filename, onDone(String path), {onProgress(double percent), bool forceDownload = false}) async {
   throw UnimplementedError('Unsupported');
 }
 

@@ -21,8 +21,8 @@ import 'package:http/http.dart' as http;
 import 'package:extended_image/extended_image.dart' as ei;
 import 'package:url_launcher/url_launcher.dart';
 
+UserCache userCache = UserCache();
 class Utils {
-  static UserCache userCache = UserCache();
   static String getAvatarUrl(User userInfo) {
     Uri uri = serverUri.replace(path: '/avatar/${userInfo.username}', query: 'format=png');
     if (userInfo.avatarETag != null)
@@ -34,7 +34,7 @@ class Utils {
   }
 
   static User getCachedUser({String userId, String userName}) => userCache.getUser(userId: userId, userName: userName);
-  static void clearCache() => userCache.clear();
+  static void clearUserCache() => userCache._clear();
   static void clearUser(String userId) => userCache.clearUser(userId);
 
   static Future<User> getUserInfo(Authentication authentication, {String userId, String userName, bool forceRefresh = false}) async {
@@ -55,19 +55,11 @@ class Utils {
         return userCache.getUser(userName: userName, userId: userId);
       });
     } while(user == null && count < 20);
-    print('@@ job wait count=$count, username=$userName, userid=$userId');
+    //print('@@ job wait count=$count, username=$userName, userid=$userId');
     return user;
   }
 
   static String getUserNameByUser(User user) {
-/*
-    String userName = '';
-    if (user.name != null)
-      userName += ' ' + user.name;
-    if (userName == '' && user.username != null)
-      userName += ' ' + user.username;
-    return userName;
-*/
     String userName = user.username;
     if (user.name != null)
       userName += '(${user.name})';
@@ -352,7 +344,7 @@ class UserCache {
   Future<bool> addJob(String userId, userName, Authentication authentication) async {
     String jobCode= '$userId+$userName';
     if (jobList.contains(jobCode)) {
-      print('job code $jobCode is in jobList');
+      //print('job code $jobCode is in jobList');
       return true;
     }
     print('new jobCode=$jobCode');
@@ -364,7 +356,7 @@ class UserCache {
     return false;
   }
 
-  void clear() {
+  void _clear() {
     userCache.clear();
     userCacheByUserName.clear();
   }
@@ -373,6 +365,7 @@ class UserCache {
       return userCache[userId];
     if (userName != null && userCacheByUserName.containsKey(userName))
       return userCache[userCacheByUserName[userName]];
+    print('!!!!!!!!!!!!!!!!!!! no cache for $userName or $userId');
     return null;
   }
 
