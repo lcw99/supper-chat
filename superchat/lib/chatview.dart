@@ -209,6 +209,8 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
   var markAsReadJob;
 
+  bool shiftPressed = false;
+
   @override
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     print('+++++==== ChatView state=$state');
@@ -282,6 +284,12 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     getMoreMessages = false;
     needScrollToBottom = true;
     myFocusNode = FocusNode();
+    myFocusNode.onKey = (node, RawKeyEvent event) {
+      if (event.isShiftPressed) {
+        shiftPressed = true;
+      }
+      return false;
+    };
     myFocusNode.addListener(() {
       if (myFocusNode.hasFocus & showEmojiKeyboard) {
         setState(() {
@@ -915,7 +923,16 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               link: _layerLink,
               child: TextFormField(
                 key: messageInputState,
-                textInputAction: TextInputAction.newline,
+                textInputAction: TextInputAction.send,
+                keyboardType: TextInputType.multiline,
+                onChanged: (value) {
+                  if (value.endsWith('\n') && !shiftPressed && kIsWeb) {
+                    _postMessage(_tecMessageInput.text);
+                    _tecMessageInput.clear();
+                    myFocusNode.requestFocus();
+                  }
+                  shiftPressed = false;
+                },
                 onFieldSubmitted: (value) {
                   _postMessage(_tecMessageInput.text);
                   myFocusNode.requestFocus();
