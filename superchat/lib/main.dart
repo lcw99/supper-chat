@@ -38,6 +38,7 @@ import 'flatform_depended/platform_depended.dart';
 import 'model/join_info.dart';
 import 'utils/password_generator.dart';
 import 'utils/utils.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 final String username = "support@semaphore.kr";
 //final String username = "changlee99@gmail.com";
@@ -362,7 +363,7 @@ class _LoginHomeState extends State<LoginHome> {
     });
   }
 
-  Future<Null> _ensureLoggedIn(BuildContext context) async {
+  Future<Null> _ensureGoogleLoggedIn(BuildContext context) async {
     GoogleSignInAccount user = googleSignIn.currentUser;
     if (user == null) {
       user = await googleSignIn.signInSilently();
@@ -391,7 +392,7 @@ class _LoginHomeState extends State<LoginHome> {
     }
   }
 
-  Future<Null> _silentLogin(BuildContext context) async {
+  Future<Null> _silentGoogleLogin(BuildContext context) async {
     GoogleSignInAccount user = googleSignIn.currentUser;
 
     print('!!!!_silent login1=${user==null}');
@@ -463,17 +464,29 @@ class _LoginHomeState extends State<LoginHome> {
   }
 
 
-  void login() async {
-    await _ensureLoggedIn(context);
+  void facebookLogin() async {
+    final LoginResult result = await FacebookAuth.instance.login(); // by default we request the email and the public profile
+    if (result.status == LoginStatus.success) {
+      // you are logged
+      final AccessToken accessToken = result.accessToken;
+      setState(() {
+        print("facebook login=$result");
+        triedSilentLogin = true;
+      });
+    }
+  }
+
+  void googleLogin() async {
+    await _ensureGoogleLoggedIn(context);
     setState(() {
       print("!!!!!!!!!!!!!!! login setstate");
       triedSilentLogin = true;
     });
   }
 
-  void silentLogin(BuildContext context) async {
+  void silentGoogleLogin(BuildContext context) async {
     print('!!!!!silentLogin1');
-    await _silentLogin(context);
+    await _silentGoogleLogin(context);
     setState(() {
       print("!!!!!!!!!!!!!!! silentLogin setstate");
       triedSilentLogin = true;
@@ -494,7 +507,7 @@ class _LoginHomeState extends State<LoginHome> {
     }
 
     if (needGoogleSignin && triedSilentLogin == false) {
-      silentLogin(context);
+      silentGoogleLogin(context);
     }
 
     authFirebase.authStateChanges().listen((event) {
@@ -583,14 +596,26 @@ class _LoginHomeState extends State<LoginHome> {
         Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
         SizedBox(height: 50,),
         GestureDetector(
-          onTap: login,
+          onTap: googleLogin,
           child: Image.asset(
             "assets/images/google_signin_button.png",
             width: 225.0,
             height: 50,
-            fit: BoxFit.contain,
+            fit: BoxFit.fitWidth,
+          ),
+        ),
+/*
+        SizedBox(height: 15,),
+        GestureDetector(
+          onTap: facebookLogin,
+          child: Image.asset(
+            "assets/images/facebook_signin_button.png",
+            width: 225.0,
+            height: 50,
+            fit: BoxFit.fitWidth,
           ),
         )
+*/
       ])]))));
   }
 
