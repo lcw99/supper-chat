@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="more than chatting">
+  <meta name="google-signin-client_id" content="1018422454473-b13472mituo8180iog5huq06sl95i5jh.apps.googleusercontent.com" />
+
+  <meta property="og:title" content="Super Chat" />
+  <meta property="og:description" content="more than chatting" />
+  <meta property="og:image" content="https://chat.smallet.co/chat/images/ogimage.jpg" />
+  <meta property="og:image:width" content="1024"/>
+  <meta property="og:image:height" content="500"/>
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://chat.smallet.co/chat/" />
+
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Super Chat">
+  <link rel="apple-touch-icon" href="myicons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/png" href="favicon.png"/>
+
+  <title>Super Chat</title>
+  <link rel="manifest" href="manifest.json">
+
+  <link rel="stylesheet" type="text/css" href="splash/style.css">
+</head>
+<body>
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/8.3.3/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.3.3/firebase-messaging.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.3.3/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.3.3/firebase-firestore.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.3.3/firebase-analytics.js"></script>
+<script src="https://apis.google.com/js/platform.js" async defer></script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+
+<script>
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  var firebaseConfig = {
+    apiKey: "AIzaSyCeiUhTHiy0MhEYJamcmqeEwUxPenH4fMo",
+    authDomain: "rocketchat-3a145.firebaseapp.com",
+    projectId: "rocketchat-3a145",
+    storageBucket: "rocketchat-3a145.appspot.com",
+    messagingSenderId: "1018422454473",
+    appId: "1:1018422454473:web:85faa8c52cbb0736dc8518",
+    measurementId: "G-0QYN6R6M6B"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+</script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        //navigator.serviceWorker.register('flutter_service_worker.js');
+        navigator.serviceWorker.register('./firebase-messaging-sw.js');
+      });
+    }
+  </script>
+  <picture id="splash">
+    <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x" media="(prefers-color-scheme: light) or (prefers-color-scheme: no-preference)">
+    <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x" media="(prefers-color-scheme: dark)">
+    <img class="center" src="splash/img/light-1x.png" />
+  </picture>
+  <script type="text/javascript">
+    let useHtml = false;
+    if(useHtml) {
+      window.flutterWebRenderer = "html";
+    } else {
+      window.flutterWebRenderer = "canvaskit";
+    }
+  </script>
+  <script defer src="sql-wasm.js"></script>
+  <script src="main.dart.js" type="application/javascript"></script>
+</body>
+</html>
