@@ -2,7 +2,7 @@
 
 ## Getting Started
 
-Inspired by rocket-chat-connector-flutter, it is a flutter-based Rocet.chat client written from scratch.
+Inspired by rocket-chat-connector-flutter, it is a flutter-based Rocket.chat client written from scratch.
 Android and web have been tested, but iOS has not been built. Looking for someone to help with iOS.
 
 You can try the web version directly from the url below.
