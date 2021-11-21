@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import io.flutter.Log;
 
 import io.flutter.embedding.engine.FlutterEngine;
-import io.flutter.embedding.engine.plugins.shim.ShimPluginRegistry;
 
 /**
  * Generated file. Do not edit.
@@ -16,7 +15,6 @@ import io.flutter.embedding.engine.plugins.shim.ShimPluginRegistry;
 public final class GeneratedPluginRegistrant {
   private static final String TAG = "GeneratedPluginRegistrant";
   public static void registerWith(@NonNull FlutterEngine flutterEngine) {
-    ShimPluginRegistry shimPluginRegistry = new ShimPluginRegistry(flutterEngine);
     try {
       flutterEngine.getPlugins().add(new io.flutter.plugins.connectivity.ConnectivityPlugin());
     } catch(Exception e) {
@@ -78,7 +76,7 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin google_sign_in, io.flutter.plugins.googlesignin.GoogleSignInPlugin", e);
     }
     try {
-      top.kikt.flutter_image_editor.FlutterImageEditorPlugin.registerWith(shimPluginRegistry.registrarFor("top.kikt.flutter_image_editor.FlutterImageEditorPlugin"));
+      flutterEngine.getPlugins().add(new top.kikt.flutter_image_editor.FlutterImageEditorPlugin());
     } catch(Exception e) {
       Log.e(TAG, "Error registering plugin image_editor, top.kikt.flutter_image_editor.FlutterImageEditorPlugin", e);
     }
@@ -138,7 +136,7 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin url_launcher, io.flutter.plugins.urllauncher.UrlLauncherPlugin", e);
     }
     try {
-      xyz.justsoft.video_thumbnail.VideoThumbnailPlugin.registerWith(shimPluginRegistry.registrarFor("xyz.justsoft.video_thumbnail.VideoThumbnailPlugin"));
+      flutterEngine.getPlugins().add(new xyz.justsoft.video_thumbnail.VideoThumbnailPlugin());
     } catch(Exception e) {
       Log.e(TAG, "Error registering plugin video_thumbnail, xyz.justsoft.video_thumbnail.VideoThumbnailPlugin", e);
     }

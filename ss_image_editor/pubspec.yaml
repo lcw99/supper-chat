@@ -18,7 +18,7 @@ dependencies:
   fl_chart: any
   http_client_helper: any
   image: any
-  image_editor: any
+  image_editor: ^1.0.2
   intl: any
   # not support null-safety
   # isolate: any

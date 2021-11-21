@@ -697,9 +697,9 @@ Future<void> logout(Authentication authRC) async {
     if (await googleSignIn.isSignedIn()) {
       print('sign out!');
       try {
+        await googleSignIn.disconnect();
         await googleSignIn.signOut();
         await authFirebase.signOut();
-        await googleSignIn.disconnect();
       } catch (e) {
         print("signout error=$e");
       }
