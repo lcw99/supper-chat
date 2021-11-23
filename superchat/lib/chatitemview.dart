@@ -777,7 +777,7 @@ class ChatItemViewState extends State<ChatItemView> {
       items.add(Utils.buildPopupMenuItem(Icons.person_outline, 'Set as Profile...', 'set_profile'));
     if (message.user.id == widget.me.id) {
       items.add(Utils.buildPopupMenuItem(Icons.delete_outline, 'Delete...', 'delete'));
-      items.add(Utils.buildPopupMenuItem(Icons.edit_outlined, 'Edit...', 'Edit'));
+      items.add(Utils.buildPopupMenuItem(Icons.edit_outlined, 'Edit...', 'edit'));
     }
     if (widget.room.t != 'd')
       items.add(Utils.buildPopupMenuItem(Icons.receipt_long_outlined, 'Read receipts...', 'read_receipts'));
