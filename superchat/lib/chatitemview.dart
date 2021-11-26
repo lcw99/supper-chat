@@ -399,7 +399,10 @@ class ChatItemViewState extends State<ChatItemView> {
       if (attachment.type == 'file' && attachment.imageUrl == null) {
         downloadLink = attachment.titleLink;
       } else {
-        downloadLink = attachment.imageUrl;
+        if (attachment.titleLink == null)
+          downloadLink = attachment.imageUrl;
+        else
+          downloadLink = attachment.titleLink;
       }
     }
     return downloadLink;
@@ -675,7 +678,7 @@ class ChatItemViewState extends State<ChatItemView> {
       return InkWell(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
-          child: Utils.buildImageByLayout(widget.authRC, attachment.imageUrl, attachment.renderWidth, attachment.imageDimensions)),
+          child: Utils.buildImageByLayout(widget.authRC, attachment.titleLink, attachment.renderWidth, attachment.imageDimensions)),
         onTap: () {
           widget.chatViewState.findAndScroll(message.id);
         },
@@ -687,7 +690,7 @@ class ChatItemViewState extends State<ChatItemView> {
         tag: attachment.imageUrl + message.id + message.isAttachment.toString() + widget.hashCode.toString(),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
-          child: Utils.buildImageByLayout(widget.authRC, attachment.imageUrl, attachment.renderWidth, attachment.imageDimensions),
+          child: Utils.buildImageByLayout(widget.authRC, attachment.titleLink, attachment.renderWidth, attachment.imageDimensions),
         ),
       ),
     );
@@ -751,8 +754,10 @@ class ChatItemViewState extends State<ChatItemView> {
     if (message.attachments != null && message.attachments.length > 0) {
       att = message.attachments.first;
       imagePath = att.imageUrl;
-      if (att.titleLinkDownload != null && att.titleLinkDownload)
+      if (att.titleLinkDownload != null && att.titleLinkDownload) {
         downloadPath = message.attachments.first.titleLink;
+        imagePath = downloadPath;
+      }
     } else if (message.imageUrlBody) {
       imagePath = Uri.parse(message.urls.single.url).path;
     }

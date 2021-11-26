@@ -1154,7 +1154,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
 
       for (var rm in roomMessages) {
         if (chatDataStore.containsMessage(rm.mid) == null) {
-          //log('@@@@ add new message=${rm.info}');
+          log('@@@@ add new message=${rm.info}');
           Message m = Message.fromMap(jsonDecode(rm.info));
           Utils.getUserInfo(widget.authRC, userId: m.user.id);
           chatDataStore.add(ChatItemData(GlobalKey(), rm.mid, m.tmid, rm.info, rm.ts));
