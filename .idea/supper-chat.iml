@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="FacetManager">
+    <facet type="android" name="Android">
+      <configuration />
+    </facet>
+  </component>
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/Linkable/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/Linkable/build" />
+      <excludeFolder url="file://$MODULE_DIR$/Linkable/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/scrollable_positioned_list/build" />
+      <excludeFolder url="file://$MODULE_DIR$/scrollable_positioned_list/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/scrollable_positioned_list/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/rocket-chat-connector-flutter/build" />
+      <excludeFolder url="file://$MODULE_DIR$/rocket-chat-connector-flutter/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/rocket-chat-connector-flutter/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/scrollable_positioned_list/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/scrollable_positioned_list/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/scrollable_positioned_list/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/emoji_picker_flutter/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/emoji_picker_flutter/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/emoji_picker_flutter/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/emoji_picker_flutter/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/emoji_picker_flutter/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/emoji_picker_flutter/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/build" />
+      <excludeFolder url="file://$MODULE_DIR$/ss_image_editor/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/ss_image_editor/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/ss_image_editor/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/sqlite3_flutter_libs/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/sqlite3_flutter_libs/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/sqlite3_flutter_libs/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/package_info_plus_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/package_info_plus_windows/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/package_info_plus_windows/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/flutter_keyboard_visibility_windows/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/sqlite3_flutter_libs/example/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/sqlite3_flutter_libs/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/sqlite3_flutter_libs/example/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/.dart_tool" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/build" />
+      <excludeFolder url="file://$MODULE_DIR$/superchat/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/.pub" />
+    </content>
+    <orderEntry type="jdk" jdkName="Android API 33, extension level 3 Platform" jdkType="Android SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Dart SDK" level="project" />
+    <orderEntry type="library" name="Dart Packages" level="project" />
+  </component>
+</module>

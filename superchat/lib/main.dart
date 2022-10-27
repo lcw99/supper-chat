@@ -30,7 +30,7 @@ import 'package:rocket_chat_connector_flutter/models/response/custom_emoji_respo
 import 'package:rocket_chat_connector_flutter/models/custom_emoji.dart' as RC;
 import 'chathome.dart';
 import 'constants/constants.dart';
-import 'constants/secrets.dart';
+import 'constants/secrets.dart';  // store in your google drive
 import 'constants/types.dart';
 import 'database/chatdb.dart';
 
@@ -185,8 +185,8 @@ androidNotification(RemoteMessage message) async {
       messages: messages);
   final AndroidNotificationDetails androidPlatformChannelSpecifics =
   AndroidNotificationDetails(
-      'Super Chat', 'Super Chat', 'Super Chat',
-      category: 'msg',
+      'Super Chat', 'Super Chat',
+      category: AndroidNotificationCategory.message,
       styleInformation: messagingStyle,
       importance: Importance.max,
       priority: Priority.high,
@@ -220,24 +220,32 @@ Future<void> _onSelectNotification(String payload) async {
   }
 }
 
-Future<void> onDidReceiveLocalNotification(int id, String title, String body, String payload) async {
+void onDidReceiveLocalNotification(int id, String title, String body, String payload) async {
+}
+
+void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
 }
 
 _initNotification() async {
   const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_notification');
-  final IOSInitializationSettings initializationSettingsIOS = IOSInitializationSettings(onDidReceiveLocalNotification: onDidReceiveLocalNotification);
-  final MacOSInitializationSettings initializationSettingsMacOS = MacOSInitializationSettings();
+  final DarwinInitializationSettings initializationSettingsDarwin =
+  DarwinInitializationSettings(
+      onDidReceiveLocalNotification: onDidReceiveLocalNotification);
+  final LinuxInitializationSettings initializationSettingsLinux =
+  LinuxInitializationSettings(
+      defaultActionName: 'Open notification');
   final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-      macOS: initializationSettingsMacOS);
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings, onSelectNotification: _onSelectNotification);
+      iOS: initializationSettingsDarwin,
+      linux: initializationSettingsLinux);
+  flutterLocalNotificationsPlugin.initialize(initializationSettings,
+      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse);
   //notificationPayload = null;
 
   final notificationAppLaunchDetails = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
   if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
     if (notificationPayload == null) {
-      notificationPayload = notificationAppLaunchDetails.payload;
+      notificationPayload = notificationAppLaunchDetails.notificationResponse.payload;
       print("=============== called from notification = $notificationPayload");
     } else {
       Logger().w('notificationPayload already setted = $notificationPayload');

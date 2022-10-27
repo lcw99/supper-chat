@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-final Uri serverUri = Uri.parse("https://chat.smallet.co");
-final String webSocketUrl = "wss://chat.smallet.co/websocket";
+final Uri serverUri = Uri.parse("https://rc.plan4.house");
+final String webSocketUrl = "wss://rc.plan4.house/websocket";
 const double MESSAGE_FONT_SIZE = 16;
 const double USERNAME_FONT_SIZE = 12;
 const double DEFAULT_AVATAR_SIZE = 40;

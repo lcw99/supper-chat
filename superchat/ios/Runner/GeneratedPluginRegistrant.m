@@ -66,14 +66,14 @@
 @import fluttertoast;
 #endif
 
-#if __has_include(<google_sign_in/FLTGoogleSignInPlugin.h>)
-#import <google_sign_in/FLTGoogleSignInPlugin.h>
+#if __has_include(<google_sign_in_ios/FLTGoogleSignInPlugin.h>)
+#import <google_sign_in_ios/FLTGoogleSignInPlugin.h>
 #else
-@import google_sign_in;
+@import google_sign_in_ios;
 #endif
 
-#if __has_include(<image_editor/FlutterImageEditorPlugin.h>)
-#import <image_editor/FlutterImageEditorPlugin.h>
+#if __has_include(<image_editor/ImageEditorPlugin.h>)
+#import <image_editor/ImageEditorPlugin.h>
 #else
 @import image_editor;
 #endif
@@ -96,14 +96,14 @@
 @import package_info_plus;
 #endif
 
-#if __has_include(<path_provider/FLTPathProviderPlugin.h>)
-#import <path_provider/FLTPathProviderPlugin.h>
+#if __has_include(<path_provider_ios/FLTPathProviderPlugin.h>)
+#import <path_provider_ios/FLTPathProviderPlugin.h>
 #else
-@import path_provider;
+@import path_provider_ios;
 #endif
 
-#if __has_include(<photo_manager/ImageScannerPlugin.h>)
-#import <photo_manager/ImageScannerPlugin.h>
+#if __has_include(<photo_manager/PhotoManagerPlugin.h>)
+#import <photo_manager/PhotoManagerPlugin.h>
 #else
 @import photo_manager;
 #endif
@@ -120,10 +120,10 @@
 @import share;
 #endif
 
-#if __has_include(<shared_preferences/FLTSharedPreferencesPlugin.h>)
-#import <shared_preferences/FLTSharedPreferencesPlugin.h>
+#if __has_include(<shared_preferences_ios/FLTSharedPreferencesPlugin.h>)
+#import <shared_preferences_ios/FLTSharedPreferencesPlugin.h>
 #else
-@import shared_preferences;
+@import shared_preferences_ios;
 #endif
 
 #if __has_include(<sqflite/SqflitePlugin.h>)
@@ -138,10 +138,10 @@
 @import sqlite3_flutter_libs;
 #endif
 
-#if __has_include(<url_launcher/FLTURLLauncherPlugin.h>)
-#import <url_launcher/FLTURLLauncherPlugin.h>
+#if __has_include(<url_launcher_ios/FLTURLLauncherPlugin.h>)
+#import <url_launcher_ios/FLTURLLauncherPlugin.h>
 #else
-@import url_launcher;
+@import url_launcher_ios;
 #endif
 
 #if __has_include(<video_thumbnail/VideoThumbnailPlugin.h>)
@@ -164,12 +164,12 @@
   [FlutterLocalNotificationsPlugin registerWithRegistrar:[registry registrarForPlugin:@"FlutterLocalNotificationsPlugin"]];
   [FluttertoastPlugin registerWithRegistrar:[registry registrarForPlugin:@"FluttertoastPlugin"]];
   [FLTGoogleSignInPlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTGoogleSignInPlugin"]];
-  [FlutterImageEditorPlugin registerWithRegistrar:[registry registrarForPlugin:@"FlutterImageEditorPlugin"]];
+  [ImageEditorPlugin registerWithRegistrar:[registry registrarForPlugin:@"ImageEditorPlugin"]];
   [FLTImagePickerPlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTImagePickerPlugin"]];
   [OpenFilePlugin registerWithRegistrar:[registry registrarForPlugin:@"OpenFilePlugin"]];
   [FLTPackageInfoPlusPlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTPackageInfoPlusPlugin"]];
   [FLTPathProviderPlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTPathProviderPlugin"]];
-  [ImageScannerPlugin registerWithRegistrar:[registry registrarForPlugin:@"ImageScannerPlugin"]];
+  [PhotoManagerPlugin registerWithRegistrar:[registry registrarForPlugin:@"PhotoManagerPlugin"]];
   [ReceiveSharingIntentPlugin registerWithRegistrar:[registry registrarForPlugin:@"ReceiveSharingIntentPlugin"]];
   [FLTSharePlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTSharePlugin"]];
   [FLTSharedPreferencesPlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTSharedPreferencesPlugin"]];

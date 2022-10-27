@@ -27,15 +27,15 @@ dependencies:
   rocket_chat_connector_flutter:
     path: ../rocket-chat-connector-flutter
 
-  firebase_core: ^1.0.2
-  firebase_messaging: ^9.1.0
+  firebase_core: ^2.1.1
+  firebase_messaging: ^14.0.3
   fluttertoast: ^8.0.3
   google_sign_in: ^5.0.1
-  firebase_auth: ^1.0.1
+  firebase_auth:
   image_picker: ^0.7.4
-  flutter_local_notifications: ^5.0.0+1
+  flutter_local_notifications: ^12.0.3
   moor: ^4.2.1
-  sqlite3_flutter_libs:
+  sqlite3_flutter_libs: ^0.5.10
   path_provider:
   path:
   get_it:

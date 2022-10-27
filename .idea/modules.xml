@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/rocket-chat-connector-flutter/.idea/super-chat.iml" filepath="$PROJECT_DIR$/rocket-chat-connector-flutter/.idea/super-chat.iml" />
-      <module fileurl="file://$PROJECT_DIR$/superchat/superchat.iml" filepath="$PROJECT_DIR$/superchat/superchat.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/supper-chat.iml" filepath="$PROJECT_DIR$/.idea/supper-chat.iml" />
     </modules>
   </component>
 </project>

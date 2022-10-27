@@ -37,7 +37,7 @@ Future<dynamic?> pickImage(BuildContext context, {bool fileResult = false}) asyn
 class ImageSaver {
   static Future<String?> save(String name, Uint8List fileData) async {
     final AssetEntity? imageEntity =
-        await PhotoManager.editor.saveImage(fileData);
+        await PhotoManager.editor.saveImage(fileData, title: "");
     final File? file = await imageEntity?.file;
     return file?.path;
   }

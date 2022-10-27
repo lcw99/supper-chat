@@ -6,7 +6,7 @@ part of 'chatdb.dart';
 // MoorGenerator
 // **************************************************************************
 
-// ignore_for_file: unnecessary_brace_in_string_interps, unnecessary_this
+// ignore_for_file: type=lint
 class Room extends DataClass implements Insertable<Room> {
   final String rid;
   final String sid;
@@ -15,11 +15,13 @@ class Room extends DataClass implements Insertable<Room> {
   factory Room.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
-    final stringType = db.typeSystem.forDartType<String>();
     return Room(
-      rid: stringType.mapFromDatabaseResponse(data['${effectivePrefix}rid']),
-      sid: stringType.mapFromDatabaseResponse(data['${effectivePrefix}sid']),
-      info: stringType.mapFromDatabaseResponse(data['${effectivePrefix}info']),
+      rid: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}rid']),
+      sid: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}sid']),
+      info: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}info']),
     );
   }
   @override
@@ -80,10 +82,9 @@ class Room extends DataClass implements Insertable<Room> {
   }
 
   @override
-  int get hashCode =>
-      $mrjf($mrjc(rid.hashCode, $mrjc(sid.hashCode, info.hashCode)));
+  int get hashCode => Object.hash(rid, sid, info);
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Room &&
           other.rid == this.rid &&
@@ -154,53 +155,34 @@ class RoomsCompanion extends UpdateCompanion<Room> {
 }
 
 class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
-  final GeneratedDatabase _db;
+  @override
+  final GeneratedDatabase attachedDatabase;
   final String _alias;
-  $RoomsTable(this._db, [this._alias]);
+  $RoomsTable(this.attachedDatabase, [this._alias]);
   final VerificationMeta _ridMeta = const VerificationMeta('rid');
-  GeneratedTextColumn _rid;
+  GeneratedColumn<String> _rid;
   @override
-  GeneratedTextColumn get rid => _rid ??= _constructRid();
-  GeneratedTextColumn _constructRid() {
-    return GeneratedTextColumn(
-      'rid',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get rid =>
+      _rid ??= GeneratedColumn<String>('rid', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   final VerificationMeta _sidMeta = const VerificationMeta('sid');
-  GeneratedTextColumn _sid;
+  GeneratedColumn<String> _sid;
   @override
-  GeneratedTextColumn get sid => _sid ??= _constructSid();
-  GeneratedTextColumn _constructSid() {
-    return GeneratedTextColumn(
-      'sid',
-      $tableName,
-      true,
-    );
-  }
-
+  GeneratedColumn<String> get sid =>
+      _sid ??= GeneratedColumn<String>('sid', aliasedName, true,
+          type: const StringType(), requiredDuringInsert: false);
   final VerificationMeta _infoMeta = const VerificationMeta('info');
-  GeneratedTextColumn _info;
+  GeneratedColumn<String> _info;
   @override
-  GeneratedTextColumn get info => _info ??= _constructInfo();
-  GeneratedTextColumn _constructInfo() {
-    return GeneratedTextColumn(
-      'info',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get info =>
+      _info ??= GeneratedColumn<String>('info', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [rid, sid, info];
   @override
-  $RoomsTable get asDslTable => this;
+  String get aliasedName => _alias ?? 'rooms';
   @override
-  String get $tableName => _alias ?? 'rooms';
-  @override
-  final String actualTableName = 'rooms';
+  String get actualTableName => 'rooms';
   @override
   VerificationContext validateIntegrity(Insertable<Room> instance,
       {bool isInserting = false}) {
@@ -229,13 +211,13 @@ class $RoomsTable extends Rooms with TableInfo<$RoomsTable, Room> {
   Set<GeneratedColumn> get $primaryKey => {rid};
   @override
   Room map(Map<String, dynamic> data, {String tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
-    return Room.fromData(data, _db, prefix: effectivePrefix);
+    return Room.fromData(data, attachedDatabase,
+        prefix: tablePrefix != null ? '$tablePrefix.' : null);
   }
 
   @override
   $RoomsTable createAlias(String alias) {
-    return $RoomsTable(_db, alias);
+    return $RoomsTable(attachedDatabase, alias);
   }
 }
 
@@ -246,10 +228,11 @@ class Subscription extends DataClass implements Insertable<Subscription> {
   factory Subscription.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
-    final stringType = db.typeSystem.forDartType<String>();
     return Subscription(
-      sid: stringType.mapFromDatabaseResponse(data['${effectivePrefix}sid']),
-      info: stringType.mapFromDatabaseResponse(data['${effectivePrefix}info']),
+      sid: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}sid']),
+      info: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}info']),
     );
   }
   @override
@@ -302,9 +285,9 @@ class Subscription extends DataClass implements Insertable<Subscription> {
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(sid.hashCode, info.hashCode));
+  int get hashCode => Object.hash(sid, info);
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Subscription &&
           other.sid == this.sid &&
@@ -364,41 +347,28 @@ class SubscriptionsCompanion extends UpdateCompanion<Subscription> {
 
 class $SubscriptionsTable extends Subscriptions
     with TableInfo<$SubscriptionsTable, Subscription> {
-  final GeneratedDatabase _db;
+  @override
+  final GeneratedDatabase attachedDatabase;
   final String _alias;
-  $SubscriptionsTable(this._db, [this._alias]);
+  $SubscriptionsTable(this.attachedDatabase, [this._alias]);
   final VerificationMeta _sidMeta = const VerificationMeta('sid');
-  GeneratedTextColumn _sid;
+  GeneratedColumn<String> _sid;
   @override
-  GeneratedTextColumn get sid => _sid ??= _constructSid();
-  GeneratedTextColumn _constructSid() {
-    return GeneratedTextColumn(
-      'sid',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get sid =>
+      _sid ??= GeneratedColumn<String>('sid', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   final VerificationMeta _infoMeta = const VerificationMeta('info');
-  GeneratedTextColumn _info;
+  GeneratedColumn<String> _info;
   @override
-  GeneratedTextColumn get info => _info ??= _constructInfo();
-  GeneratedTextColumn _constructInfo() {
-    return GeneratedTextColumn(
-      'info',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get info =>
+      _info ??= GeneratedColumn<String>('info', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [sid, info];
   @override
-  $SubscriptionsTable get asDslTable => this;
+  String get aliasedName => _alias ?? 'subscriptions';
   @override
-  String get $tableName => _alias ?? 'subscriptions';
-  @override
-  final String actualTableName = 'subscriptions';
+  String get actualTableName => 'subscriptions';
   @override
   VerificationContext validateIntegrity(Insertable<Subscription> instance,
       {bool isInserting = false}) {
@@ -423,13 +393,13 @@ class $SubscriptionsTable extends Subscriptions
   Set<GeneratedColumn> get $primaryKey => {sid};
   @override
   Subscription map(Map<String, dynamic> data, {String tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
-    return Subscription.fromData(data, _db, prefix: effectivePrefix);
+    return Subscription.fromData(data, attachedDatabase,
+        prefix: tablePrefix != null ? '$tablePrefix.' : null);
   }
 
   @override
   $SubscriptionsTable createAlias(String alias) {
-    return $SubscriptionsTable(_db, alias);
+    return $SubscriptionsTable(attachedDatabase, alias);
   }
 }
 
@@ -440,11 +410,11 @@ class KeyValue extends DataClass implements Insertable<KeyValue> {
   factory KeyValue.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
-    final stringType = db.typeSystem.forDartType<String>();
     return KeyValue(
-      key: stringType.mapFromDatabaseResponse(data['${effectivePrefix}key']),
-      value:
-          stringType.mapFromDatabaseResponse(data['${effectivePrefix}value']),
+      key: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}key']),
+      value: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}value']),
     );
   }
   @override
@@ -498,9 +468,9 @@ class KeyValue extends DataClass implements Insertable<KeyValue> {
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(key.hashCode, value.hashCode));
+  int get hashCode => Object.hash(key, value);
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       identical(this, other) ||
       (other is KeyValue && other.key == this.key && other.value == this.value);
 }
@@ -558,41 +528,28 @@ class KeyValuesCompanion extends UpdateCompanion<KeyValue> {
 
 class $KeyValuesTable extends KeyValues
     with TableInfo<$KeyValuesTable, KeyValue> {
-  final GeneratedDatabase _db;
+  @override
+  final GeneratedDatabase attachedDatabase;
   final String _alias;
-  $KeyValuesTable(this._db, [this._alias]);
+  $KeyValuesTable(this.attachedDatabase, [this._alias]);
   final VerificationMeta _keyMeta = const VerificationMeta('key');
-  GeneratedTextColumn _key;
+  GeneratedColumn<String> _key;
   @override
-  GeneratedTextColumn get key => _key ??= _constructKey();
-  GeneratedTextColumn _constructKey() {
-    return GeneratedTextColumn(
-      'key',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get key =>
+      _key ??= GeneratedColumn<String>('key', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   final VerificationMeta _valueMeta = const VerificationMeta('value');
-  GeneratedTextColumn _value;
+  GeneratedColumn<String> _value;
   @override
-  GeneratedTextColumn get value => _value ??= _constructValue();
-  GeneratedTextColumn _constructValue() {
-    return GeneratedTextColumn(
-      'value',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get value =>
+      _value ??= GeneratedColumn<String>('value', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [key, value];
   @override
-  $KeyValuesTable get asDslTable => this;
+  String get aliasedName => _alias ?? 'key_values';
   @override
-  String get $tableName => _alias ?? 'key_values';
-  @override
-  final String actualTableName = 'key_values';
+  String get actualTableName => 'key_values';
   @override
   VerificationContext validateIntegrity(Insertable<KeyValue> instance,
       {bool isInserting = false}) {
@@ -617,13 +574,13 @@ class $KeyValuesTable extends KeyValues
   Set<GeneratedColumn> get $primaryKey => {key};
   @override
   KeyValue map(Map<String, dynamic> data, {String tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
-    return KeyValue.fromData(data, _db, prefix: effectivePrefix);
+    return KeyValue.fromData(data, attachedDatabase,
+        prefix: tablePrefix != null ? '$tablePrefix.' : null);
   }
 
   @override
   $KeyValuesTable createAlias(String alias) {
-    return $KeyValuesTable(_db, alias);
+    return $KeyValuesTable(attachedDatabase, alias);
   }
 }
 
@@ -640,13 +597,15 @@ class RoomMessage extends DataClass implements Insertable<RoomMessage> {
   factory RoomMessage.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
-    final stringType = db.typeSystem.forDartType<String>();
-    final dateTimeType = db.typeSystem.forDartType<DateTime>();
     return RoomMessage(
-      rid: stringType.mapFromDatabaseResponse(data['${effectivePrefix}rid']),
-      ts: dateTimeType.mapFromDatabaseResponse(data['${effectivePrefix}ts']),
-      mid: stringType.mapFromDatabaseResponse(data['${effectivePrefix}mid']),
-      info: stringType.mapFromDatabaseResponse(data['${effectivePrefix}info']),
+      rid: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}rid']),
+      ts: const DateTimeType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}ts']),
+      mid: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}mid']),
+      info: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}info']),
     );
   }
   @override
@@ -716,10 +675,9 @@ class RoomMessage extends DataClass implements Insertable<RoomMessage> {
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(
-      rid.hashCode, $mrjc(ts.hashCode, $mrjc(mid.hashCode, info.hashCode))));
+  int get hashCode => Object.hash(rid, ts, mid, info);
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RoomMessage &&
           other.rid == this.rid &&
@@ -807,65 +765,40 @@ class RoomMessagesCompanion extends UpdateCompanion<RoomMessage> {
 
 class $RoomMessagesTable extends RoomMessages
     with TableInfo<$RoomMessagesTable, RoomMessage> {
-  final GeneratedDatabase _db;
+  @override
+  final GeneratedDatabase attachedDatabase;
   final String _alias;
-  $RoomMessagesTable(this._db, [this._alias]);
+  $RoomMessagesTable(this.attachedDatabase, [this._alias]);
   final VerificationMeta _ridMeta = const VerificationMeta('rid');
-  GeneratedTextColumn _rid;
+  GeneratedColumn<String> _rid;
   @override
-  GeneratedTextColumn get rid => _rid ??= _constructRid();
-  GeneratedTextColumn _constructRid() {
-    return GeneratedTextColumn(
-      'rid',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get rid =>
+      _rid ??= GeneratedColumn<String>('rid', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   final VerificationMeta _tsMeta = const VerificationMeta('ts');
-  GeneratedDateTimeColumn _ts;
+  GeneratedColumn<DateTime> _ts;
   @override
-  GeneratedDateTimeColumn get ts => _ts ??= _constructTs();
-  GeneratedDateTimeColumn _constructTs() {
-    return GeneratedDateTimeColumn(
-      'ts',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<DateTime> get ts =>
+      _ts ??= GeneratedColumn<DateTime>('ts', aliasedName, false,
+          type: const IntType(), requiredDuringInsert: true);
   final VerificationMeta _midMeta = const VerificationMeta('mid');
-  GeneratedTextColumn _mid;
+  GeneratedColumn<String> _mid;
   @override
-  GeneratedTextColumn get mid => _mid ??= _constructMid();
-  GeneratedTextColumn _constructMid() {
-    return GeneratedTextColumn(
-      'mid',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get mid =>
+      _mid ??= GeneratedColumn<String>('mid', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   final VerificationMeta _infoMeta = const VerificationMeta('info');
-  GeneratedTextColumn _info;
+  GeneratedColumn<String> _info;
   @override
-  GeneratedTextColumn get info => _info ??= _constructInfo();
-  GeneratedTextColumn _constructInfo() {
-    return GeneratedTextColumn(
-      'info',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get info =>
+      _info ??= GeneratedColumn<String>('info', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [rid, ts, mid, info];
   @override
-  $RoomMessagesTable get asDslTable => this;
+  String get aliasedName => _alias ?? 'room_messages';
   @override
-  String get $tableName => _alias ?? 'room_messages';
-  @override
-  final String actualTableName = 'room_messages';
+  String get actualTableName => 'room_messages';
   @override
   VerificationContext validateIntegrity(Insertable<RoomMessage> instance,
       {bool isInserting = false}) {
@@ -901,13 +834,13 @@ class $RoomMessagesTable extends RoomMessages
   Set<GeneratedColumn> get $primaryKey => {mid};
   @override
   RoomMessage map(Map<String, dynamic> data, {String tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
-    return RoomMessage.fromData(data, _db, prefix: effectivePrefix);
+    return RoomMessage.fromData(data, attachedDatabase,
+        prefix: tablePrefix != null ? '$tablePrefix.' : null);
   }
 
   @override
   $RoomMessagesTable createAlias(String alias) {
-    return $RoomMessagesTable(_db, alias);
+    return $RoomMessagesTable(attachedDatabase, alias);
   }
 }
 
@@ -918,10 +851,11 @@ class CustomEmoji extends DataClass implements Insertable<CustomEmoji> {
   factory CustomEmoji.fromData(Map<String, dynamic> data, GeneratedDatabase db,
       {String prefix}) {
     final effectivePrefix = prefix ?? '';
-    final stringType = db.typeSystem.forDartType<String>();
     return CustomEmoji(
-      id: stringType.mapFromDatabaseResponse(data['${effectivePrefix}id']),
-      info: stringType.mapFromDatabaseResponse(data['${effectivePrefix}info']),
+      id: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}id']),
+      info: const StringType()
+          .mapFromDatabaseResponse(data['${effectivePrefix}info']),
     );
   }
   @override
@@ -974,9 +908,9 @@ class CustomEmoji extends DataClass implements Insertable<CustomEmoji> {
   }
 
   @override
-  int get hashCode => $mrjf($mrjc(id.hashCode, info.hashCode));
+  int get hashCode => Object.hash(id, info);
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CustomEmoji && other.id == this.id && other.info == this.info);
 }
@@ -1034,41 +968,28 @@ class CustomEmojisCompanion extends UpdateCompanion<CustomEmoji> {
 
 class $CustomEmojisTable extends CustomEmojis
     with TableInfo<$CustomEmojisTable, CustomEmoji> {
-  final GeneratedDatabase _db;
+  @override
+  final GeneratedDatabase attachedDatabase;
   final String _alias;
-  $CustomEmojisTable(this._db, [this._alias]);
+  $CustomEmojisTable(this.attachedDatabase, [this._alias]);
   final VerificationMeta _idMeta = const VerificationMeta('id');
-  GeneratedTextColumn _id;
+  GeneratedColumn<String> _id;
   @override
-  GeneratedTextColumn get id => _id ??= _constructId();
-  GeneratedTextColumn _constructId() {
-    return GeneratedTextColumn(
-      'id',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get id =>
+      _id ??= GeneratedColumn<String>('id', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   final VerificationMeta _infoMeta = const VerificationMeta('info');
-  GeneratedTextColumn _info;
+  GeneratedColumn<String> _info;
   @override
-  GeneratedTextColumn get info => _info ??= _constructInfo();
-  GeneratedTextColumn _constructInfo() {
-    return GeneratedTextColumn(
-      'info',
-      $tableName,
-      false,
-    );
-  }
-
+  GeneratedColumn<String> get info =>
+      _info ??= GeneratedColumn<String>('info', aliasedName, false,
+          type: const StringType(), requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns => [id, info];
   @override
-  $CustomEmojisTable get asDslTable => this;
+  String get aliasedName => _alias ?? 'custom_emojis';
   @override
-  String get $tableName => _alias ?? 'custom_emojis';
-  @override
-  final String actualTableName = 'custom_emojis';
+  String get actualTableName => 'custom_emojis';
   @override
   VerificationContext validateIntegrity(Insertable<CustomEmoji> instance,
       {bool isInserting = false}) {
@@ -1092,13 +1013,13 @@ class $CustomEmojisTable extends CustomEmojis
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   CustomEmoji map(Map<String, dynamic> data, {String tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : null;
-    return CustomEmoji.fromData(data, _db, prefix: effectivePrefix);
+    return CustomEmoji.fromData(data, attachedDatabase,
+        prefix: tablePrefix != null ? '$tablePrefix.' : null);
   }
 
   @override
   $CustomEmojisTable createAlias(String alias) {
-    return $CustomEmojisTable(_db, alias);
+    return $CustomEmojisTable(attachedDatabase, alias);
   }
 }
 
