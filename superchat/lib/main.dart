@@ -4,7 +4,6 @@ import 'dart:developer';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart' as FBA;
-import 'firebase_options.dart';
 import 'package:fluro/fluro.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +30,7 @@ import 'package:rocket_chat_connector_flutter/models/response/custom_emoji_respo
 import 'package:rocket_chat_connector_flutter/models/custom_emoji.dart' as RC;
 import 'chathome.dart';
 import 'constants/constants.dart';
-import 'constants/secrets.dart';  // store in your google drive
+import 'constants/secrets.dart';
 import 'constants/types.dart';
 import 'database/chatdb.dart';
 
@@ -186,8 +185,8 @@ androidNotification(RemoteMessage message) async {
       messages: messages);
   final AndroidNotificationDetails androidPlatformChannelSpecifics =
   AndroidNotificationDetails(
-      'Super Chat', 'Super Chat',
-      category: AndroidNotificationCategory.message,
+      'Super Chat', 'Super Chat', 'Super Chat',
+      category: 'msg',
       styleInformation: messagingStyle,
       importance: Importance.max,
       priority: Priority.high,
@@ -221,32 +220,24 @@ Future<void> _onSelectNotification(String payload) async {
   }
 }
 
-void onDidReceiveLocalNotification(int id, String title, String body, String payload) async {
-}
-
-void onDidReceiveNotificationResponse(NotificationResponse notificationResponse) async {
+Future<void> onDidReceiveLocalNotification(int id, String title, String body, String payload) async {
 }
 
 _initNotification() async {
   const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('ic_notification');
-  final DarwinInitializationSettings initializationSettingsDarwin =
-  DarwinInitializationSettings(
-      onDidReceiveLocalNotification: onDidReceiveLocalNotification);
-  final LinuxInitializationSettings initializationSettingsLinux =
-  LinuxInitializationSettings(
-      defaultActionName: 'Open notification');
+  final IOSInitializationSettings initializationSettingsIOS = IOSInitializationSettings(onDidReceiveLocalNotification: onDidReceiveLocalNotification);
+  final MacOSInitializationSettings initializationSettingsMacOS = MacOSInitializationSettings();
   final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
-      iOS: initializationSettingsDarwin,
-      linux: initializationSettingsLinux);
-  flutterLocalNotificationsPlugin.initialize(initializationSettings,
-      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse);
+      iOS: initializationSettingsIOS,
+      macOS: initializationSettingsMacOS);
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings, onSelectNotification: _onSelectNotification);
   //notificationPayload = null;
 
   final notificationAppLaunchDetails = await flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
   if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
     if (notificationPayload == null) {
-      notificationPayload = notificationAppLaunchDetails.notificationResponse.payload;
+      notificationPayload = notificationAppLaunchDetails.payload;
       print("=============== called from notification = $notificationPayload");
     } else {
       Logger().w('notificationPayload already setted = $notificationPayload');
@@ -385,9 +376,7 @@ class _LoginHomeState extends State<LoginHome> {
   Future<FirebaseApp> initializeFlutterFire() async {
     debugPrint("start flutter fire...");
 
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    final FirebaseApp app = await Firebase.initializeApp();
     FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
     NotificationSettings settings = await _messaging.requestPermission(
@@ -419,6 +408,8 @@ class _LoginHomeState extends State<LoginHome> {
     });
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    return app;
   }
 
   Future<Authentication> getAuthentication() async {
@@ -567,11 +558,11 @@ class _LoginHomeState extends State<LoginHome> {
 
     bool needOAuth = loginType == null || loginType == LoginType.google || loginType == LoginType.facebook;
     bool oAuthLoggedIn = loginType == LoginType.google && googleSignIn.currentUser != null ||
-                          loginType == LoginType.facebook && facebookAccessToken != null;
+        loginType == LoginType.facebook && facebookAccessToken != null;
 
     if (firebaseInitialized && (!needOAuth || (triedSilentLogin && oAuthLoggedIn))) {
       return Scaffold(body:
-        FutureBuilder<Authentication>(
+      FutureBuilder<Authentication>(
           future: getAuthentication(),
           builder: (context, AsyncSnapshot<Authentication> snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting)
@@ -616,59 +607,59 @@ class _LoginHomeState extends State<LoginHome> {
             } else {
               return buildShowVersion('connecting');
             }
-        }));
+          }));
     } else
       return Scaffold(body: FutureBuilder<String>(
-        future: Future.delayed(Duration(seconds: 5), () {
-          return '';
-        }),
-        builder: (context, AsyncSnapshot<String> snapshot) {
-          if (snapshot.connectionState == ConnectionState.done)
-            return buildOAuthLoginPage();
-          else
-            return buildShowVersion('login started');
-        }));
+          future: Future.delayed(Duration(seconds: 5), () {
+            return '';
+          }),
+          builder: (context, AsyncSnapshot<String> snapshot) {
+            if (snapshot.connectionState == ConnectionState.done)
+              return buildOAuthLoginPage();
+            else
+              return buildShowVersion('login started');
+          }));
   }
 
   buildShowVersion(String status) {
     return Container(color: Colors.white, child:
-      Center(child: Wrap(children: [Column(children: [
-        Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
-        SizedBox(height: 50,),
-        SizedBox(height: 50, child: Column(children: [
-          Text('SuperChat $version($buildNumber)' + (kDebugMode ? ' - debug' : ''), style: TextStyle(fontSize: 10, color: Colors.blueAccent),),
-          Text('$status', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
-        ])),
-      ])])));
+    Center(child: Wrap(children: [Column(children: [
+      Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
+      SizedBox(height: 50,),
+      SizedBox(height: 50, child: Column(children: [
+        Text('SuperChat $version($buildNumber)' + (kDebugMode ? ' - debug' : ''), style: TextStyle(fontSize: 10, color: Colors.blueAccent),),
+        Text('$status', style: TextStyle(fontSize: 8, color: Colors.deepOrange)),
+      ])),
+    ])])));
   }
 
   Scaffold buildOAuthLoginPage() {
     return Scaffold(
-      body:
-      Container(color: Colors.white, child:
-      Center(child: Wrap(children: [Column(children: [
-        Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
-        SizedBox(height: 50,),
-        GestureDetector(
-          onTap: googleLogin,
-          child: Image.asset(
-            "assets/images/google_signin_button.png",
-            width: 225.0,
-            height: 50,
-            fit: BoxFit.fitWidth,
+        body:
+        Container(color: Colors.white, child:
+        Center(child: Wrap(children: [Column(children: [
+          Image.asset('assets/images/logo.png', height: 150, fit: BoxFit.fitHeight,),
+          SizedBox(height: 50,),
+          GestureDetector(
+            onTap: googleLogin,
+            child: Image.asset(
+              "assets/images/google_signin_button.png",
+              width: 225.0,
+              height: 50,
+              fit: BoxFit.fitWidth,
+            ),
           ),
-        ),
-        SizedBox(height: 15,),
-        GestureDetector(
-          onTap: facebookLogin,
-          child: Image.asset(
-            "assets/images/facebook_signin_button.png",
-            width: 225.0,
-            height: 50,
-            fit: BoxFit.fitWidth,
-          ),
-        )
-      ])]))));
+          SizedBox(height: 15,),
+          GestureDetector(
+            onTap: facebookLogin,
+            child: Image.asset(
+              "assets/images/facebook_signin_button.png",
+              width: 225.0,
+              height: 50,
+              fit: BoxFit.fitWidth,
+            ),
+          )
+        ])]))));
   }
 
   Future<void> loadCustomEmojis(Authentication authRC) async {
@@ -706,9 +697,9 @@ Future<void> logout(Authentication authRC) async {
     if (await googleSignIn.isSignedIn()) {
       print('sign out!');
       try {
-        await googleSignIn.disconnect();
         await googleSignIn.signOut();
         await authFirebase.signOut();
+        await googleSignIn.disconnect();
       } catch (e) {
         print("signout error=$e");
       }

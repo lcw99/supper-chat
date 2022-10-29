@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.14+18
+version: 1.0.13+17
 
 environment:
   sdk: ">=2.7.0 <3.0.0"
@@ -30,13 +30,13 @@ dependencies:
   firebase_core_platform_interface: 4.5.1
   firebase_core: 1.19.1
   firebase_messaging: ^11.4.4
-  firebase_auth: ^3.4.1
   fluttertoast: ^8.0.3
   google_sign_in: 5.4.2
+  firebase_auth: ^1.0.1
   image_picker: ^0.7.4
-  flutter_local_notifications: ^12.0.3
+  flutter_local_notifications: ^5.0.0+1
   moor: ^4.2.1
-  sqlite3_flutter_libs: ^0.5.10
+  sqlite3_flutter_libs:
   path_provider:
   path:
   get_it:
@@ -65,7 +65,7 @@ dependencies:
   async: ^2.5.0
   open_file: ^3.2.1
   percent_indicator: ^3.0.1
-  video_thumbnail: ^0.4.3
+  video_thumbnail: ^0.3.3
   flutter_facebook_auth: ^3.4.0
   linkable:
     path: ../Linkable
@@ -86,7 +86,6 @@ dev_dependencies:
     sdk: flutter
   moor_generator:
   build_runner:
-
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
