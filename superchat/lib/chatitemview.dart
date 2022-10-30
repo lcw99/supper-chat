@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:open_file/open_file.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
+import 'package:rocket_chat_connector_flutter/models/attachment_action.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
 import 'package:rocket_chat_connector_flutter/models/image_dimensions.dart';
 import 'package:rocket_chat_connector_flutter/models/room.dart';
@@ -105,12 +106,15 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget buildChatItemMain(Message message) {
+/*
+    // uncomment this block, to support read count
     if(!message.isAttachment && widget.room.usersCount < 10 && !widget.onTapExit) {
       if (message.reactions == null ||
           !message.reactions.containsKey(readCountEmoji) ||
           !message.reactions[readCountEmoji].usernames.contains(widget.me.username))
         widget.chatViewState.taskQueueMarkMessageRead.addTask(() => getWebsocketService().setReaction(message.id, readCountEmoji, true));
     }
+*/
 
     double leftMargin = 0;
     bool isThreadMessage = message.tmid != null;
@@ -175,6 +179,8 @@ class ChatItemViewState extends State<ChatItemView> {
 
 
   Widget _buildChatItem(Message message) {
+    if (!message.isAttachment && message.msg == "")
+      return SizedBox();
     User user = Utils.getCachedUser(userId: message.user.id);
     bool roomChangedMessage = message.t != null;
     double avatarSize = DEFAULT_AVATAR_SIZE;
@@ -228,6 +234,7 @@ class ChatItemViewState extends State<ChatItemView> {
   }
 
   Widget buildUnreadCount() {
+    return SizedBox();    // disable unread count
     var reactions = message.reactions;
     bool bReactions = reactions != null && reactions.length > 0;
 
@@ -477,7 +484,34 @@ class ChatItemViewState extends State<ChatItemView> {
         attachmentBody = _buildChatItem(attachmentMessage);
       } else if (message.t == 'message_pinned') {
         attachmentBody = SizedBox();
-      } else {
+      } else if (attachment.actions != null) {
+        attachmentBody = LayoutBuilder(builder: (context, bc) {
+          List<Widget> buttons = [];
+          attachment.actions.forEach((AttachmentAction attachmentAction) {
+            Widget w = LayoutBuilder(builder: (context, bc) {
+              return TextButton(
+                child: Text(
+                  attachmentAction.type == "button" ? attachmentAction.text : "unknown",
+                ),
+                style: ButtonStyle(
+                    foregroundColor: MaterialStateProperty.all<Color>(Colors.black),
+                    backgroundColor: MaterialStateProperty.all<Color>(Colors.yellow),
+                    shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                        RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                            //side: BorderSide(color: Colors.red)
+                        )
+                    )
+                ),
+                onPressed: () {},
+              );
+            });
+            buttons.add(w);
+          });
+          return Column(children: buttons);
+        });
+      }
+      else {
         log('unknown attachment type=$message');
       }
       widgets.add(LayoutBuilder(builder: (context, bc) {

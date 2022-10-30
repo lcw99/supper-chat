@@ -184,7 +184,7 @@ class ChatHomeState extends State<ChatHome> with WidgetsBindingObserver {
         return;
       }
       prevEvent = eventStr;
-      //log('event=$e');
+      log('event=$eventStr');
       if (json['id'] != 'getPermissions')
         log('chat home event=$eventStr');
       RC.Notification event = RC.Notification.fromMap(json);

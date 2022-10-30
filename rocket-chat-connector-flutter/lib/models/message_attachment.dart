@@ -5,6 +5,7 @@ import 'package:rocket_chat_connector_flutter/models/message_attachment_field.da
 
 import 'image_dimensions.dart';
 import 'package:rocket_chat_connector_flutter/models/constants/utils.dart';
+import 'attachment_action.dart';
 
 class MessageAttachment {
   String? audioUrl;
@@ -29,6 +30,7 @@ class MessageAttachment {
   String? type;
   List<MessageAttachment>? attachments;
   double? renderWidth;
+  List<AttachmentAction>? actions;
 
   MessageAttachment({
     this.audioUrl,
@@ -86,6 +88,18 @@ class MessageAttachment {
         fields = null;
       }
 
+      if (json['actions'] != null) {
+        List<dynamic> jsonList = json['actions'].runtimeType == String //
+            ? jsonDecode(json['actions'])
+            : json['actions'];
+        actions = jsonList
+            .where((json) => json != null)
+            .map((json) => AttachmentAction.fromMap(json))
+            .toList();
+      } else {
+        actions = null;
+      }
+
       imageUrl = json['image_url'];
       messageLink = json['message_link'];
       text = json['text'];
@@ -101,6 +115,7 @@ class MessageAttachment {
       imageDimensions = json['image_dimensions'] != null
           ? ImageDimensions.fromMap(json['image_dimensions'])
           : null;
+
     }
     type = json['type'];
   }
@@ -123,7 +138,12 @@ class MessageAttachment {
                 ?.map((field) => field.toMap())
                 ?.toList() ??
             [],
-        'image_url': imageUrl,
+        'actions': actions
+            ?.where((json) => json != null)
+            ?.map((action) => action.toMap())
+            ?.toList() ??
+            [],
+      'image_url': imageUrl,
         'message_link': messageLink,
         'text': text,
         'description': description,
