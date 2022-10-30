@@ -73,6 +73,7 @@ class ChatItemView extends StatefulWidget {
 class ChatItemViewState extends State<ChatItemView> {
   Message message;
   GlobalKey<_ReactionViewState> keyReactionView = GlobalKey();
+  bool myMessageToRight = true;
 
   @override
   void dispose() {
@@ -189,8 +190,9 @@ class ChatItemViewState extends State<ChatItemView> {
     else if (message.tmid != null || message.isAttachment)
       avatarSize = DEFAULT_AVATAR_SIZE * 3 / 4;
 
-    //bool myMessage = message.user.id == widget.me.id && !(message.tmid != null || message.isAttachment);
-    bool myMessage = false;
+    bool myMessage = message.user.id == widget.me.id && !(message.tmid != null || message.isAttachment);
+    if (!myMessageToRight)
+      myMessage = false;
 
     if (widget.hideAvatar || myMessage)
       avatarSize = 0;
@@ -489,22 +491,24 @@ class ChatItemViewState extends State<ChatItemView> {
           List<Widget> buttons = [];
           attachment.actions.forEach((AttachmentAction attachmentAction) {
             Widget w = LayoutBuilder(builder: (context, bc) {
-              return TextButton(
-                child: Text(
-                  attachmentAction.type == "button" ? attachmentAction.text : "unknown",
-                ),
-                style: ButtonStyle(
-                    foregroundColor: MaterialStateProperty.all<Color>(Colors.black),
-                    backgroundColor: MaterialStateProperty.all<Color>(Colors.yellow),
-                    shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                        RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
-                            //side: BorderSide(color: Colors.red)
-                        )
-                    )
-                ),
-                onPressed: () {},
-              );
+              String buttonText = attachmentAction.type == "button" ? attachmentAction.text : "unknown";
+              return Align(alignment: Alignment.centerLeft, child:
+                TextButton(
+                  child: Text(buttonText),
+                  style: ButtonStyle(
+                      foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
+                      backgroundColor: MaterialStateProperty.all<Color>(Colors.black26),
+                      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                          RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
+                              //side: BorderSide(color: Colors.red)
+                          )
+                      )
+                  ),
+                  onPressed: () {
+                    widget.chatViewState.postMessage(buttonText);
+                  },
+              ));
             });
             buttons.add(w);
           });

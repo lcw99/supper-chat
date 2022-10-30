@@ -432,7 +432,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.sharedObject != null) {
         if (widget.sharedObject is String)
-          _postMessage(widget.sharedObject);
+          postMessage(widget.sharedObject);
         else if (widget.sharedObject is List<SharedMediaFile>) {
           List<SharedMediaFile> mediaFiles = widget.sharedObject;
           if (mediaFiles.isNotEmpty && !kIsWeb) {
@@ -610,7 +610,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               onEmojiSelected: (category, emoji) {
                 print(emoji);
                 if (emoji.emoji.startsWith('/')) {
-                  _postMessage(serverUri.replace(path: '/emoji-custom${emoji.emoji}').toString());
+                  postMessage(serverUri.replace(path: '/emoji-custom${emoji.emoji}').toString());
                 } else {
                   _tecMessageInput.text += emoji.emoji;
                   caretToEnd();
@@ -927,14 +927,14 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
                 keyboardType: TextInputType.multiline,
                 onChanged: (value) {
                   if (value.endsWith('\n') && !shiftPressed && kIsWeb) {
-                    _postMessage(_tecMessageInput.text);
+                    postMessage(_tecMessageInput.text);
                     _tecMessageInput.clear();
                     myFocusNode.requestFocus();
                   }
                   shiftPressed = false;
                 },
                 onFieldSubmitted: (value) {
-                  _postMessage(_tecMessageInput.text);
+                  postMessage(_tecMessageInput.text);
                   myFocusNode.requestFocus();
                 },
                 autofocus: false,
@@ -968,7 +968,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
               margin: EdgeInsets.only(left: 10),
               child:
               InkWell(
-                onTap: () {_postMessage(_tecMessageInput.text);},
+                onTap: () {postMessage(_tecMessageInput.text);},
                 child: Icon(Icons.send, color: Colors.blueAccent, size: 40,),
               )),
         ])
@@ -976,7 +976,7 @@ class ChatViewState extends State<ChatView> with WidgetsBindingObserver, TickerP
   }
 
   //message = '[ ](https://chat.smallet.co/channel/pppp_test?msg=NeZ9q4YHzezW8qTAK)  ' + message;
-  Future<void> _postMessage(String message) async {
+  Future<void> postMessage(String message) async {
     if (message == null || message.isEmpty)
       return;
     MessageNew msg = MessageNew(roomId: room.id, text: message);
