@@ -181,7 +181,7 @@ class ChatItemViewState extends State<ChatItemView> {
 
   Widget _buildChatItem(Message message) {
     if (!message.isAttachment && message.msg == "")
-      return SizedBox();
+      print("empty msg text");
     User user = Utils.getCachedUser(userId: message.user.id);
     bool roomChangedMessage = message.t != null;
     double avatarSize = DEFAULT_AVATAR_SIZE;
@@ -506,7 +506,7 @@ class ChatItemViewState extends State<ChatItemView> {
                       )
                   ),
                   onPressed: () {
-                    widget.chatViewState.postMessage(buttonText);
+                    widget.chatViewState.postMessage(attachmentAction.text + "\t" + attachmentAction.msg);
                   },
               ));
             });
@@ -723,12 +723,16 @@ class ChatItemViewState extends State<ChatItemView> {
       );
     }
 
+    String imageUrl = attachment.titleLink;
+    if (imageUrl == null)
+      imageUrl = attachment.imageUrl;
+
     return FullScreenWidget(
       child: Hero(
         tag: attachment.imageUrl + message.id + message.isAttachment.toString() + widget.hashCode.toString(),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(5),
-          child: Utils.buildImageByLayout(widget.authRC, attachment.titleLink, attachment.renderWidth, attachment.imageDimensions),
+          child: Utils.buildImageByLayout(widget.authRC, imageUrl, attachment.renderWidth, attachment.imageDimensions),
         ),
       ),
     );

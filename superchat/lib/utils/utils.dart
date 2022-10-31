@@ -229,12 +229,19 @@ class Utils {
       var dpr = MediaQuery.of(context).devicePixelRatio;
       var imageWidthInDevice = imageWidth * dpr;
 
-      double r = imageWidthInDevice / imageDimensions.width;
-      double imageHeightInDevice = imageDimensions.height * r;
+      double imageHeightInDevice = imageWidthInDevice;
+      if (imageDimensions != null) {
+        double r = imageWidthInDevice / imageDimensions.width;
+        imageHeightInDevice = imageDimensions.height * r;
+      }
 
-      var uri = serverUri.replace(path: imagePath, queryParameters: query);
+      String url = imagePath;
+      if (!imagePath.startsWith("http")) {
+        var uri = serverUri.replace(path: imagePath, queryParameters: query);
+        url = uri.toString();
+      }
 
-      var image = ei.ExtendedImage.network(uri.toString(),
+      var image = ei.ExtendedImage.network(url,
         width: imageWidthInDevice / dpr,
         height: imageHeightInDevice / dpr,
         cacheWidth: 800,
@@ -312,6 +319,10 @@ class Utils {
       case 'message_pinned': newMessage = '$userName pinned message'; break;
       case 'discussion-created': newMessage = '$userName created discussion(${message.msg})'; break;
       default: if (message.t != null ) newMessage = '$userName act ${message.t}'; break;
+    }
+    if (newMessage.contains("\t")) {
+      int idx = newMessage.indexOf("\t");
+      newMessage = newMessage.substring(0, idx);
     }
     message.displayMessage = newMessage;
     return message;
